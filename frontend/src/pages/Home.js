@@ -8,64 +8,247 @@ function Home() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
     try {
       let response;
       if (isLogin) {
         response = await authService.login(email, password);
+        setSuccess('Connexion réussie! Redirection...');
       } else {
         response = await authService.register(username, email, password);
+        setSuccess('Compte créé avec succès! Redirection...');
       }
+
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
-      navigate('/predictions');
+
+      setTimeout(() => {
+        navigate('/predictions');
+      }, 1500);
     } catch (err) {
-      setError(err.response?.data?.error || 'Error');
+      setError(err.response?.data?.error || 'Une erreur est survenue');
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', textAlign: 'center' }}>
-      <h1>🏆 TakoTak</h1>
-      <p>Jeu de pronostiques Coupe du Monde</p>
-      <form onSubmit={handleSubmit}>
-        {!isLogin && (
-          <input
-            type="text"
-            placeholder="Nom d'utilisateur"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '8px' }}
-          />
-        )}
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '8px' }}
-        />
-        <input
-          type="password"
-          placeholder="Mot de passe"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '8px' }}
-        />
-        <button type="submit" style={{ width: '100%', padding: '10px', background: '#007bff', color: 'white', border: 'none', cursor: 'pointer' }}>
-          {isLogin ? 'Connexion' : 'Inscription'}
-        </button>
-      </form>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <p>
-        {isLogin ? "Pas de compte? " : 'Tu as déjà un compte? '}
-        <button onClick={() => setIsLogin(!isLogin)} style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}>
-          {isLogin ? 'Inscription' : 'Connexion'}
-        </button>
-      </p>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ width: '100%', maxWidth: '450px', background: 'white', borderRadius: '20px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '40px 20px', textAlign: 'center', color: 'white' }}>
+          <h1 style={{ fontSize: '48px', margin: '0 0 10px 0' }}>🏆</h1>
+          <h2 style={{ fontSize: '32px', margin: '0 0 5px 0', fontWeight: 'bold' }}>TakoTak</h2>
+          <p style={{ margin: '0', opacity: 0.9, fontSize: '14px' }}>Prédictions Coupe du Monde 2026</p>
+        </div>
+
+        {/* Form Container */}
+        <div style={{ padding: '40px' }}>
+          <div style={{ marginBottom: '30px' }}>
+            <h3 style={{ fontSize: '22px', marginBottom: '5px', color: '#333' }}>
+              {isLogin ? 'Bienvenue!' : 'Créer un compte'}
+            </h3>
+            <p style={{ color: '#999', margin: '0', fontSize: '14px' }}>
+              {isLogin ? 'Connecte-toi pour voir tes prédictions' : 'Rejoins la compétition'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            {!isLogin && (
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#555' }}>Nom d'utilisateur</label>
+                <input
+                  type="text"
+                  placeholder="ton_pseudo"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid #e0e0e0',
+                    borderRadius: '10px',
+                    fontSize: '14px',
+                    transition: 'all 0.3s',
+                    boxSizing: 'border-box',
+                    cursor: loading ? 'not-allowed' : 'text',
+                    opacity: loading ? 0.6 : 1
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                  onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                />
+              </div>
+            )}
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#555' }}>Email</label>
+              <input
+                type="email"
+                placeholder="ton@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #e0e0e0',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  transition: 'all 0.3s',
+                  boxSizing: 'border-box',
+                  cursor: loading ? 'not-allowed' : 'text',
+                  opacity: loading ? 0.6 : 1
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#555' }}>Mot de passe</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #e0e0e0',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  transition: 'all 0.3s',
+                  boxSizing: 'border-box',
+                  cursor: loading ? 'not-allowed' : 'text',
+                  opacity: loading ? 0.6 : 1
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+              />
+            </div>
+
+            {error && (
+              <div style={{
+                padding: '12px',
+                background: '#fee',
+                border: '1px solid #fcc',
+                borderRadius: '10px',
+                color: '#c33',
+                fontSize: '14px',
+                animation: 'slideDown 0.3s ease-out'
+              }}>
+                ❌ {error}
+              </div>
+            )}
+
+            {success && (
+              <div style={{
+                padding: '12px',
+                background: '#efe',
+                border: '1px solid #cfc',
+                borderRadius: '10px',
+                color: '#3c3',
+                fontSize: '14px',
+                animation: 'slideDown 0.3s ease-out'
+              }}>
+                ✅ {success}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: '14px',
+                background: loading ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.3s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                opacity: loading ? 0.7 : 1
+              }}
+            >
+              {loading ? (
+                <>
+                  <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', originX: '50%', originY: '50%' }}>⏳</span>
+                  {isLogin ? 'Connexion...' : 'Création du compte...'}
+                </>
+              ) : (
+                isLogin ? '🔓 Connexion' : '✨ Créer mon compte'
+              )}
+            </button>
+          </form>
+
+          {/* Toggle */}
+          <div style={{ marginTop: '25px', textAlign: 'center', paddingTop: '20px', borderTop: '1px solid #e0e0e0' }}>
+            <p style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>
+              {isLogin ? "Tu n'as pas de compte? " : 'Tu as déjà un compte? '}
+            </p>
+            <button
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError('');
+                setSuccess('');
+                setEmail('');
+                setPassword('');
+                setUsername('');
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#667eea',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                transition: 'all 0.3s'
+              }}
+              onMouseOver={(e) => e.target.style.color = '#764ba2'}
+              onMouseOut={(e) => e.target.style.color = '#667eea'}
+            >
+              {isLogin ? 'Créer un compte' : 'Me connecter'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }
