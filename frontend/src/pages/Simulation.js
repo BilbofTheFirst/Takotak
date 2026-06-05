@@ -60,12 +60,12 @@ function Simulation() {
     return 0;
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: '20px' }}>Chargement...</div>;
 
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
       <h1>🎮 Simulation</h1>
-      <p>Test what-if scenarios for finished matches</p>
+      <p>Testez des scénarios pour les matchs terminés</p>
       {matches.filter(m => m.status === 'finished').map(match => {
         const pred = predictions[match.id];
         const sim = simulations[match.id] || { team1_goals: 0, team2_goals: 0 };
@@ -74,16 +74,16 @@ function Simulation() {
         return (
           <div key={match.id} style={{ border: '1px solid #ccc', padding: '10px', marginBottom: '10px' }}>
             <h3>{match.team1} vs {match.team2}</h3>
-            <p>Your prediction: {pred?.team1_goals || '-'} - {pred?.team2_goals || '-'}</p>
+            <p>Votre pronostic: {pred?.team1_goals || '-'} - {pred?.team2_goals || '-'}</p>
             <div style={{ marginBottom: '10px' }}>
               <label>
-                {match.team1} goals: <input type="number" value={sim.team1_goals} onChange={(e) => handleSimulationChange(match.id, 'team1_goals', e.target.value)} />
+                Buts {match.team1}: <input type="number" value={sim.team1_goals} onChange={(e) => handleSimulationChange(match.id, 'team1_goals', e.target.value)} />
               </label>
               <label style={{ marginLeft: '10px' }}>
-                {match.team2} goals: <input type="number" value={sim.team2_goals} onChange={(e) => handleSimulationChange(match.id, 'team2_goals', e.target.value)} />
+                Buts {match.team2}: <input type="number" value={sim.team2_goals} onChange={(e) => handleSimulationChange(match.id, 'team2_goals', e.target.value)} />
               </label>
             </div>
-            <p>Points you would get: <strong>{points}</strong></p>
+            <p>Points que vous obtiendriez: <strong>{points}</strong></p>
           </div>
         );
       })}

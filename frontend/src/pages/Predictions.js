@@ -31,34 +31,34 @@ function Predictions() {
   };
 
   const handlePrediction = async (matchId, team1, team2) => {
-    const t1 = prompt(`Goals for ${team1}:`);
-    const t2 = prompt(`Goals for ${team2}:`);
+    const t1 = prompt(`Buts pour ${team1}:`);
+    const t2 = prompt(`Buts pour ${team2}:`);
     if (t1 !== null && t2 !== null) {
       try {
         await predictionsService.create(matchId, parseInt(t1), parseInt(t2));
         loadData();
       } catch (error) {
-        alert(error.response?.data?.error || 'Error saving prediction');
+        alert(error.response?.data?.error || 'Erreur lors de la sauvegarde');
       }
     }
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: '20px' }}>Chargement...</div>;
 
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-      <h1>Make Your Predictions</h1>
+      <h1>Faites vos pronostics</h1>
       {matches.map(match => (
         <div key={match.id} style={{ border: '1px solid #ccc', padding: '10px', marginBottom: '10px' }}>
           <h3>{match.team1} vs {match.team2}</h3>
-          <p>Match starts: {new Date(match.start_time).toLocaleString()}</p>
+          <p>Le match commence: {new Date(match.start_time).toLocaleString('fr-FR')}</p>
           {predictions[match.id] ? (
-            <p>Your prediction: {predictions[match.id].team1_goals} - {predictions[match.id].team2_goals}</p>
+            <p>Votre pronostic: {predictions[match.id].team1_goals} - {predictions[match.id].team2_goals}</p>
           ) : (
-            <p>No prediction yet</p>
+            <p>Pas encore de pronostic</p>
           )}
           <button onClick={() => handlePrediction(match.id, match.team1, match.team2)} style={{ padding: '8px 16px', background: '#007bff', color: 'white', border: 'none', cursor: 'pointer' }}>
-            {predictions[match.id] ? 'Update' : 'Predict'}
+            {predictions[match.id] ? 'Modifier' : 'Pronostiquer'}
           </button>
         </div>
       ))}

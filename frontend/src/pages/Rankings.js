@@ -20,18 +20,18 @@ function Rankings() {
     }
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: '20px' }}>Chargement...</div>;
 
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-      <h1>🏆 Leaderboard</h1>
+      <h1>🏆 Classement</h1>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ background: '#f0f0f0' }}>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Rank</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Player</th>
+            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Rang</th>
+            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Joueur</th>
             <th style={{ border: '1px solid #ddd', padding: '8px' }}>Points</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Matches</th>
+            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Matchs</th>
           </tr>
         </thead>
         <tbody>

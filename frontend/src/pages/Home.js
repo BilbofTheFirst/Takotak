@@ -30,12 +30,12 @@ function Home() {
   return (
     <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', textAlign: 'center' }}>
       <h1>🏆 TakoTak</h1>
-      <p>World Cup Predictions Game</p>
+      <p>Jeu de pronostiques Coupe du Monde</p>
       <form onSubmit={handleSubmit}>
         {!isLogin && (
           <input
             type="text"
-            placeholder="Username"
+            placeholder="Nom d'utilisateur"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '8px' }}
@@ -50,20 +50,20 @@ function Home() {
         />
         <input
           type="password"
-          placeholder="Password"
+          placeholder="Mot de passe"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           style={{ display: 'block', width: '100%', marginBottom: '10px', padding: '8px' }}
         />
         <button type="submit" style={{ width: '100%', padding: '10px', background: '#007bff', color: 'white', border: 'none', cursor: 'pointer' }}>
-          {isLogin ? 'Login' : 'Register'}
+          {isLogin ? 'Connexion' : 'Inscription'}
         </button>
       </form>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <p>
-        {isLogin ? "Don't have an account? " : 'Already have an account? '}
+        {isLogin ? "Pas de compte? " : 'Tu as déjà un compte? '}
         <button onClick={() => setIsLogin(!isLogin)} style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}>
-          {isLogin ? 'Register' : 'Login'}
+          {isLogin ? 'Inscription' : 'Connexion'}
         </button>
       </p>
     </div>
