@@ -1,0 +1,40 @@
+╔════════════════════════════════════════════════════════════════╗
+║            TAKOTAK DEPLOYMENT QUICK START                      ║
+╚════════════════════════════════════════════════════════════════╝
+
+1. PUSH TO GITHUB
+   $ git push -u origin main
+
+2. DATABASE (Railway)
+   • Create account at railway.app
+   • New Project → Provision PostgreSQL
+   • Copy DATABASE_URL
+
+3. BACKEND (Railway)
+   • New Service → GitHub Repo → Select takotak
+   • Root Directory: /backend
+   • Add Environment Variables:
+     DATABASE_URL: (from step 2)
+     JWT_SECRET: your-super-secret-key
+     PORT: 3001
+   • Deploy!
+   • Copy public URL
+
+4. FRONTEND (Vercel)
+   • Create account at vercel.com
+   • Import your GitHub repo
+   • Root Directory: /frontend
+   • Environment Variable:
+     REACT_APP_API_URL: https://your-railway-url.railway.app/api
+   • Deploy!
+
+5. TEST
+   • Go to Vercel URL
+   • Register account
+   • Make predictions
+   • Check admin panel for results
+
+Total time: ~15 minutes
+Cost: $0 (free tier)
+
+Need help? See DEPLOYMENT.md

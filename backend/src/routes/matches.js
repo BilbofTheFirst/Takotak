@@ -1,0 +1,51 @@
+const express = require('express');
+const pool = require('../db/pool');
+const { authenticateToken } = require('../middleware/auth');
+
+const router = express.Router();
+
+// Get all matches
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT m.*, r.team1_goals, r.team2_goals FROM matches m LEFT JOIN results r ON m.id = r.match_id ORDER BY m.start_time'
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get matches error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get single match with predictions
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const matchId = req.params.id;
+    const match = await pool.query('SELECT * FROM matches WHERE id = $1', [matchId]);
+    
+    if (match.rows.length === 0) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+
+    const predictions = await pool.query(
+      'SELECT * FROM predictions WHERE match_id = $1',
+      [matchId]
+    );
+
+    const result = await pool.query(
+      'SELECT * FROM results WHERE match_id = $1',
+      [matchId]
+    );
+
+    res.json({
+      match: match.rows[0],
+      predictions: predictions.rows,
+      result: result.rows[0] || null
+    });
+  } catch (error) {
+    console.error('Get match error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+module.exports = router;
