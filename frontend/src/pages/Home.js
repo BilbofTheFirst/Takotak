@@ -32,20 +32,24 @@ function Home() {
       localStorage.setItem('user', JSON.stringify(response.data.user));
 
       setTimeout(() => {
-        navigate('/predictions');
-      }, 1500);
+        window.location.href = '/predictions';
+      }, 1000);
     } catch (err) {
       setError(err.response?.data?.error || 'Une erreur est survenue');
       setLoading(false);
     }
   };
 
+  const PRIMARY = '#2563eb'; // Bleu moderne
+  const SECONDARY = '#ec4899'; // Rose moderne
+  const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
+
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+    <div style={{ minHeight: '100vh', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div style={{ width: '100%', maxWidth: '450px', background: 'white', borderRadius: '20px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
 
         {/* Header */}
-        <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '40px 20px', textAlign: 'center', color: 'white' }}>
+        <div style={{ background: GRADIENT, padding: '40px 20px', textAlign: 'center', color: 'white' }}>
           <h1 style={{ fontSize: '48px', margin: '0 0 10px 0' }}>🏆</h1>
           <h2 style={{ fontSize: '32px', margin: '0 0 5px 0', fontWeight: 'bold' }}>TakoTak</h2>
           <p style={{ margin: '0', opacity: 0.9, fontSize: '14px' }}>Prédictions Coupe du Monde 2026</p>
@@ -84,7 +88,7 @@ function Home() {
                     cursor: loading ? 'not-allowed' : 'text',
                     opacity: loading ? 0.6 : 1
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                  onFocus={(e) => e.target.style.borderColor = PRIMARY}
                   onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
                 />
               </div>
@@ -110,7 +114,7 @@ function Home() {
                   cursor: loading ? 'not-allowed' : 'text',
                   opacity: loading ? 0.6 : 1
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onFocus={(e) => e.target.style.borderColor = PRIMARY}
                 onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
               />
             </div>
@@ -135,7 +139,7 @@ function Home() {
                   cursor: loading ? 'not-allowed' : 'text',
                   opacity: loading ? 0.6 : 1
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onFocus={(e) => e.target.style.borderColor = PRIMARY}
                 onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
               />
             </div>
@@ -173,7 +177,7 @@ function Home() {
               disabled={loading}
               style={{
                 padding: '14px',
-                background: loading ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: loading ? '#ccc' : GRADIENT,
                 color: 'white',
                 border: 'none',
                 borderRadius: '10px',
@@ -216,15 +220,15 @@ function Home() {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#667eea',
+                color: PRIMARY,
                 cursor: 'pointer',
                 textDecoration: 'underline',
                 fontSize: '14px',
                 fontWeight: 'bold',
                 transition: 'all 0.3s'
               }}
-              onMouseOver={(e) => e.target.style.color = '#764ba2'}
-              onMouseOut={(e) => e.target.style.color = '#667eea'}
+              onMouseOver={(e) => e.target.style.color = SECONDARY}
+              onMouseOut={(e) => e.target.style.color = PRIMARY}
             >
               {isLogin ? 'Créer un compte' : 'Me connecter'}
             </button>

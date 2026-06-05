@@ -9,6 +9,10 @@ function Predictions() {
   const [success, setSuccess] = useState({});
   const [tempScores, setTempScores] = useState({});
 
+  const PRIMARY = '#2563eb';
+  const SECONDARY = '#ec4899';
+  const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
+
   useEffect(() => {
     loadData();
   }, []);
@@ -41,12 +45,12 @@ function Predictions() {
       ...prev,
       [matchId]: {
         ...prev[matchId] || { team1: 0, team2: 0 },
-        [team]: Math.max(0, parseInt(value) || 0)
+        [team]: Math.max(0, Math.min(20, parseInt(value) || 0))
       }
     }));
   };
 
-  const handleSavePrediction = async (matchId, team1Name, team2Name) => {
+  const handleSavePrediction = async (matchId) => {
     setSaving(prev => ({ ...prev, [matchId]: true }));
     try {
       const scores = tempScores[matchId] || { team1: 0, team2: 0 };
@@ -59,7 +63,7 @@ function Predictions() {
 
       loadData();
     } catch (error) {
-      alert(error.response?.data?.error || 'Erreur lors de la sauvegarde');
+      alert(error.response?.data?.error || 'Erreur');
     } finally {
       setSaving(prev => ({ ...prev, [matchId]: false }));
     }
@@ -80,6 +84,12 @@ function Predictions() {
     return grouped;
   };
 
+  const getGroupLetter = (matchId) => {
+    // Groupes A-L basés sur les IDs (72 matchs total, 6 par groupe)
+    const groupIndex = Math.floor((matchId - 1) / 6);
+    return String.fromCharCode(65 + groupIndex); // A-L
+  };
+
   const groupedMatches = groupByDate(matches);
 
   if (loading) {
@@ -89,14 +99,10 @@ function Predictions() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f5f7fa'
+        background: '#f0f4f8'
       }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{
-            fontSize: '48px',
-            marginBottom: '20px',
-            animation: 'bounce 1s infinite'
-          }}>⏳</div>
+          <div style={{ fontSize: '48px', marginBottom: '20px', animation: 'bounce 1s infinite' }}>⏳</div>
           <p style={{ color: '#666', fontSize: '16px' }}>Chargement des matchs...</p>
         </div>
       </div>
@@ -106,26 +112,17 @@ function Predictions() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+      background: 'linear-gradient(135deg, #f0f4f8 0%, #f3e7e9 100%)',
       padding: '30px 20px',
     }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: '40px' }}>
-          <h1 style={{
-            fontSize: '36px',
-            color: '#333',
-            margin: '0 0 10px 0',
-            fontWeight: 'bold'
-          }}>
+          <h1 style={{ fontSize: '36px', color: '#333', margin: '0 0 10px 0', fontWeight: 'bold' }}>
             🎯 Mes Prédictions
           </h1>
-          <p style={{
-            color: '#666',
-            margin: '0',
-            fontSize: '16px'
-          }}>
-            Prédis les scores avant le match pour gagner des points!
+          <p style={{ color: '#666', margin: '0', fontSize: '16px' }}>
+            Prédis les scores avant le coup d'envoi pour gagner des points!
           </p>
         </div>
 
@@ -134,7 +131,7 @@ function Predictions() {
           <div key={date} style={{ marginBottom: '40px' }}>
             {/* Date Header */}
             <div style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: GRADIENT,
               color: 'white',
               padding: '15px 20px',
               borderRadius: '10px 10px 0 0',
@@ -142,7 +139,7 @@ function Predictions() {
             }}>
               <h2 style={{
                 margin: '0',
-                fontSize: '20px',
+                fontSize: '18px',
                 fontWeight: 'bold',
                 textTransform: 'capitalize'
               }}>
@@ -155,7 +152,7 @@ function Predictions() {
               background: 'white',
               borderRadius: '0 0 10px 10px',
               overflow: 'hidden',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
               marginBottom: '20px'
             }}>
               {dateMatches.map((match, idx) => {
@@ -163,174 +160,154 @@ function Predictions() {
                 const scores = tempScores[match.id] || { team1: pred?.team1_goals || 0, team2: pred?.team2_goals || 0 };
                 const isDeadline = new Date(match.start_time) < new Date();
                 const isSaved = pred && pred.team1_goals === scores.team1 && pred.team2_goals === scores.team2;
+                const groupLetter = getGroupLetter(match.id);
 
                 return (
                   <div
                     key={match.id}
                     style={{
-                      padding: '20px',
+                      padding: '16px 20px',
                       borderBottom: idx < dateMatches.length - 1 ? '1px solid #eee' : 'none',
                       background: isDeadline ? '#f9f9f9' : 'white',
-                      opacity: isDeadline ? 0.7 : 1
+                      opacity: isDeadline ? 0.7 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '15px',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap'
                     }}
                   >
-                    {/* Match Info */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{
-                          margin: '0 0 5px 0',
-                          fontSize: '18px',
-                          color: '#333',
-                          fontWeight: 'bold'
-                        }}>
-                          ⚽ {match.team1} vs {match.team2}
-                        </h3>
-                        <p style={{
-                          margin: '0',
-                          color: '#999',
-                          fontSize: '13px'
-                        }}>
-                          {new Date(match.start_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                          {isDeadline && ' (Matchs fermés)'}
-                        </p>
+                    {/* Group Badge */}
+                    <div style={{
+                      background: GRADIENT,
+                      color: 'white',
+                      padding: '4px 10px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      minWidth: '40px',
+                      textAlign: 'center'
+                    }}>
+                      Groupe {groupLetter}
+                    </div>
+
+                    {/* Time */}
+                    <div style={{
+                      color: '#999',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      minWidth: '50px'
+                    }}>
+                      {new Date(match.start_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+
+                    {/* Match Score Input */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flex: 1,
+                      minWidth: '280px'
+                    }}>
+                      {/* Team 1 */}
+                      <div style={{ textAlign: 'right', flex: 1 }}>
+                        <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px', fontWeight: '500' }}>
+                          {match.team1}
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          max="20"
+                          value={scores.team1}
+                          onChange={(e) => handleScoreChange(match.id, 'team1', e.target.value)}
+                          disabled={isDeadline || saving[match.id]}
+                          style={{
+                            width: '50px',
+                            padding: '8px',
+                            fontSize: '16px',
+                            fontWeight: 'bold',
+                            border: `2px solid ${PRIMARY}`,
+                            borderRadius: '6px',
+                            textAlign: 'center',
+                            cursor: isDeadline ? 'not-allowed' : 'text',
+                            opacity: isDeadline ? 0.5 : 1
+                          }}
+                        />
                       </div>
 
-                      {pred && !isDeadline && (
+                      {/* Separator */}
+                      <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#ddd' }}>-</div>
+
+                      {/* Team 2 */}
+                      <div style={{ textAlign: 'left', flex: 1 }}>
+                        <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px', fontWeight: '500' }}>
+                          {match.team2}
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          max="20"
+                          value={scores.team2}
+                          onChange={(e) => handleScoreChange(match.id, 'team2', e.target.value)}
+                          disabled={isDeadline || saving[match.id]}
+                          style={{
+                            width: '50px',
+                            padding: '8px',
+                            fontSize: '16px',
+                            fontWeight: 'bold',
+                            border: `2px solid ${PRIMARY}`,
+                            borderRadius: '6px',
+                            textAlign: 'center',
+                            cursor: isDeadline ? 'not-allowed' : 'text',
+                            opacity: isDeadline ? 0.5 : 1
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Button and Status */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '200px' }}>
+                      {!isDeadline && (
+                        <button
+                          onClick={() => handleSavePrediction(match.id)}
+                          disabled={saving[match.id] || isSaved}
+                          style={{
+                            padding: '8px 16px',
+                            background: isSaved ? '#10b981' : GRADIENT,
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            cursor: saving[match.id] || isSaved ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.3s',
+                            opacity: saving[match.id] ? 0.7 : 1,
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {saving[match.id] ? '⏳' : (isSaved ? '✅ Enregistré' : '💾 Enregistrer')}
+                        </button>
+                      )}
+                      {isDeadline && (
                         <div style={{
-                          background: '#efe',
-                          color: '#3c3',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
+                          color: '#999',
                           fontSize: '12px',
-                          fontWeight: 'bold'
+                          fontWeight: '500'
                         }}>
-                          ✅ Prédit
+                          🔒 Fermé
                         </div>
                       )}
                     </div>
 
-                    {/* Score Input */}
-                    {!isDeadline && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        marginBottom: '15px',
-                        background: '#f9f9f9',
-                        padding: '15px',
-                        borderRadius: '8px'
-                      }}>
-                        {/* Team 1 Score */}
-                        <div style={{ flex: 1, textAlign: 'center' }}>
-                          <label style={{
-                            display: 'block',
-                            fontSize: '12px',
-                            color: '#666',
-                            marginBottom: '6px',
-                            fontWeight: '500'
-                          }}>
-                            {match.team1}
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="20"
-                            value={scores.team1}
-                            onChange={(e) => handleScoreChange(match.id, 'team1', e.target.value)}
-                            disabled={isDeadline || saving[match.id]}
-                            style={{
-                              width: '100%',
-                              padding: '10px',
-                              fontSize: '20px',
-                              fontWeight: 'bold',
-                              border: '2px solid #667eea',
-                              borderRadius: '6px',
-                              textAlign: 'center',
-                              cursor: isDeadline ? 'not-allowed' : 'text',
-                              opacity: isDeadline ? 0.5 : 1,
-                              transition: 'all 0.2s'
-                            }}
-                          />
-                        </div>
-
-                        {/* Separator */}
-                        <div style={{
-                          fontSize: '24px',
-                          fontWeight: 'bold',
-                          color: '#ddd',
-                          marginBottom: '10px'
-                        }}>
-                          -
-                        </div>
-
-                        {/* Team 2 Score */}
-                        <div style={{ flex: 1, textAlign: 'center' }}>
-                          <label style={{
-                            display: 'block',
-                            fontSize: '12px',
-                            color: '#666',
-                            marginBottom: '6px',
-                            fontWeight: '500'
-                          }}>
-                            {match.team2}
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="20"
-                            value={scores.team2}
-                            onChange={(e) => handleScoreChange(match.id, 'team2', e.target.value)}
-                            disabled={isDeadline || saving[match.id]}
-                            style={{
-                              width: '100%',
-                              padding: '10px',
-                              fontSize: '20px',
-                              fontWeight: 'bold',
-                              border: '2px solid #667eea',
-                              borderRadius: '6px',
-                              textAlign: 'center',
-                              cursor: isDeadline ? 'not-allowed' : 'text',
-                              opacity: isDeadline ? 0.5 : 1,
-                              transition: 'all 0.2s'
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Save Button */}
-                    {!isDeadline && (
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <button
-                          onClick={() => handleSavePrediction(match.id, match.team1, match.team2)}
-                          disabled={saving[match.id] || isSaved}
-                          style={{
-                            flex: 1,
-                            padding: '10px',
-                            background: isSaved ? '#3c3' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontWeight: 'bold',
-                            cursor: saving[match.id] || isSaved ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.3s',
-                            opacity: saving[match.id] ? 0.7 : 1
-                          }}
-                        >
-                          {saving[match.id] ? '⏳ Sauvegarde...' : (isSaved ? '✅ Enregistré' : '💾 Enregistrer')}
-                        </button>
-                      </div>
-                    )}
-
                     {/* Success Message */}
                     {success[match.id] && (
                       <div style={{
-                        marginTop: '10px',
-                        padding: '10px',
-                        background: '#efe',
-                        color: '#3c3',
+                        width: '100%',
+                        padding: '8px',
+                        background: '#d1fae5',
+                        color: '#059669',
                         borderRadius: '6px',
-                        fontSize: '13px',
+                        fontSize: '12px',
                         animation: 'slideDown 0.3s ease-out'
                       }}>
                         ✅ Prédiction enregistrée!
