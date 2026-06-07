@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { matchesService, predictionsService } from '../services/api';
+import { getCountryFlag } from '../utils/flags';
 
 function Simulation() {
   const [matches, setMatches] = useState([]);
@@ -314,7 +315,7 @@ function Simulation() {
           <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '20px', fontWeight: 'bold' }}>
             🏆 Phase de Groupes
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(900px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
             {groups.map(groupLetter => {
               const groupIndex = groupLetter.charCodeAt(0) - 65;
               const startId = groupIndex * 6 + 1;
@@ -359,8 +360,8 @@ function Simulation() {
                             fontSize: '12px'
                           }}>
                             <div style={{ flex: 1, minWidth: '140px' }}>
-                              <div style={{ fontWeight: '500', color: '#333' }}>
-                                {match.team1} vs {match.team2}
+                              <div style={{ fontWeight: '500', color: '#333', fontSize: '13px' }}>
+                                {getCountryFlag(match.team1)} {match.team1} vs {match.team2} {getCountryFlag(match.team2)}
                               </div>
                               {pred && (
                                 <div style={{ fontSize: '10px', color: '#999' }}>
@@ -459,10 +460,11 @@ function Simulation() {
                                     lineHeight: '16px',
                                     fontSize: '8px',
                                     fontWeight: 'bold',
-                                    marginRight: '3px'
+                                    marginRight: '2px'
                                   }}>
                                     {idx + 1}
                                   </span>
+                                  {getCountryFlag(data.team)}
                                 </td>
                                 <td style={{ padding: '4px 2px', textAlign: 'center', fontSize: '9px' }}>{data.played}</td>
                                 <td style={{ padding: '4px 2px', textAlign: 'center', color: '#059669', fontWeight: 'bold', fontSize: '9px' }}>{data.won}</td>
@@ -545,6 +547,7 @@ function Simulation() {
                       }}>
                         {idx + 1}
                       </span>
+                      <span style={{ marginRight: '6px' }}>{getCountryFlag(data.team)}</span>
                       {data.team}
                       {idx < 4 && <span style={{ marginLeft: '8px', color: '#059669', fontWeight: 'bold', fontSize: '11px' }}>✓ Qualifié</span>}
                     </td>
@@ -616,7 +619,7 @@ function Simulation() {
                         whiteSpace: 'nowrap',
                         textOverflow: 'ellipsis'
                       }}>
-                        {match.home || '?'}
+                        {match.home ? `${getCountryFlag(match.home)} ${match.home}` : '?'}
                       </div>
                       <input
                         type="number"
@@ -666,7 +669,7 @@ function Simulation() {
                         whiteSpace: 'nowrap',
                         textOverflow: 'ellipsis'
                       }}>
-                        {match.away || '?'}
+                        {match.away ? `${getCountryFlag(match.away)} ${match.away}` : '?'}
                       </div>
                     </div>
                   </div>

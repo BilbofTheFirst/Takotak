@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { matchesService, predictionsService } from '../services/api';
+import { getCountryFlag } from '../utils/flags';
 
 function Predictions() {
   const [matches, setMatches] = useState([]);
@@ -226,7 +227,7 @@ function Predictions() {
                       {/* Team 1 */}
                       <div style={{ textAlign: 'right', flex: 1 }}>
                         <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500' }}>
-                          {match.team1}
+                          {getCountryFlag(match.team1)} {match.team1}
                         </div>
                         <input
                           type="number"
@@ -255,7 +256,7 @@ function Predictions() {
                       {/* Team 2 */}
                       <div style={{ textAlign: 'left', flex: 1 }}>
                         <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500' }}>
-                          {match.team2}
+                          {match.team2} {getCountryFlag(match.team2)}
                         </div>
                         <input
                           type="number"
