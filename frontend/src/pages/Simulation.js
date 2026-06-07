@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { matchesService, predictionsService } from '../services/api';
-import CountryFlag from 'react-country-flag';
-import { getCountryCode } from '../utils/countryCode';
+import { getFlag } from '../utils/countryFlags';
 import TournamentBracket from '../components/TournamentBracket';
 
 function Simulation() {
@@ -363,9 +362,9 @@ function Simulation() {
                           }}>
                             <div style={{ flex: 1, minWidth: '140px' }}>
                               <div style={{ fontWeight: '500', color: '#333', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                                <CountryFlag countryCode={getCountryCode(match.team1)} svg style={{ width: '1em', height: '1em' }} />
+                                <span>{getFlag(match.team1)}</span>
                                 {match.team1} vs {match.team2}
-                                <CountryFlag countryCode={getCountryCode(match.team2)} svg style={{ width: '1em', height: '1em' }} />
+                                <span>{getFlag(match.team2)}</span>
                               </div>
                               {pred && (
                                 <div style={{ fontSize: '10px', color: '#999' }}>
@@ -470,7 +469,7 @@ function Simulation() {
                                   }}>
                                     {idx + 1}
                                   </span>
-                                  <CountryFlag countryCode={getCountryCode(data.team)} svg style={{ width: '0.9em', height: '0.9em', marginRight: '2px' }} />
+                                  <span style={{ marginRight: '2px' }}>{getFlag(data.team)}</span>
                                   {data.team}
                                 </td>
                                 <td style={{ padding: '4px 2px', textAlign: 'center', fontSize: '9px' }}>{data.played}</td>
@@ -556,7 +555,7 @@ function Simulation() {
                       }}>
                         {idx + 1}
                       </span>
-                      <CountryFlag countryCode={getCountryCode(data.team)} svg style={{ width: '1.2em', height: '1.2em', marginRight: '6px' }} />
+                      <span style={{ marginRight: '6px' }}>{getFlag(data.team)}</span>
                       {data.team}
                       {idx < 4 && <span style={{ marginLeft: '8px', color: '#059669', fontWeight: 'bold', fontSize: '11px' }}>✓ Qualifié</span>}
                     </td>

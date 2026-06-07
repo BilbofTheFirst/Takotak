@@ -1,6 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-import CountryFlag from 'react-country-flag';
-import { getCountryCode } from '../utils/countryCode';
+import { getFlag } from '../utils/countryFlags';
 
 function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, PRIMARY, SECONDARY, GRADIENT }) {
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
@@ -80,7 +79,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
         alignItems: 'center',
         gap: '4px'
       }}>
-        <CountryFlag countryCode={getCountryCode(team)} svg style={{ width: '1.2em', height: '1.2em', flexShrink: 0 }} />
+        <span style={{ flexShrink: 0 }}>{getFlag(team)}</span>
         <span>{team || 'TBD'}</span>
       </div>
       {isEditable && (

@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import CountryFlag from 'react-country-flag';
-import { getCountryCode } from '../utils/countryCode';
+import { getFlag } from '../utils/countryFlags';
 
 function KOBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, PRIMARY, SECONDARY, GRADIENT }) {
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
@@ -126,7 +125,7 @@ function KOBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, P
             }}>
               {match.home ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <CountryFlag countryCode={getCountryCode(match.home)} svg style={{ width: '1.2em', height: '1.2em', flexShrink: 0 }} />
+                  <span>{getFlag(match.home)}</span>
                   <span>{match.home}</span>
                 </div>
               ) : 'TBD'}
@@ -174,7 +173,7 @@ function KOBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, P
             }}>
               {match.away ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <CountryFlag countryCode={getCountryCode(match.away)} svg style={{ width: '1.2em', height: '1.2em', flexShrink: 0 }} />
+                  <span>{getFlag(match.away)}</span>
                   <span>{match.away}</span>
                 </div>
               ) : 'TBD'}

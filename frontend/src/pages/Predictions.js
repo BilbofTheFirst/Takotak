@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { matchesService, predictionsService } from '../services/api';
-import CountryFlag from 'react-country-flag';
-import { getCountryCode } from '../utils/countryCode';
+import { getFlag } from '../utils/countryFlags';
 
 function Predictions() {
   const [matches, setMatches] = useState([]);
@@ -103,6 +102,45 @@ function Predictions() {
     if (koId === 32) return 'Final';
 
     return 'Match';
+  };
+
+  const getTeamLabel = (matchId, position, teamName) => {
+    if (teamName) return teamName;
+
+    // Pour les matchs KO sans équipes déterminées
+    const koId = matchId - 72;
+    if (koId <= 0) return '?';
+
+    if (koId <= 16) {
+      // 16ème: 1er/2nd des poules
+      if (position === 'team1') {
+        const groupIndex = Math.floor((koId - 1) / 2);
+        return `1er Groupe ${String.fromCharCode(65 + groupIndex * 2)}`;
+      } else {
+        const groupIndex = Math.floor((koId - 1) / 2);
+        return `2nd Groupe ${String.fromCharCode(65 + groupIndex * 2 + 1)}`;
+      }
+    }
+
+    if (koId <= 24) {
+      // 8ème: Vainqueur 16ème
+      const r16Id = Math.ceil(koId / 2);
+      return `Vainqueur 16ème ${r16Id}`;
+    }
+
+    if (koId <= 28) {
+      // Quarts: Vainqueur 8ème
+      const r8Id = koId - 16;
+      return `Vainqueur 8ème ${r8Id}`;
+    }
+
+    if (koId <= 30) {
+      // Semis: Vainqueur Quart
+      const qId = koId - 20;
+      return `Vainqueur Quart ${qId}`;
+    }
+
+    return 'À déterminer';
   };
 
   const groupedMatches = groupByDate(matches);
@@ -228,8 +266,8 @@ function Predictions() {
                       {/* Team 1 */}
                       <div style={{ textAlign: 'right', flex: 1 }}>
                         <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                          <CountryFlag countryCode={getCountryCode(match.team1)} svg style={{ width: '1.2em', height: '1.2em' }} />
-                          {match.team1}
+                          {match.team1 && <span style={{ fontSize: '1.2em' }}>{getFlag(match.team1)}</span>}
+                          {getTeamLabel(match.id, 'team1', match.team1)}
                         </div>
                         <input
                           type="number"
@@ -258,8 +296,8 @@ function Predictions() {
                       {/* Team 2 */}
                       <div style={{ textAlign: 'left', flex: 1 }}>
                         <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          {match.team2}
-                          <CountryFlag countryCode={getCountryCode(match.team2)} svg style={{ width: '1.2em', height: '1.2em' }} />
+                          {getTeamLabel(match.id, 'team2', match.team2)}
+                          {match.team2 && <span style={{ fontSize: '1.2em' }}>{getFlag(match.team2)}</span>}
                         </div>
                         <input
                           type="number"
