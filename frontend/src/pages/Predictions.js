@@ -20,7 +20,7 @@ function Predictions() {
     if (!timestamp) return '';
     const dateStr = timestamp.substring(0, 10); // '2026-07-18'
     const timeStr = timestamp.substring(11, 16); // '00:00', '02:30', etc.
-    const [year, month, day] = dateStr.split('-');
+    let [year, month, day] = dateStr.split('-');
     const [hour] = timeStr.split(':');
 
     let displayDay = parseInt(day);
