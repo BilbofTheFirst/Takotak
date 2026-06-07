@@ -48,9 +48,7 @@ router.get('/', authenticateToken, async (req, res) => {
         m.team1_id,
         m.team2_id,
         t1.name as team1,
-        t1.flag_emoji as team1_flag,
         t2.name as team2,
-        t2.flag_emoji as team2_flag,
         m.start_time
       FROM predictions p
       JOIN matches m ON p.match_id = m.id

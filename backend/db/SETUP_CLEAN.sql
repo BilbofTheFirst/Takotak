@@ -125,7 +125,7 @@ INSERT INTO teams (name) VALUES
 -- Groupe A
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
 ((SELECT id FROM teams WHERE name='Mexique'), (SELECT id FROM teams WHERE name='Afrique du Sud'), '2026-06-11 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='France'), (SELECT id FROM teams WHERE name='Canada'), '2026-06-12 06:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='France'), (SELECT id FROM teams WHERE name='Canada'), '2026-06-12 04:00:00', 'pending'),
 ((SELECT id FROM teams WHERE name='Belgique'), (SELECT id FROM teams WHERE name='Maroc'), '2026-06-13 03:00:00', 'pending'),
 ((SELECT id FROM teams WHERE name='Afrique du Sud'), (SELECT id FROM teams WHERE name='France'), '2026-06-17 21:00:00', 'pending'),
 ((SELECT id FROM teams WHERE name='Belgique'), (SELECT id FROM teams WHERE name='Mexique'), '2026-06-18 00:00:00', 'pending'),
@@ -169,117 +169,117 @@ INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
 
 -- Groupe F
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-((SELECT id FROM teams WHERE name='Belgique'), (SELECT id FROM teams WHERE name='Slovaquie'), '2026-06-15 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Roumanie'), (SELECT id FROM teams WHERE name='Ouzbékistan'), '2026-06-16 03:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Belgique'), (SELECT id FROM teams WHERE name='Slovaquie'), '2026-06-15 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Roumanie'), (SELECT id FROM teams WHERE name='Ouzbékistan'), '2026-06-16 01:00:00', 'pending'),
 ((SELECT id FROM teams WHERE name='Slovaquie'), (SELECT id FROM teams WHERE name='Roumanie'), '2026-06-20 03:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Roumanie'), (SELECT id FROM teams WHERE name='Belgique'), '2026-06-21 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Slovaquie'), (SELECT id FROM teams WHERE name='Ouzbékistan'), '2026-06-25 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Ouzbékistan'), (SELECT id FROM teams WHERE name='Belgique'), '2026-06-25 00:00:00', 'pending');
+((SELECT id FROM teams WHERE name='Roumanie'), (SELECT id FROM teams WHERE name='Belgique'), '2026-06-21 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Slovaquie'), (SELECT id FROM teams WHERE name='Ouzbékistan'), '2026-06-24 22:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Ouzbékistan'), (SELECT id FROM teams WHERE name='Belgique'), '2026-06-24 22:00:00', 'pending');
 
 -- Groupe G
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-((SELECT id FROM teams WHERE name='Nouvelle-Zélande'), (SELECT id FROM teams WHERE name='Égypte'), '2026-06-16 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Colombie'), (SELECT id FROM teams WHERE name='Monténégro'), '2026-06-16 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Égypte'), (SELECT id FROM teams WHERE name='Monténégro'), '2026-06-21 03:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Monténégro'), (SELECT id FROM teams WHERE name='Colombie'), '2026-06-21 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Colombie'), (SELECT id FROM teams WHERE name='Nouvelle-Zélande'), '2026-06-25 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Égypte'), (SELECT id FROM teams WHERE name='Colombie'), '2026-06-25 21:00:00', 'pending');
+((SELECT id FROM teams WHERE name='Nouvelle-Zélande'), (SELECT id FROM teams WHERE name='Égypte'), '2026-06-15 22:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Colombie'), (SELECT id FROM teams WHERE name='Monténégro'), '2026-06-16 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Égypte'), (SELECT id FROM teams WHERE name='Monténégro'), '2026-06-21 01:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Monténégro'), (SELECT id FROM teams WHERE name='Colombie'), '2026-06-21 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Colombie'), (SELECT id FROM teams WHERE name='Nouvelle-Zélande'), '2026-06-25 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Égypte'), (SELECT id FROM teams WHERE name='Colombie'), '2026-06-25 19:00:00', 'pending');
 
 -- Groupe H
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-((SELECT id FROM teams WHERE name='Uruguay'), (SELECT id FROM teams WHERE name='Cap-Vert'), '2026-06-22 00:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Uruguay'), (SELECT id FROM teams WHERE name='Cap-Vert'), '2026-06-21 22:00:00', 'pending'),
 ((SELECT id FROM teams WHERE name='Ghana'), (SELECT id FROM teams WHERE name='Portugal'), '2026-06-22 03:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Portugal'), (SELECT id FROM teams WHERE name='Cap-Vert'), '2026-06-26 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Cap-Vert'), (SELECT id FROM teams WHERE name='Ghana'), '2026-06-27 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Ghana'), (SELECT id FROM teams WHERE name='Uruguay'), '2026-06-27 03:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Portugal'), (SELECT id FROM teams WHERE name='Uruguay'), '2026-06-27 03:00:00', 'pending');
+((SELECT id FROM teams WHERE name='Portugal'), (SELECT id FROM teams WHERE name='Cap-Vert'), '2026-06-26 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Cap-Vert'), (SELECT id FROM teams WHERE name='Ghana'), '2026-06-26 22:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Ghana'), (SELECT id FROM teams WHERE name='Uruguay'), '2026-06-27 01:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Portugal'), (SELECT id FROM teams WHERE name='Uruguay'), '2026-06-27 01:00:00', 'pending');
 
 -- Groupe I
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
 ((SELECT id FROM teams WHERE name='Brésil'), (SELECT id FROM teams WHERE name='Serbie'), '2026-06-23 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Suisse'), (SELECT id FROM teams WHERE name='Paraguay'), '2026-06-23 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Paraguay'), (SELECT id FROM teams WHERE name='Serbie'), '2026-06-27 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Serbie'), (SELECT id FROM teams WHERE name='Suisse'), '2026-06-28 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Suisse'), (SELECT id FROM teams WHERE name='Brésil'), '2026-07-01 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Paraguay'), (SELECT id FROM teams WHERE name='Brésil'), '2026-07-01 21:00:00', 'pending');
+((SELECT id FROM teams WHERE name='Suisse'), (SELECT id FROM teams WHERE name='Paraguay'), '2026-06-23 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Paraguay'), (SELECT id FROM teams WHERE name='Serbie'), '2026-06-27 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Serbie'), (SELECT id FROM teams WHERE name='Suisse'), '2026-06-27 22:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Suisse'), (SELECT id FROM teams WHERE name='Brésil'), '2026-07-01 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Paraguay'), (SELECT id FROM teams WHERE name='Brésil'), '2026-07-01 19:00:00', 'pending');
 
 -- Groupe J
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-((SELECT id FROM teams WHERE name='États-Unis'), (SELECT id FROM teams WHERE name='Bolivie'), '2026-06-23 03:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Ukraine'), (SELECT id FROM teams WHERE name='Maroc'), '2026-06-24 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Maroc'), (SELECT id FROM teams WHERE name='Bolivie'), '2026-06-28 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Bolivie'), (SELECT id FROM teams WHERE name='Ukraine'), '2026-06-29 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Ukraine'), (SELECT id FROM teams WHERE name='États-Unis'), '2026-07-02 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Maroc'), (SELECT id FROM teams WHERE name='États-Unis'), '2026-07-02 00:00:00', 'pending');
+((SELECT id FROM teams WHERE name='États-Unis'), (SELECT id FROM teams WHERE name='Bolivie'), '2026-06-23 01:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Ukraine'), (SELECT id FROM teams WHERE name='Maroc'), '2026-06-23 22:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Maroc'), (SELECT id FROM teams WHERE name='Bolivie'), '2026-06-28 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Bolivie'), (SELECT id FROM teams WHERE name='Ukraine'), '2026-06-28 22:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Ukraine'), (SELECT id FROM teams WHERE name='États-Unis'), '2026-07-01 22:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Maroc'), (SELECT id FROM teams WHERE name='États-Unis'), '2026-07-01 22:00:00', 'pending');
 
 -- Groupe K
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
 ((SELECT id FROM teams WHERE name='Angleterre'), (SELECT id FROM teams WHERE name='Serbie'), '2026-06-24 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Iran'), (SELECT id FROM teams WHERE name='Azerbaïdjan'), '2026-06-25 03:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Azerbaïdjan'), (SELECT id FROM teams WHERE name='Angleterre'), '2026-06-29 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Angleterre'), (SELECT id FROM teams WHERE name='Iran'), '2026-06-30 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Iran'), (SELECT id FROM teams WHERE name='Serbie'), '2026-07-03 03:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Azerbaïdjan'), (SELECT id FROM teams WHERE name='Serbie'), '2026-07-03 03:00:00', 'pending');
+((SELECT id FROM teams WHERE name='Iran'), (SELECT id FROM teams WHERE name='Azerbaïdjan'), '2026-06-25 01:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Azerbaïdjan'), (SELECT id FROM teams WHERE name='Angleterre'), '2026-06-29 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Angleterre'), (SELECT id FROM teams WHERE name='Iran'), '2026-06-29 22:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Iran'), (SELECT id FROM teams WHERE name='Serbie'), '2026-07-03 01:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Azerbaïdjan'), (SELECT id FROM teams WHERE name='Serbie'), '2026-07-03 01:00:00', 'pending');
 
 -- Groupe L
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-((SELECT id FROM teams WHERE name='Espagne'), (SELECT id FROM teams WHERE name='Costa Rica'), '2026-06-25 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Allemagne'), (SELECT id FROM teams WHERE name='Angleterre'), '2026-06-26 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Angleterre'), (SELECT id FROM teams WHERE name='Costa Rica'), '2026-06-30 21:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Costa Rica'), (SELECT id FROM teams WHERE name='Allemagne'), '2026-07-01 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Allemagne'), (SELECT id FROM teams WHERE name='Espagne'), '2026-07-05 00:00:00', 'pending'),
-((SELECT id FROM teams WHERE name='Angleterre'), (SELECT id FROM teams WHERE name='Espagne'), '2026-07-05 00:00:00', 'pending');
+((SELECT id FROM teams WHERE name='Espagne'), (SELECT id FROM teams WHERE name='Costa Rica'), '2026-06-25 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Allemagne'), (SELECT id FROM teams WHERE name='Angleterre'), '2026-06-25 22:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Angleterre'), (SELECT id FROM teams WHERE name='Costa Rica'), '2026-06-30 19:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Costa Rica'), (SELECT id FROM teams WHERE name='Allemagne'), '2026-06-30 22:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Allemagne'), (SELECT id FROM teams WHERE name='Espagne'), '2026-07-04 22:00:00', 'pending'),
+((SELECT id FROM teams WHERE name='Angleterre'), (SELECT id FROM teams WHERE name='Espagne'), '2026-07-04 22:00:00', 'pending');
 
 -- INSERT 32 MATCHS KO
 -- 16ème (16 matchs)
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-(NULL, NULL, '2026-06-28 21:00:00', 'pending'),
-(NULL, NULL, '2026-06-29 19:00:00', 'pending'),
-(NULL, NULL, '2026-06-29 22:30:00', 'pending'),
-(NULL, NULL, '2026-06-30 03:00:00', 'pending'),
-(NULL, NULL, '2026-06-30 19:00:00', 'pending'),
-(NULL, NULL, '2026-06-30 23:00:00', 'pending'),
-(NULL, NULL, '2026-07-01 03:00:00', 'pending'),
-(NULL, NULL, '2026-07-01 18:00:00', 'pending'),
-(NULL, NULL, '2026-07-01 22:00:00', 'pending'),
-(NULL, NULL, '2026-07-02 02:00:00', 'pending'),
-(NULL, NULL, '2026-07-02 21:00:00', 'pending'),
-(NULL, NULL, '2026-07-03 01:00:00', 'pending'),
-(NULL, NULL, '2026-07-03 05:00:00', 'pending'),
-(NULL, NULL, '2026-07-03 20:00:00', 'pending'),
-(NULL, NULL, '2026-07-04 00:00:00', 'pending'),
-(NULL, NULL, '2026-07-04 03:30:00', 'pending');
+(NULL, NULL, '2026-06-28 19:00:00', 'pending'),
+(NULL, NULL, '2026-06-29 17:00:00', 'pending'),
+(NULL, NULL, '2026-06-29 20:30:00', 'pending'),
+(NULL, NULL, '2026-06-30 01:00:00', 'pending'),
+(NULL, NULL, '2026-06-30 17:00:00', 'pending'),
+(NULL, NULL, '2026-06-30 21:00:00', 'pending'),
+(NULL, NULL, '2026-07-01 01:00:00', 'pending'),
+(NULL, NULL, '2026-07-01 16:00:00', 'pending'),
+(NULL, NULL, '2026-07-01 20:00:00', 'pending'),
+(NULL, NULL, '2026-07-02 00:00:00', 'pending'),
+(NULL, NULL, '2026-07-02 19:00:00', 'pending'),
+(NULL, NULL, '2026-07-02 23:00:00', 'pending'),
+(NULL, NULL, '2026-07-03 03:00:00', 'pending'),
+(NULL, NULL, '2026-07-03 18:00:00', 'pending'),
+(NULL, NULL, '2026-07-03 22:00:00', 'pending'),
+(NULL, NULL, '2026-07-04 01:30:00', 'pending');
 
 -- 8ème (8 matchs)
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-(NULL, NULL, '2026-07-04 19:00:00', 'pending'),
-(NULL, NULL, '2026-07-04 23:00:00', 'pending'),
-(NULL, NULL, '2026-07-05 22:00:00', 'pending'),
-(NULL, NULL, '2026-07-06 02:00:00', 'pending'),
-(NULL, NULL, '2026-07-06 21:00:00', 'pending'),
-(NULL, NULL, '2026-07-07 02:00:00', 'pending'),
-(NULL, NULL, '2026-07-07 18:00:00', 'pending'),
-(NULL, NULL, '2026-07-07 22:00:00', 'pending');
+(NULL, NULL, '2026-07-04 17:00:00', 'pending'),
+(NULL, NULL, '2026-07-04 21:00:00', 'pending'),
+(NULL, NULL, '2026-07-05 20:00:00', 'pending'),
+(NULL, NULL, '2026-07-06 00:00:00', 'pending'),
+(NULL, NULL, '2026-07-06 19:00:00', 'pending'),
+(NULL, NULL, '2026-07-07 00:00:00', 'pending'),
+(NULL, NULL, '2026-07-07 16:00:00', 'pending'),
+(NULL, NULL, '2026-07-07 20:00:00', 'pending');
 
 -- Quarts (4 matchs)
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-(NULL, NULL, '2026-07-09 22:00:00', 'pending'),
-(NULL, NULL, '2026-07-10 21:00:00', 'pending'),
-(NULL, NULL, '2026-07-11 23:00:00', 'pending'),
-(NULL, NULL, '2026-07-12 03:00:00', 'pending');
+(NULL, NULL, '2026-07-09 20:00:00', 'pending'),
+(NULL, NULL, '2026-07-10 19:00:00', 'pending'),
+(NULL, NULL, '2026-07-11 21:00:00', 'pending'),
+(NULL, NULL, '2026-07-12 01:00:00', 'pending');
 
 -- Semis (2 matchs)
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-(NULL, NULL, '2026-07-14 21:00:00', 'pending'),
-(NULL, NULL, '2026-07-15 21:00:00', 'pending');
+(NULL, NULL, '2026-07-14 19:00:00', 'pending'),
+(NULL, NULL, '2026-07-15 19:00:00', 'pending');
 
 -- 3e place (1 match) - 18 JUILLET 23:00 ✓
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-(NULL, NULL, '2026-07-18 23:00:00', 'pending');
+(NULL, NULL, '2026-07-18 21:00:00', 'pending');
 
 -- Final (1 match) - 19 JUILLET 21:00 ✓
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-(NULL, NULL, '2026-07-19 21:00:00', 'pending');
+(NULL, NULL, '2026-07-19 19:00:00', 'pending');
 
 -- VÉRIFICATION FINALE
 SELECT 'Teams' as table_name, COUNT(*) as count FROM teams
@@ -291,3 +291,4 @@ UNION ALL
 SELECT 'Knockout stage', COUNT(*) FROM matches WHERE id > 72;
 
 SELECT id, start_time FROM matches WHERE id IN (103, 104);
+                  
