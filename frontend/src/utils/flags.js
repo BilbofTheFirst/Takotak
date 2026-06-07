@@ -64,6 +64,7 @@ export const COUNTRY_FLAGS = {
   'Qatar': '🇶🇦',
   'RD Congo': '🇨🇩',
   'République centrafricaine': '🇨🇫',
+  'Tchéquie': '🇨🇿',
   'République dominicaine': '🇩🇴',
   'République du Congo': '🇨🇬',
   'République démocratique du Congo': '🇨🇩',
@@ -131,6 +132,10 @@ export const COUNTRY_FLAGS = {
   'Zimbabwe': '🇿🇼'
 };
 
-export const getCountryFlag = (country) => {
+export const getCountryFlag = (country, apiFlagEmoji = null) => {
+  // If flag is provided from API, use it (database is source of truth)
+  if (apiFlagEmoji) return apiFlagEmoji;
+
+  // Fallback to local mapping for backward compatibility
   return COUNTRY_FLAGS[country] || '🌍';
 };

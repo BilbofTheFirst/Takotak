@@ -437,7 +437,9 @@ function Simulation() {
                             <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>G</th>
                             <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>N</th>
                             <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>P</th>
-                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '20px' }}>+/-</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>B+</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>B-</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '20px' }}>Diff</th>
                             <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', color: PRIMARY, width: '18px' }}>Pts</th>
                           </tr>
                         </thead>
@@ -465,12 +467,14 @@ function Simulation() {
                                   }}>
                                     {idx + 1}
                                   </span>
-                                  {getCountryFlag(data.team)}
+                                  {getCountryFlag(data.team)} {data.team}
                                 </td>
                                 <td style={{ padding: '4px 2px', textAlign: 'center', fontSize: '9px' }}>{data.played}</td>
                                 <td style={{ padding: '4px 2px', textAlign: 'center', color: '#059669', fontWeight: 'bold', fontSize: '9px' }}>{data.won}</td>
                                 <td style={{ padding: '4px 2px', textAlign: 'center', color: '#92400e', fontWeight: 'bold', fontSize: '9px' }}>{data.draw}</td>
                                 <td style={{ padding: '4px 2px', textAlign: 'center', color: '#dc2626', fontWeight: 'bold', fontSize: '9px' }}>{data.lost}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', fontSize: '9px', fontWeight: 'bold' }}>{data.goalsFor}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', fontSize: '9px', fontWeight: 'bold' }}>{data.goalsAgainst}</td>
                                 <td style={{
                                   padding: '4px 2px',
                                   textAlign: 'center',
@@ -478,7 +482,7 @@ function Simulation() {
                                   fontWeight: 'bold',
                                   fontSize: '9px'
                                 }}>
-                                  {data.gf}-{data.ga}
+                                  {diff > 0 ? '+' : ''}{diff}
                                 </td>
                                 <td style={{
                                   padding: '4px 2px',

@@ -4,12 +4,29 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Get all matches
+// Get all matches with team details
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT m.*, r.team1_goals, r.team2_goals FROM matches m LEFT JOIN results r ON m.id = r.match_id ORDER BY m.start_time'
-    );
+    const result = await pool.query(`
+      SELECT
+        m.id,
+        m.team1_id,
+        m.team2_id,
+        t1.name as team1,
+        t1.flag_emoji as team1_flag,
+        t2.name as team2,
+        t2.flag_emoji as team2_flag,
+        m.start_time,
+        m.status,
+        m.created_at,
+        r.team1_goals,
+        r.team2_goals
+      FROM matches m
+      LEFT JOIN teams t1 ON m.team1_id = t1.id
+      LEFT JOIN teams t2 ON m.team2_id = t2.id
+      LEFT JOIN results r ON m.id = r.match_id
+      ORDER BY m.start_time
+    `);
     res.json(result.rows);
   } catch (error) {
     console.error('Get matches error:', error);
@@ -21,8 +38,24 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const matchId = req.params.id;
-    const match = await pool.query('SELECT * FROM matches WHERE id = $1', [matchId]);
-    
+    const match = await pool.query(`
+      SELECT
+        m.id,
+        m.team1_id,
+        m.team2_id,
+        t1.name as team1,
+        t1.flag_emoji as team1_flag,
+        t2.name as team2,
+        t2.flag_emoji as team2_flag,
+        m.start_time,
+        m.status,
+        m.created_at
+      FROM matches m
+      LEFT JOIN teams t1 ON m.team1_id = t1.id
+      LEFT JOIN teams t2 ON m.team2_id = t2.id
+      WHERE m.id = $1
+    `, [matchId]);
+
     if (match.rows.length === 0) {
       return res.status(404).json({ error: 'Match not found' });
     }

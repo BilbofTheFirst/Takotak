@@ -1,3 +1,10 @@
+-- Teams
+CREATE TABLE teams (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) UNIQUE NOT NULL,
+  flag_emoji VARCHAR(10)
+);
+
 -- Users
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
@@ -11,8 +18,8 @@ CREATE TABLE users (
 -- Matches
 CREATE TABLE matches (
   id SERIAL PRIMARY KEY,
-  team1 VARCHAR(100) NOT NULL,
-  team2 VARCHAR(100) NOT NULL,
+  team1_id INTEGER NOT NULL REFERENCES teams(id),
+  team2_id INTEGER NOT NULL REFERENCES teams(id),
   start_time TIMESTAMP NOT NULL,
   status VARCHAR(20) DEFAULT 'pending', -- pending, open, closed, finished
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -53,3 +60,5 @@ CREATE INDEX idx_predictions_user ON predictions(user_id);
 CREATE INDEX idx_predictions_match ON predictions(match_id);
 CREATE INDEX idx_user_scores_user ON user_scores(user_id);
 CREATE INDEX idx_matches_status ON matches(status);
+CREATE INDEX idx_matches_team1 ON matches(team1_id);
+CREATE INDEX idx_matches_team2 ON matches(team2_id);
