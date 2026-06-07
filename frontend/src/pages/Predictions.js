@@ -14,6 +14,17 @@ function Predictions() {
   const SECONDARY = '#ec4899';
   const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
 
+  // Formater la date SANS conversion de timezone
+  const formatDateBelge = (timestamp) => {
+    if (!timestamp) return '';
+    const dateStr = timestamp.substring(0, 10); // '2026-07-18'
+    const [year, month, day] = dateStr.split('-');
+    const date = new Date(year, month - 1, day);
+    const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    return `${days[date.getDay()]} ${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`;
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -73,12 +84,7 @@ function Predictions() {
   const groupByDate = (matches) => {
     const grouped = {};
     matches.forEach(match => {
-      const date = new Date(match.start_time).toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+      const date = formatDateBelge(match.start_time);
       if (!grouped[date]) grouped[date] = [];
       grouped[date].push(match);
     });
@@ -255,18 +261,19 @@ function Predictions() {
                       {match.start_time ? match.start_time.substring(11, 16) : '--:--'}
                     </div>
 
-                    {/* Match Score Input - UNE LIGNE */}
+                    {/* Match Score Input - UNE LIGNE ALIGNÉE */}
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
+                      justifyContent: 'center',
+                      gap: '8px',
                       flex: 1,
                       minWidth: '400px'
                     }}>
-                      {/* Team 1: Drapeau + Nom */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: '100px' }}>
-                        {match.team1 && getFlag(match.team1) && <img src={getFlag(match.team1)} alt={match.team1} style={{ height: '20px', width: '20px', borderRadius: '50%', border: '1px solid #ccc', objectFit: 'cover' }} />}
+                      {/* Team 1: Nom + Drapeau */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: '90px', justifyContent: 'flex-end' }}>
                         <span style={{ fontSize: '12px', fontWeight: '500', color: '#333' }}>{getTeamLabel(match.id, 'team1', match.team1)}</span>
+                        {match.team1 && getFlag(match.team1) && <img src={getFlag(match.team1)} alt={match.team1} style={{ height: '20px', width: '20px', borderRadius: '50%', border: '1px solid #ddd', objectFit: 'cover' }} />}
                       </div>
 
                       {/* Score 1 */}
@@ -278,19 +285,19 @@ function Predictions() {
                         onChange={(e) => handleScoreChange(match.id, 'team1', e.target.value)}
                         disabled={isDeadline || saving[match.id]}
                         style={{
-                          width: '40px',
-                          padding: '4px',
-                          fontSize: '13px',
+                          width: '32px',
+                          padding: '3px',
+                          fontSize: '12px',
                           fontWeight: 'bold',
-                          border: `2px solid ${PRIMARY}`,
-                          borderRadius: '4px',
+                          border: `1.5px solid ${PRIMARY}`,
+                          borderRadius: '3px',
                           textAlign: 'center',
                           cursor: isDeadline ? 'not-allowed' : 'pointer'
                         }}
                       />
 
                       {/* Separator */}
-                      <span style={{ color: '#ccc', fontWeight: 'bold' }}>-</span>
+                      <span style={{ color: '#ddd', fontWeight: 'bold' }}>-</span>
 
                       {/* Score 2 */}
                       <input
@@ -301,21 +308,21 @@ function Predictions() {
                         onChange={(e) => handleScoreChange(match.id, 'team2', e.target.value)}
                         disabled={isDeadline || saving[match.id]}
                         style={{
-                          width: '40px',
-                          padding: '4px',
-                          fontSize: '13px',
+                          width: '32px',
+                          padding: '3px',
+                          fontSize: '12px',
                           fontWeight: 'bold',
-                          border: `2px solid ${PRIMARY}`,
-                          borderRadius: '4px',
+                          border: `1.5px solid ${PRIMARY}`,
+                          borderRadius: '3px',
                           textAlign: 'center',
                           cursor: isDeadline ? 'not-allowed' : 'pointer'
                         }}
                       />
 
-                      {/* Team 2: Nom + Drapeau */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: '100px', justifyContent: 'flex-end' }}>
+                      {/* Team 2: Drapeau + Nom */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: '90px', justifyContent: 'flex-start' }}>
+                        {match.team2 && getFlag(match.team2) && <img src={getFlag(match.team2)} alt={match.team2} style={{ height: '20px', width: '20px', borderRadius: '50%', border: '1px solid #ddd', objectFit: 'cover' }} />}
                         <span style={{ fontSize: '12px', fontWeight: '500', color: '#333' }}>{getTeamLabel(match.id, 'team2', match.team2)}</span>
-                        {match.team2 && getFlag(match.team2) && <img src={getFlag(match.team2)} alt={match.team2} style={{ height: '20px', width: '20px', borderRadius: '50%', border: '1px solid #ccc', objectFit: 'cover' }} />}
                       </div>
                     </div>
 
