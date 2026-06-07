@@ -15,14 +15,35 @@ function Predictions() {
   const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
 
   // Formater la date SANS conversion de timezone
+  // Pour les matchs tôt le matin (00:00-05:00), affiche le jour précédent
   const formatDateBelge = (timestamp) => {
     if (!timestamp) return '';
     const dateStr = timestamp.substring(0, 10); // '2026-07-18'
+    const timeStr = timestamp.substring(11, 16); // '00:00', '02:30', etc.
     const [year, month, day] = dateStr.split('-');
-    const date = new Date(year, month - 1, day);
+    const [hour] = timeStr.split(':');
+
+    let displayDay = parseInt(day);
+    // Si c'est 00:00-05:00, afficher le jour PRÉCÉDENT
+    if (parseInt(hour) < 6) {
+      displayDay -= 1;
+      if (displayDay < 1) {
+        // Gérer changement de mois
+        let displayMonth = parseInt(month) - 1;
+        if (displayMonth < 1) {
+          displayMonth = 12;
+          year = (parseInt(year) - 1).toString();
+        }
+        month = displayMonth.toString().padStart(2, '0');
+        const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
+        displayDay = daysInMonth;
+      }
+    }
+
+    const date = new Date(parseInt(year), parseInt(month) - 1, displayDay);
     const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-    return `${days[date.getDay()]} ${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`;
+    return `${days[date.getDay()]} ${displayDay} ${months[parseInt(month) - 1]} ${year}`;
   };
 
   useEffect(() => {
