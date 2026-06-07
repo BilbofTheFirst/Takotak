@@ -266,7 +266,7 @@ function Predictions() {
                       {/* Team 1 */}
                       <div style={{ textAlign: 'right', flex: 1 }}>
                         <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                          {match.team1 && <span style={{ fontSize: '1.2em' }}>{getFlag(match.team1)}</span>}
+                          {match.team1 && getFlag(match.team1) && <img src={getFlag(match.team1)} alt={match.team1} style={{ height: '20px', width: 'auto' }} />}
                           {getTeamLabel(match.id, 'team1', match.team1)}
                         </div>
                         <input
@@ -297,7 +297,7 @@ function Predictions() {
                       <div style={{ textAlign: 'left', flex: 1 }}>
                         <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           {getTeamLabel(match.id, 'team2', match.team2)}
-                          {match.team2 && <span style={{ fontSize: '1.2em' }}>{getFlag(match.team2)}</span>}
+                          {match.team2 && getFlag(match.team2) && <img src={getFlag(match.team2)} alt={match.team2} style={{ height: '20px', width: 'auto' }} />}
                         </div>
                         <input
                           type="number"
