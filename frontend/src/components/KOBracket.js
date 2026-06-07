@@ -1,14 +1,8 @@
 import React, { useMemo } from 'react';
 import { getCountryFlag } from '../utils/flags';
 
-function KOBracket({ groupsData, koSimulations, onScoreChange, PRIMARY, SECONDARY, GRADIENT }) {
+function KOBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, PRIMARY, SECONDARY, GRADIENT }) {
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-
-  // Récupérer les classifications
-  const getGroupClassification = (groupLetter) => {
-    // À implémenter - récupérer depuis groupsData
-    return groupsData[groupLetter] || [];
-  };
 
   // Générer les matchs par round
   const generateBracket = useMemo(() => {
@@ -27,6 +21,9 @@ function KOBracket({ groupsData, koSimulations, onScoreChange, PRIMARY, SECONDAR
       }
     });
 
+    // 4 meilleurs 3e qualifiés
+    const qualifiedThirds = allThirdPlaces.slice(0, 4);
+
     // Matchs 16ème
     const round16 = [
       { id: 'r16_1', home: firstPlaces['A'], away: secondPlaces['B'], label: 'GA1 vs GB2' },
@@ -41,24 +38,24 @@ function KOBracket({ groupsData, koSimulations, onScoreChange, PRIMARY, SECONDAR
       { id: 'r16_10', home: firstPlaces['K'], away: secondPlaces['L'], label: 'GK1 vs GL2' },
       { id: 'r16_11', home: firstPlaces['J'], away: secondPlaces['I'], label: 'GJ1 vs GI2' },
       { id: 'r16_12', home: firstPlaces['L'], away: secondPlaces['K'], label: 'GL1 vs GK2' },
-      { id: 'r16_13', home: classifications[g][2]?.team || '3e1', away: firstPlaces['B'], label: '3e1 vs GB1' },
-      { id: 'r16_14', home: classifications[g][2]?.team || '3e2', away: firstPlaces['D'], label: '3e2 vs GD1' },
-      { id: 'r16_15', home: classifications[g][2]?.team || '3e3', away: firstPlaces['F'], label: '3e3 vs GF1' },
-      { id: 'r16_16', home: classifications[g][2]?.team || '3e4', away: firstPlaces['H'], label: '3e4 vs GH1' }
+      { id: 'r16_13', home: qualifiedThirds[0]?.team, away: firstPlaces['B'], label: '3e1 vs GB1' },
+      { id: 'r16_14', home: qualifiedThirds[1]?.team, away: firstPlaces['D'], label: '3e2 vs GD1' },
+      { id: 'r16_15', home: qualifiedThirds[2]?.team, away: firstPlaces['F'], label: '3e3 vs GF1' },
+      { id: 'r16_16', home: qualifiedThirds[3]?.team, away: firstPlaces['H'], label: '3e4 vs GH1' }
     ];
 
     return { round16, firstPlaces, secondPlaces };
-  }, [groupsData]);
+  }, [groupsData, allThirdPlaces]);
 
   // Déterminer le gagnant d'un match
   const getWinner = (matchId) => {
     const sim = koSimulations[matchId];
-    if (!sim || sim.team1_goals === sim.team2_goals) return null; // Pas décidé ou égalité
+    if (!sim || sim.team1_goals === sim.team2_goals) return null;
     return sim.team1_goals > sim.team2_goals ? 'home' : 'away';
   };
 
   // Match component
-  const MatchBox = ({ match, round = '16ème' }) => {
+  const MatchBox = ({ match }) => {
     const sim = koSimulations[match.id] || { team1_goals: 0, team2_goals: 0 };
     const winner = getWinner(match.id);
 
@@ -89,7 +86,7 @@ function KOBracket({ groupsData, koSimulations, onScoreChange, PRIMARY, SECONDAR
               overflow: 'hidden',
               textOverflow: 'ellipsis'
             }}>
-              {getCountryFlag(match.home)} {match.home || '?'}
+              {match.home ? `${getCountryFlag(match.home)} ${match.home}` : '?'}
             </div>
           </div>
           <input
@@ -128,7 +125,7 @@ function KOBracket({ groupsData, koSimulations, onScoreChange, PRIMARY, SECONDAR
               overflow: 'hidden',
               textOverflow: 'ellipsis'
             }}>
-              {getCountryFlag(match.away)} {match.away || '?'}
+              {match.away ? `${getCountryFlag(match.away)} ${match.away}` : '?'}
             </div>
           </div>
           <input
@@ -163,10 +160,9 @@ function KOBracket({ groupsData, koSimulations, onScoreChange, PRIMARY, SECONDAR
       <div style={{ marginBottom: '40px' }}>
         <h3 style={{
           fontSize: '16px',
-          color: '#333',
+          color: 'white',
           padding: '10px 15px',
           background: GRADIENT,
-          color: 'white',
           borderRadius: '8px',
           margin: '0 0 15px 0',
           fontWeight: 'bold'
@@ -179,7 +175,7 @@ function KOBracket({ groupsData, koSimulations, onScoreChange, PRIMARY, SECONDAR
           gap: '15px'
         }}>
           {generateBracket.round16.map((match) => (
-            <MatchBox key={match.id} match={match} round="16ème" />
+            <MatchBox key={match.id} match={match} />
           ))}
         </div>
       </div>

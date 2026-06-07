@@ -574,6 +574,7 @@ function Simulation() {
         {/* PHASE ÉLIMINATOIRE - Bracket */}
         <KOBracket
           groupsData={groupsData}
+          allThirdPlaces={allThirdPlaces}
           koSimulations={koSimulations}
           onScoreChange={handleKoSimulationChange}
           PRIMARY={PRIMARY}
