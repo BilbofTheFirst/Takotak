@@ -128,18 +128,18 @@ function Predictions() {
 
         {/* Calendar */}
         {Object.entries(groupedMatches).map(([date, dateMatches]) => (
-          <div key={date} style={{ marginBottom: '40px' }}>
+          <div key={date} style={{ marginBottom: '20px' }}>
             {/* Date Header */}
             <div style={{
               background: GRADIENT,
               color: 'white',
-              padding: '15px 20px',
-              borderRadius: '10px 10px 0 0',
+              padding: '10px 15px',
+              borderRadius: '8px 8px 0 0',
               marginBottom: '0'
             }}>
               <h2 style={{
                 margin: '0',
-                fontSize: '18px',
+                fontSize: '14px',
                 fontWeight: 'bold',
                 textTransform: 'capitalize'
               }}>
@@ -166,13 +166,13 @@ function Predictions() {
                   <div
                     key={match.id}
                     style={{
-                      padding: '16px 20px',
+                      padding: '10px 15px',
                       borderBottom: idx < dateMatches.length - 1 ? '1px solid #eee' : 'none',
                       background: isDeadline ? '#f9f9f9' : 'white',
                       opacity: isDeadline ? 0.7 : 1,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '15px',
+                      gap: '12px',
                       justifyContent: 'space-between',
                       flexWrap: 'wrap'
                     }}
@@ -181,22 +181,22 @@ function Predictions() {
                     <div style={{
                       background: GRADIENT,
                       color: 'white',
-                      padding: '4px 10px',
+                      padding: '2px 8px',
                       borderRadius: '20px',
-                      fontSize: '12px',
+                      fontSize: '11px',
                       fontWeight: 'bold',
-                      minWidth: '40px',
+                      minWidth: '35px',
                       textAlign: 'center'
                     }}>
-                      Groupe {groupLetter}
+                      G{groupLetter}
                     </div>
 
                     {/* Time */}
                     <div style={{
                       color: '#999',
-                      fontSize: '13px',
+                      fontSize: '12px',
                       fontWeight: '500',
-                      minWidth: '50px'
+                      minWidth: '45px'
                     }}>
                       {new Date(match.start_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                     </div>
@@ -211,7 +211,7 @@ function Predictions() {
                     }}>
                       {/* Team 1 */}
                       <div style={{ textAlign: 'right', flex: 1 }}>
-                        <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px', fontWeight: '500' }}>
+                        <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500' }}>
                           {match.team1}
                         </div>
                         <input
@@ -222,12 +222,12 @@ function Predictions() {
                           onChange={(e) => handleScoreChange(match.id, 'team1', e.target.value)}
                           disabled={isDeadline || saving[match.id]}
                           style={{
-                            width: '50px',
-                            padding: '8px',
-                            fontSize: '16px',
+                            width: '45px',
+                            padding: '6px',
+                            fontSize: '14px',
                             fontWeight: 'bold',
                             border: `2px solid ${PRIMARY}`,
-                            borderRadius: '6px',
+                            borderRadius: '4px',
                             textAlign: 'center',
                             cursor: isDeadline ? 'not-allowed' : 'text',
                             opacity: isDeadline ? 0.5 : 1
@@ -236,11 +236,11 @@ function Predictions() {
                       </div>
 
                       {/* Separator */}
-                      <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#ddd' }}>-</div>
+                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#ddd', marginTop: '8px' }}>-</div>
 
                       {/* Team 2 */}
                       <div style={{ textAlign: 'left', flex: 1 }}>
-                        <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px', fontWeight: '500' }}>
+                        <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500' }}>
                           {match.team2}
                         </div>
                         <input
@@ -251,12 +251,12 @@ function Predictions() {
                           onChange={(e) => handleScoreChange(match.id, 'team2', e.target.value)}
                           disabled={isDeadline || saving[match.id]}
                           style={{
-                            width: '50px',
-                            padding: '8px',
-                            fontSize: '16px',
+                            width: '45px',
+                            padding: '6px',
+                            fontSize: '14px',
                             fontWeight: 'bold',
                             border: `2px solid ${PRIMARY}`,
-                            borderRadius: '6px',
+                            borderRadius: '4px',
                             textAlign: 'center',
                             cursor: isDeadline ? 'not-allowed' : 'text',
                             opacity: isDeadline ? 0.5 : 1
@@ -272,12 +272,12 @@ function Predictions() {
                           onClick={() => handleSavePrediction(match.id)}
                           disabled={saving[match.id] || isSaved}
                           style={{
-                            padding: '8px 16px',
+                            padding: '6px 12px',
                             background: isSaved ? '#10b981' : GRADIENT,
                             color: 'white',
                             border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '13px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
                             fontWeight: 'bold',
                             cursor: saving[match.id] || isSaved ? 'not-allowed' : 'pointer',
                             transition: 'all 0.3s',
@@ -285,7 +285,7 @@ function Predictions() {
                             whiteSpace: 'nowrap'
                           }}
                         >
-                          {saving[match.id] ? '⏳' : (isSaved ? '✅ Enregistré' : '💾 Enregistrer')}
+                          {saving[match.id] ? '⏳' : (isSaved ? '✅' : '💾')}
                         </button>
                       )}
                       {isDeadline && (
