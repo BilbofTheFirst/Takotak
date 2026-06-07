@@ -5,15 +5,26 @@ function Simulation() {
   const [matches, setMatches] = useState([]);
   const [predictions, setPredictions] = useState({});
   const [simulations, setSimulations] = useState({});
+  const [koSimulations, setKoSimulations] = useState({});
   const [loading, setLoading] = useState(true);
+  const [saveMessage, setSaveMessage] = useState('');
 
   const PRIMARY = '#2563eb';
   const SECONDARY = '#ec4899';
   const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
 
+  // Charger les simulations depuis localStorage
   useEffect(() => {
     loadData();
   }, []);
+
+  // Sauvegarder automatiquement dans localStorage
+  useEffect(() => {
+    if (Object.keys(simulations).length > 0) {
+      localStorage.setItem('takotak_simulations', JSON.stringify(simulations));
+      localStorage.setItem('takotak_ko_simulations', JSON.stringify(koSimulations));
+    }
+  }, [simulations, koSimulations]);
 
   const loadData = async () => {
     try {
@@ -29,10 +40,25 @@ function Simulation() {
       const simMap = {};
       predictionsRes.data.forEach(p => {
         predMap[p.match_id] = p;
-        simMap[p.match_id] = { team1_goals: 0, team2_goals: 0 };
       });
       setPredictions(predMap);
-      setSimulations(simMap);
+
+      // Charger les simulations depuis localStorage
+      const savedSims = localStorage.getItem('takotak_simulations');
+      const savedKoSims = localStorage.getItem('takotak_ko_simulations');
+
+      if (savedSims) {
+        setSimulations(JSON.parse(savedSims));
+      } else {
+        groupMatches.forEach(match => {
+          simMap[match.id] = { team1_goals: 0, team2_goals: 0 };
+        });
+        setSimulations(simMap);
+      }
+
+      if (savedKoSims) {
+        setKoSimulations(JSON.parse(savedKoSims));
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -45,6 +71,16 @@ function Simulation() {
       ...prev,
       [matchId]: {
         ...prev[matchId],
+        [field]: Math.max(0, Math.min(20, parseInt(value) || 0))
+      }
+    }));
+  };
+
+  const handleKoSimulationChange = (matchId, field, value) => {
+    setKoSimulations(prev => ({
+      ...prev,
+      [matchId]: {
+        ...prev[matchId] || { team1_goals: 0, team2_goals: 0 },
         [field]: Math.max(0, Math.min(20, parseInt(value) || 0))
       }
     }));
@@ -141,7 +177,6 @@ function Simulation() {
       });
   };
 
-  // Memoize les données pour éviter recalculs inutiles
   const groupsData = useMemo(() => {
     const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
     const data = {};
@@ -178,7 +213,6 @@ function Simulation() {
   const getKOMatchups = useMemo(() => {
     const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
-    // Premiers et deuxièmes
     const firstPlaces = {};
     const secondPlaces = {};
     groups.forEach(g => {
@@ -189,31 +223,38 @@ function Simulation() {
       }
     });
 
-    // 4 meilleurs 3e
     const qualifiedThirds = allThirdPlaces.slice(0, 4);
 
-    // Matchs 16ème: Format officiel
     const round16 = [
-      { home: firstPlaces['A'], away: secondPlaces['B'], desc: 'G A1 - GB2' },
-      { home: firstPlaces['C'], away: secondPlaces['D'], desc: 'GC1 - GD2' },
-      { home: firstPlaces['E'], away: secondPlaces['F'], desc: 'GE1 - GF2' },
-      { home: firstPlaces['G'], away: secondPlaces['H'], desc: 'GG1 - GH2' },
-      { home: firstPlaces['B'], away: secondPlaces['A'], desc: 'GB1 - GA2' },
-      { home: firstPlaces['D'], away: secondPlaces['C'], desc: 'GD1 - GC2' },
-      { home: firstPlaces['F'], away: secondPlaces['E'], desc: 'GF1 - GE2' },
-      { home: firstPlaces['H'], away: secondPlaces['G'], desc: 'GH1 - GG2' },
-      { home: firstPlaces['I'], away: secondPlaces['J'], desc: 'GI1 - GJ2' },
-      { home: firstPlaces['K'], away: secondPlaces['L'], desc: 'GK1 - GL2' },
-      { home: firstPlaces['J'], away: secondPlaces['I'], desc: 'GJ1 - GI2' },
-      { home: firstPlaces['L'], away: secondPlaces['K'], desc: 'GL1 - GK2' },
-      { home: qualifiedThirds[0]?.team, away: firstPlaces['B'], desc: '3e + GB1' },
-      { home: qualifiedThirds[1]?.team, away: firstPlaces['D'], desc: '3e + GD1' },
-      { home: qualifiedThirds[2]?.team, away: firstPlaces['F'], desc: '3e + GF1' },
-      { home: qualifiedThirds[3]?.team, away: firstPlaces['H'], desc: '3e + GH1' }
+      { home: firstPlaces['A'], away: secondPlaces['B'], desc: 'GA1 - GB2', id: 'r16_1' },
+      { home: firstPlaces['C'], away: secondPlaces['D'], desc: 'GC1 - GD2', id: 'r16_2' },
+      { home: firstPlaces['E'], away: secondPlaces['F'], desc: 'GE1 - GF2', id: 'r16_3' },
+      { home: firstPlaces['G'], away: secondPlaces['H'], desc: 'GG1 - GH2', id: 'r16_4' },
+      { home: firstPlaces['B'], away: secondPlaces['A'], desc: 'GB1 - GA2', id: 'r16_5' },
+      { home: firstPlaces['D'], away: secondPlaces['C'], desc: 'GD1 - GC2', id: 'r16_6' },
+      { home: firstPlaces['F'], away: secondPlaces['E'], desc: 'GF1 - GE2', id: 'r16_7' },
+      { home: firstPlaces['H'], away: secondPlaces['G'], desc: 'GH1 - GG2', id: 'r16_8' },
+      { home: firstPlaces['I'], away: secondPlaces['J'], desc: 'GI1 - GJ2', id: 'r16_9' },
+      { home: firstPlaces['K'], away: secondPlaces['L'], desc: 'GK1 - GL2', id: 'r16_10' },
+      { home: firstPlaces['J'], away: secondPlaces['I'], desc: 'GJ1 - GI2', id: 'r16_11' },
+      { home: firstPlaces['L'], away: secondPlaces['K'], desc: 'GL1 - GK2', id: 'r16_12' },
+      { home: qualifiedThirds[0]?.team, away: firstPlaces['B'], desc: '3e1 - GB1', id: 'r16_13' },
+      { home: qualifiedThirds[1]?.team, away: firstPlaces['D'], desc: '3e2 - GD1', id: 'r16_14' },
+      { home: qualifiedThirds[2]?.team, away: firstPlaces['F'], desc: '3e3 - GF1', id: 'r16_15' },
+      { home: qualifiedThirds[3]?.team, away: firstPlaces['H'], desc: '3e4 - GH1', id: 'r16_16' }
     ];
 
     return { firstPlaces, secondPlaces, qualifiedThirds, round16 };
   }, [groupsData, allThirdPlaces]);
+
+  const clearSimulation = () => {
+    localStorage.removeItem('takotak_simulations');
+    localStorage.removeItem('takotak_ko_simulations');
+    setSimulations({});
+    setKoSimulations({});
+    setSaveMessage('Simulation réinitialisée!');
+    setTimeout(() => setSaveMessage(''), 2000);
+  };
 
   if (loading) {
     return (
@@ -242,13 +283,30 @@ function Simulation() {
     }}>
       <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ marginBottom: '40px' }}>
-          <h1 style={{ fontSize: '36px', color: '#333', margin: '0 0 10px 0', fontWeight: 'bold' }}>
-            🎮 Simulation Coupe du Monde
-          </h1>
-          <p style={{ color: '#666', margin: '0', fontSize: '16px' }}>
-            Simule les scores, vois les qualifiés et les matchs éliminatoires!
-          </p>
+        <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ fontSize: '36px', color: '#333', margin: '0 0 5px 0', fontWeight: 'bold' }}>
+              🎮 Simulation Coupe du Monde
+            </h1>
+            <p style={{ color: '#666', margin: '0', fontSize: '14px' }}>
+              Auto-sauvegardé dans votre navigateur • {saveMessage && <span style={{ color: '#059669' }}>✅ {saveMessage}</span>}
+            </p>
+          </div>
+          <button
+            onClick={clearSimulation}
+            style={{
+              padding: '8px 16px',
+              background: '#fee',
+              color: '#c33',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '500'
+            }}
+          >
+            🔄 Réinitialiser
+          </button>
         </div>
 
         {/* PHASE DE GROUPES - 2 par ligne */}
@@ -256,7 +314,7 @@ function Simulation() {
           <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '20px', fontWeight: 'bold' }}>
             🏆 Phase de Groupes
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(700px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(900px, 1fr))', gap: '20px' }}>
             {groups.map(groupLetter => {
               const groupIndex = groupLetter.charCodeAt(0) - 65;
               const startId = groupIndex * 6 + 1;
@@ -271,21 +329,21 @@ function Simulation() {
                     background: GRADIENT,
                     color: 'white',
                     padding: '12px 15px',
-                    borderRadius: '8px 8px 0 0'
+                    borderRadius: '8px 8px 0 0',
+                    fontWeight: 'bold'
                   }}>
-                    <h3 style={{ margin: '0', fontSize: '16px', fontWeight: 'bold' }}>
-                      Groupe {groupLetter}
-                    </h3>
+                    Groupe {groupLetter}
                   </div>
 
                   <div style={{
                     background: 'white',
                     borderRadius: '0 0 8px 8px',
                     boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    display: 'flex'
                   }}>
-                    {/* Matchs */}
-                    <div style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
+                    {/* MATCHS - Gauche */}
+                    <div style={{ flex: 1, padding: '12px', borderRight: '1px solid #eee' }}>
                       {groupMatches.map((match, idx) => {
                         const sim = simulations[match.id] || { team1_goals: 0, team2_goals: 0 };
                         const pred = predictions[match.id];
@@ -300,7 +358,7 @@ function Simulation() {
                             borderBottom: idx < groupMatches.length - 1 ? '1px solid #f0f0f0' : 'none',
                             fontSize: '12px'
                           }}>
-                            <div style={{ flex: 1, minWidth: '150px' }}>
+                            <div style={{ flex: 1, minWidth: '140px' }}>
                               <div style={{ fontWeight: '500', color: '#333' }}>
                                 {match.team1} vs {match.team2}
                               </div>
@@ -363,74 +421,77 @@ function Simulation() {
                       })}
                     </div>
 
-                    {/* Classement */}
-                    <table style={{
-                      width: '100%',
-                      borderCollapse: 'collapse',
-                      fontSize: '11px'
-                    }}>
-                      <thead>
-                        <tr style={{ background: '#f3f4f6' }}>
-                          <th style={{ padding: '6px 4px', textAlign: 'left', fontWeight: 'bold' }}>Équipe</th>
-                          <th style={{ padding: '6px 2px', textAlign: 'center', fontWeight: 'bold', width: '20px' }}>J</th>
-                          <th style={{ padding: '6px 2px', textAlign: 'center', fontWeight: 'bold', width: '20px' }}>G</th>
-                          <th style={{ padding: '6px 2px', textAlign: 'center', fontWeight: 'bold', width: '20px' }}>N</th>
-                          <th style={{ padding: '6px 2px', textAlign: 'center', fontWeight: 'bold', width: '20px' }}>P</th>
-                          <th style={{ padding: '6px 2px', textAlign: 'center', fontWeight: 'bold', width: '25px' }}>+/-</th>
-                          <th style={{ padding: '6px 2px', textAlign: 'center', fontWeight: 'bold', color: PRIMARY, width: '20px' }}>Pts</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {classification.map((data, idx) => {
-                          const diff = data.goalsFor - data.goalsAgainst;
-                          return (
-                            <tr key={data.team} style={{
-                              background: idx < 2 ? '#eff6ff' : 'white',
-                              borderTop: '1px solid #eee'
-                            }}>
-                              <td style={{ padding: '6px 4px', fontWeight: '500', fontSize: '11px' }}>
-                                <span style={{
-                                  display: 'inline-block',
-                                  width: '18px',
-                                  height: '18px',
-                                  background: idx < 2 ? GRADIENT : '#e0e0e0',
-                                  color: 'white',
-                                  borderRadius: '50%',
+                    {/* CLASSEMENT - Droite */}
+                    <div style={{ width: '320px', padding: '12px', background: '#f9f9f9' }}>
+                      <table style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        fontSize: '10px'
+                      }}>
+                        <thead>
+                          <tr style={{ background: '#f0f0f0' }}>
+                            <th style={{ padding: '4px 2px', textAlign: 'left', fontWeight: 'bold', fontSize: '9px' }}>Équipe</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>J</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>G</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>N</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>P</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '20px' }}>+/-</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', color: PRIMARY, width: '18px' }}>Pts</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {classification.map((data, idx) => {
+                            const diff = data.goalsFor - data.goalsAgainst;
+                            return (
+                              <tr key={data.team} style={{
+                                background: idx < 2 ? '#eff6ff' : 'white',
+                                borderTop: '1px solid #eee'
+                              }}>
+                                <td style={{ padding: '4px 2px', fontWeight: '500', fontSize: '9px' }}>
+                                  <span style={{
+                                    display: 'inline-block',
+                                    width: '16px',
+                                    height: '16px',
+                                    background: idx < 2 ? GRADIENT : '#e0e0e0',
+                                    color: 'white',
+                                    borderRadius: '50%',
+                                    textAlign: 'center',
+                                    lineHeight: '16px',
+                                    fontSize: '8px',
+                                    fontWeight: 'bold',
+                                    marginRight: '3px'
+                                  }}>
+                                    {idx + 1}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', fontSize: '9px' }}>{data.played}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', color: '#059669', fontWeight: 'bold', fontSize: '9px' }}>{data.won}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', color: '#92400e', fontWeight: 'bold', fontSize: '9px' }}>{data.draw}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', color: '#dc2626', fontWeight: 'bold', fontSize: '9px' }}>{data.lost}</td>
+                                <td style={{
+                                  padding: '4px 2px',
                                   textAlign: 'center',
-                                  lineHeight: '18px',
-                                  fontSize: '9px',
+                                  color: diff > 0 ? '#059669' : diff < 0 ? '#dc2626' : '#666',
                                   fontWeight: 'bold',
-                                  marginRight: '4px'
+                                  fontSize: '9px'
                                 }}>
-                                  {idx + 1}
-                                </span>
-                                {data.team}
-                              </td>
-                              <td style={{ padding: '6px 2px', textAlign: 'center' }}>{data.played}</td>
-                              <td style={{ padding: '6px 2px', textAlign: 'center', color: '#059669', fontWeight: 'bold' }}>{data.won}</td>
-                              <td style={{ padding: '6px 2px', textAlign: 'center', color: '#92400e', fontWeight: 'bold' }}>{data.draw}</td>
-                              <td style={{ padding: '6px 2px', textAlign: 'center', color: '#dc2626', fontWeight: 'bold' }}>{data.lost}</td>
-                              <td style={{
-                                padding: '6px 2px',
-                                textAlign: 'center',
-                                color: diff > 0 ? '#059669' : diff < 0 ? '#dc2626' : '#666',
-                                fontWeight: 'bold'
-                              }}>
-                                {data.gf}-{data.ga}
-                              </td>
-                              <td style={{
-                                padding: '6px 2px',
-                                textAlign: 'center',
-                                color: PRIMARY,
-                                fontWeight: 'bold'
-                              }}>
-                                {data.points}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                                  {data.gf}-{data.ga}
+                                </td>
+                                <td style={{
+                                  padding: '4px 2px',
+                                  textAlign: 'center',
+                                  color: PRIMARY,
+                                  fontWeight: 'bold',
+                                  fontSize: '9px'
+                                }}>
+                                  {data.points}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               );
@@ -458,12 +519,8 @@ function Simulation() {
                 <tr style={{ background: GRADIENT, color: 'white' }}>
                   <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold' }}>Équipe</th>
                   <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '60px' }}>Groupe</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '40px' }}>J</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '40px' }}>G</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '40px' }}>N</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '40px' }}>P</th>
+                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '40px' }}>Pts</th>
                   <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '50px' }}>Diff</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '40px', background: 'rgba(255,255,255,0.2)' }}>Pts</th>
                 </tr>
               </thead>
               <tbody>
@@ -492,10 +549,9 @@ function Simulation() {
                       {idx < 4 && <span style={{ marginLeft: '8px', color: '#059669', fontWeight: 'bold', fontSize: '11px' }}>✓ Qualifié</span>}
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 'bold' }}>{data.group}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>3</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center', color: '#059669', fontWeight: 'bold' }}>-</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center', color: '#92400e', fontWeight: 'bold' }}>-</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center', color: '#dc2626', fontWeight: 'bold' }}>-</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 'bold', color: PRIMARY }}>
+                      {data.points}
+                    </td>
                     <td style={{
                       padding: '10px 12px',
                       textAlign: 'center',
@@ -503,9 +559,6 @@ function Simulation() {
                       color: data.diff > 0 ? '#059669' : '#dc2626'
                     }}>
                       {data.diff > 0 ? '+' : ''}{data.diff}
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 'bold', color: PRIMARY }}>
-                      {data.points}
                     </td>
                   </tr>
                 ))}
@@ -517,29 +570,17 @@ function Simulation() {
         {/* PHASE ÉLIMINATOIRE */}
         <div style={{ marginBottom: '50px' }}>
           <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '20px', fontWeight: 'bold' }}>
-            🏟️ Phase Éliminatoire
+            🏟️ 16ème de Finale
           </h2>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '15px'
+          }}>
+            {getKOMatchups.round16.map((match, idx) => {
+              const sim = koSimulations[match.id] || { team1_goals: 0, team2_goals: 0 };
 
-          {/* 16ème de Finale */}
-          <div style={{ marginBottom: '30px' }}>
-            <h3 style={{
-              fontSize: '18px',
-              color: '#333',
-              padding: '10px 15px',
-              background: GRADIENT,
-              color: 'white',
-              borderRadius: '8px',
-              margin: '0 0 15px 0',
-              fontWeight: 'bold'
-            }}>
-              🥊 16ème de Finale
-            </h3>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '15px'
-            }}>
-              {getKOMatchups.round16.map((match, idx) => (
+              return (
                 <div key={idx} style={{
                   border: '1px solid #ddd',
                   borderRadius: '6px',
@@ -563,39 +604,75 @@ function Simulation() {
                     fontSize: '12px',
                     fontWeight: '500'
                   }}>
-                    <div style={{
-                      padding: '8px',
-                      background: '#f9f9f9',
-                      borderRadius: '4px',
-                      borderLeft: `3px solid ${PRIMARY}`
-                    }}>
-                      {match.home || '?'}
+                    {/* Team 1 */}
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <div style={{
+                        flex: 1,
+                        padding: '8px',
+                        background: '#f9f9f9',
+                        borderRadius: '4px',
+                        borderLeft: `3px solid ${PRIMARY}`,
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {match.home || '?'}
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        max="20"
+                        value={sim.team1_goals}
+                        onChange={(e) => handleKoSimulationChange(match.id, 'team1_goals', e.target.value)}
+                        style={{
+                          width: '40px',
+                          padding: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          border: `1px solid ${PRIMARY}`,
+                          borderRadius: '4px',
+                          textAlign: 'center'
+                        }}
+                      />
                     </div>
-                    <div style={{ textAlign: 'center', color: '#999', fontSize: '11px' }}>vs</div>
-                    <div style={{
-                      padding: '8px',
-                      background: '#f9f9f9',
-                      borderRadius: '4px',
-                      borderLeft: `3px solid ${SECONDARY}`
-                    }}>
-                      {match.away || '?'}
+
+                    <div style={{ textAlign: 'center', color: '#999', fontSize: '10px' }}>vs</div>
+
+                    {/* Team 2 */}
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <input
+                        type="number"
+                        min="0"
+                        max="20"
+                        value={sim.team2_goals}
+                        onChange={(e) => handleKoSimulationChange(match.id, 'team2_goals', e.target.value)}
+                        style={{
+                          width: '40px',
+                          padding: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          border: `1px solid ${PRIMARY}`,
+                          borderRadius: '4px',
+                          textAlign: 'center'
+                        }}
+                      />
+                      <div style={{
+                        flex: 1,
+                        padding: '8px',
+                        background: '#f9f9f9',
+                        borderRadius: '4px',
+                        borderLeft: `3px solid ${SECONDARY}`,
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {match.away || '?'}
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Message pour phases suivantes */}
-          <div style={{
-            background: '#f0f4f8',
-            padding: '20px',
-            borderRadius: '8px',
-            textAlign: 'center',
-            color: '#666',
-            fontSize: '14px'
-          }}>
-            Les phases 8ème, Quarts, Semis et Final se calculeront automatiquement à mesure que les matchs précédents se déroulent! 🚀
+              );
+            })}
           </div>
         </div>
       </div>
