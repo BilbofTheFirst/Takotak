@@ -266,7 +266,7 @@ function Predictions() {
                       {/* Team 1 */}
                       <div style={{ textAlign: 'right', flex: 1 }}>
                         <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                          {match.team1 && getFlag(match.team1) && <img src={getFlag(match.team1)} alt={match.team1} style={{ height: '20px', width: 'auto' }} />}
+                          {match.team1 && getFlag(match.team1) && <img src={getFlag(match.team1)} alt={match.team1} style={{ height: '20px', width: '20px', borderRadius: '50%', border: '1px solid #ccc', objectFit: 'cover' }} />}
                           {getTeamLabel(match.id, 'team1', match.team1)}
                         </div>
                         <input
@@ -297,7 +297,7 @@ function Predictions() {
                       <div style={{ textAlign: 'left', flex: 1 }}>
                         <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           {getTeamLabel(match.id, 'team2', match.team2)}
-                          {match.team2 && getFlag(match.team2) && <img src={getFlag(match.team2)} alt={match.team2} style={{ height: '20px', width: 'auto' }} />}
+                          {match.team2 && getFlag(match.team2) && <img src={getFlag(match.team2)} alt={match.team2} style={{ height: '20px', width: '20px', borderRadius: '50%', border: '1px solid #ccc', objectFit: 'cover' }} />}
                         </div>
                         <input
                           type="number"
