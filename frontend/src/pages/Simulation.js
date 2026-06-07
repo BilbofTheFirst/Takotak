@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { matchesService, predictionsService } from '../services/api';
 import { getCountryFlag } from '../utils/flags';
-import KOBracket from '../components/KOBracket';
+import TournamentBracket from '../components/TournamentBracket';
 
 function Simulation() {
   const [matches, setMatches] = useState([]);
@@ -576,7 +576,7 @@ function Simulation() {
         </div>
 
         {/* PHASE ÉLIMINATOIRE - Bracket */}
-        <KOBracket
+        <TournamentBracket
           groupsData={groupsData}
           allThirdPlaces={allThirdPlaces}
           koSimulations={koSimulations}
