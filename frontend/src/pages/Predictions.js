@@ -245,79 +245,77 @@ function Predictions() {
                       {matchLabel}
                     </div>
 
-                    {/* Time */}
+                    {/* Time - Heure belgique DIRECTE sans conversion */}
                     <div style={{
                       color: '#999',
                       fontSize: '12px',
                       fontWeight: '500',
                       minWidth: '45px'
                     }}>
-                      {new Date(match.start_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      {match.start_time ? match.start_time.substring(11, 16) : '--:--'}
                     </div>
 
-                    {/* Match Score Input */}
+                    {/* Match Score Input - UNE LIGNE */}
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
+                      gap: '6px',
                       flex: 1,
-                      minWidth: '280px'
+                      minWidth: '400px'
                     }}>
-                      {/* Team 1 */}
-                      <div style={{ textAlign: 'right', flex: 1 }}>
-                        <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                          {match.team1 && getFlag(match.team1) && <img src={getFlag(match.team1)} alt={match.team1} style={{ height: '20px', width: '20px', borderRadius: '50%', border: '1px solid #ccc', objectFit: 'cover' }} />}
-                          {getTeamLabel(match.id, 'team1', match.team1)}
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          max="20"
-                          value={scores.team1}
-                          onChange={(e) => handleScoreChange(match.id, 'team1', e.target.value)}
-                          disabled={isDeadline || saving[match.id]}
-                          style={{
-                            width: '45px',
-                            padding: '6px',
-                            fontSize: '14px',
-                            fontWeight: 'bold',
-                            border: `2px solid ${PRIMARY}`,
-                            borderRadius: '4px',
-                            textAlign: 'center',
-                            cursor: isDeadline ? 'not-allowed' : 'text',
-                            opacity: isDeadline ? 0.5 : 1
-                          }}
-                        />
+                      {/* Team 1: Drapeau + Nom */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: '100px' }}>
+                        {match.team1 && getFlag(match.team1) && <img src={getFlag(match.team1)} alt={match.team1} style={{ height: '20px', width: '20px', borderRadius: '50%', border: '1px solid #ccc', objectFit: 'cover' }} />}
+                        <span style={{ fontSize: '12px', fontWeight: '500', color: '#333' }}>{getTeamLabel(match.id, 'team1', match.team1)}</span>
                       </div>
 
-                      {/* Separator */}
-                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#ddd', marginTop: '8px' }}>-</div>
+                      {/* Score 1 */}
+                      <input
+                        type="number"
+                        min="0"
+                        max="20"
+                        value={scores.team1}
+                        onChange={(e) => handleScoreChange(match.id, 'team1', e.target.value)}
+                        disabled={isDeadline || saving[match.id]}
+                        style={{
+                          width: '40px',
+                          padding: '4px',
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                          border: `2px solid ${PRIMARY}`,
+                          borderRadius: '4px',
+                          textAlign: 'center',
+                          cursor: isDeadline ? 'not-allowed' : 'pointer'
+                        }}
+                      />
 
-                      {/* Team 2 */}
-                      <div style={{ textAlign: 'left', flex: 1 }}>
-                        <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          {getTeamLabel(match.id, 'team2', match.team2)}
-                          {match.team2 && getFlag(match.team2) && <img src={getFlag(match.team2)} alt={match.team2} style={{ height: '20px', width: '20px', borderRadius: '50%', border: '1px solid #ccc', objectFit: 'cover' }} />}
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          max="20"
-                          value={scores.team2}
-                          onChange={(e) => handleScoreChange(match.id, 'team2', e.target.value)}
-                          disabled={isDeadline || saving[match.id]}
-                          style={{
-                            width: '45px',
-                            padding: '6px',
-                            fontSize: '14px',
-                            fontWeight: 'bold',
-                            border: `2px solid ${PRIMARY}`,
-                            borderRadius: '4px',
-                            textAlign: 'center',
-                            cursor: isDeadline ? 'not-allowed' : 'text',
-                            opacity: isDeadline ? 0.5 : 1
-                          }}
-                        />
+                      {/* Separator */}
+                      <span style={{ color: '#ccc', fontWeight: 'bold' }}>-</span>
+
+                      {/* Score 2 */}
+                      <input
+                        type="number"
+                        min="0"
+                        max="20"
+                        value={scores.team2}
+                        onChange={(e) => handleScoreChange(match.id, 'team2', e.target.value)}
+                        disabled={isDeadline || saving[match.id]}
+                        style={{
+                          width: '40px',
+                          padding: '4px',
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                          border: `2px solid ${PRIMARY}`,
+                          borderRadius: '4px',
+                          textAlign: 'center',
+                          cursor: isDeadline ? 'not-allowed' : 'pointer'
+                        }}
+                      />
+
+                      {/* Team 2: Nom + Drapeau */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: '100px', justifyContent: 'flex-end' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '500', color: '#333' }}>{getTeamLabel(match.id, 'team2', match.team2)}</span>
+                        {match.team2 && getFlag(match.team2) && <img src={getFlag(match.team2)} alt={match.team2} style={{ height: '20px', width: '20px', borderRadius: '50%', border: '1px solid #ccc', objectFit: 'cover' }} />}
                       </div>
                     </div>
 
