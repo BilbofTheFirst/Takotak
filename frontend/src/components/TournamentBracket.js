@@ -1,8 +1,28 @@
 import React, { useMemo, useState } from 'react';
-import { getCountryFlag } from '../utils/flags';
 
 function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, PRIMARY, SECONDARY, GRADIENT }) {
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+
+  // Emoji flags mapping (fallback if DB doesn't provide them)
+  const flagMap = {
+    'Mexique': '🇲🇽', 'Afrique du Sud': '🇿🇦', 'Corée du Sud': '🇰🇷', 'République tchèque': '🇨🇿',
+    'Canada': '🇨🇦', 'Bosnie-Herzégovine': '🇧🇦', 'Qatar': '🇶🇦', 'Suisse': '🇨🇭',
+    'Brésil': '🇧🇷', 'Maroc': '🇲🇦', 'Haïti': '🇭🇹', 'Écosse': '🇬🇧',
+    'États-Unis': '🇺🇸', 'Paraguay': '🇵🇾', 'Australie': '🇦🇺', 'Turquie': '🇹🇷',
+    'Allemagne': '🇩🇪', 'Curaçao': '🇨🇼', 'Côte d\'Ivoire': '🇨🇮', 'Équateur': '🇪🇨',
+    'Pays-Bas': '🇳🇱', 'Japon': '🇯🇵', 'Suède': '🇸🇪', 'Tunisie': '🇹🇳',
+    'Belgique': '🇧🇪', 'Égypte': '🇪🇬', 'Iran': '🇮🇷', 'Nouvelle-Zélande': '🇳🇿',
+    'Espagne': '🇪🇸', 'Cap-Vert': '🇨🇻', 'Arabie saoudite': '🇸🇦', 'Uruguay': '🇺🇾',
+    'France': '🇫🇷', 'Sénégal': '🇸🇳', 'Irak': '🇮🇶', 'Norvège': '🇳🇴',
+    'Argentine': '🇦🇷', 'Algérie': '🇩🇿', 'Autriche': '🇦🇹', 'Jordanie': '🇯🇴',
+    'Portugal': '🇵🇹', 'RD Congo': '🇨🇩', 'Ouzbékistan': '🇺🇿', 'Colombie': '🇨🇴',
+    'Angleterre': '🇬🇧', 'Croatie': '🇭🇷', 'Ghana': '🇬🇭', 'Panama': '🇵🇦'
+  };
+
+  const getFlag = (team) => {
+    if (!team) return '🌍';
+    return flagMap[team] || '🌍';
+  };
 
   const bracket = useMemo(() => {
     const classifications = {};
@@ -57,7 +77,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     return winner === 'home' ? match.home : winner === 'away' ? match.away : null;
   };
 
-  // Get next round matchups based on 16ème results
+  // 8ème matchups
   const round8Matchups = [
     { id: 'r8_1', prev1: 'r16_1', prev2: 'r16_2' },
     { id: 'r8_2', prev1: 'r16_3', prev2: 'r16_4' },
@@ -69,7 +89,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     { id: 'r8_8', prev1: 'r16_15', prev2: 'r16_16' }
   ];
 
-  const MatchTeam = ({ team, flag, isWinner = false, isEditable = false, goals, onGoalsChange }) => (
+  const MatchTeam = ({ team, isWinner = false, isEditable = false, goals, onGoalsChange }) => (
     <div
       style={{
         padding: '8px 10px',
@@ -81,8 +101,16 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
         minHeight: '32px'
       }}
     >
-      <div style={{ flex: 1, minWidth: 0, fontSize: '12px', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {flag} {team || 'TBD'}
+      <div style={{
+        flex: 1,
+        minWidth: 0,
+        fontSize: '12px',
+        fontWeight: '500',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis'
+      }}>
+        {getFlag(team)} {team || 'TBD'}
       </div>
       {isEditable && (
         <input
@@ -106,7 +134,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     </div>
   );
 
-  const MatchCard = ({ match, isEditable = false, isRound16 = false }) => {
+  const MatchCard = ({ match, isEditable = false, onHome, onAway }) => {
     const sim = koSimulations[match.id] || { team1_goals: 0, team2_goals: 0 };
     const winner = getWinner(match.id);
 
@@ -118,44 +146,26 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           borderRadius: '6px',
           overflow: 'hidden',
           boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-          minWidth: '160px',
-          transition: 'all 0.3s ease'
+          minWidth: '160px'
         }}
       >
         <MatchTeam
           team={match.home}
-          flag={getCountryFlag(match.home)}
           isWinner={winner === 'home'}
-          isEditable={isRound16}
+          isEditable={isEditable}
           goals={sim.team1_goals}
-          onGoalsChange={(val) => onScoreChange(match.id, 'team1_goals', val)}
+          onGoalsChange={onHome}
         />
         <MatchTeam
           team={match.away}
-          flag={getCountryFlag(match.away)}
           isWinner={winner === 'away'}
-          isEditable={isRound16}
+          isEditable={isEditable}
           goals={sim.team2_goals}
-          onGoalsChange={(val) => onScoreChange(match.id, 'team2_goals', val)}
+          onGoalsChange={onAway}
         />
       </div>
     );
   };
-
-  const Column = ({ title, matches, isEditable = false }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '60px', alignItems: 'center', flex: 1 }}>
-      <div style={{ fontSize: '12px', fontWeight: 'bold', color: PRIMARY, textAlign: 'center', minHeight: '20px' }}>
-        {title}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '60px', width: '100%' }}>
-        {matches.map((match, idx) => (
-          <div key={match.id} style={{ width: '100%' }}>
-            <MatchCard match={match} isEditable={isEditable} isRound16={isEditable} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 
   return (
     <div style={{ marginBottom: '50px' }}>
@@ -172,110 +182,105 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           overflowX: 'auto'
         }}
       >
-        {/* SVG for connecting lines */}
-        <svg
-          style={{
-            position: 'absolute',
-            top: '0',
-            left: '0',
-            width: '100%',
-            height: '100%',
-            pointerEvents: 'none',
-            zIndex: 0
-          }}
-          viewBox="0 0 1400 900"
-        >
-          {/* Connecting lines from 16ème to 8ème */}
-          <g stroke={PRIMARY} strokeWidth="2" opacity="0.3">
-            {/* Top bracket connections */}
-            <line x1="160" y1="50" x2="220" y2="90" />
-            <line x1="160" y1="110" x2="220" y2="90" />
-            <line x1="160" y1="170" x2="220" y2="210" />
-            <line x1="160" y1="230" x2="220" y2="210" />
-            {/* More connections... (simplified for demo) */}
-          </g>
-        </svg>
+        {/* Main Bracket Grid */}
+        <div style={{ minWidth: '1400px' }}>
+          {/* Headers */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '30px', marginBottom: '30px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY, textAlign: 'center' }}>🥊 16ème (16)</div>
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY, textAlign: 'center' }}>⚡ 8ème (8)</div>
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY, textAlign: 'center' }}>🎯 Quarts (4)</div>
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY, textAlign: 'center' }}>🏅 Semis (2)</div>
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY, textAlign: 'center' }}>👑 FINALE</div>
+          </div>
 
-        {/* Bracket Grid */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '40px',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            minWidth: '1300px',
-            position: 'relative',
-            zIndex: 1
-          }}
-        >
-          {/* 16ème de Finale */}
-          <Column title="🥊 16ème (16)" matches={bracket.round16} isEditable={true} />
+          {/* Matches Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '30px' }}>
+            {/* 16ème - Column 1 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '80px' }}>
+              {bracket.round16.map((match) => (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  isEditable={true}
+                  onHome={(val) => onScoreChange(match.id, 'team1_goals', val)}
+                  onAway={(val) => onScoreChange(match.id, 'team2_goals', val)}
+                />
+              ))}
+            </div>
 
-          {/* 8ème de Finale */}
-          <Column
-            title="⚡ 8ème (8)"
-            matches={round8Matchups.map(matchup => ({
-              id: matchup.id,
-              home: getWinnerTeam(matchup.prev1),
-              away: getWinnerTeam(matchup.prev2)
-            }))}
-          />
+            {/* 8ème - Column 2 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '80px', paddingTop: '100px' }}>
+              {round8Matchups.map(matchup => (
+                <MatchCard
+                  key={matchup.id}
+                  match={{
+                    id: matchup.id,
+                    home: getWinnerTeam(matchup.prev1),
+                    away: getWinnerTeam(matchup.prev2)
+                  }}
+                  isEditable={true}
+                  onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
+                  onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
+                />
+              ))}
+            </div>
 
-          {/* Quart de Finale */}
-          <Column
-            title="🎯 Quarts (4)"
-            matches={[
-              {
-                id: 'qf_1',
-                home: getWinnerTeam('r8_1'),
-                away: getWinnerTeam('r8_2')
-              },
-              {
-                id: 'qf_2',
-                home: getWinnerTeam('r8_3'),
-                away: getWinnerTeam('r8_4')
-              },
-              {
-                id: 'qf_3',
-                home: getWinnerTeam('r8_5'),
-                away: getWinnerTeam('r8_6')
-              },
-              {
-                id: 'qf_4',
-                home: getWinnerTeam('r8_7'),
-                away: getWinnerTeam('r8_8')
-              }
-            ]}
-          />
+            {/* Quarts - Column 3 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '200px', paddingTop: '300px' }}>
+              {[
+                { id: 'qf_1', prev1: 'r8_1', prev2: 'r8_2' },
+                { id: 'qf_2', prev1: 'r8_3', prev2: 'r8_4' },
+                { id: 'qf_3', prev1: 'r8_5', prev2: 'r8_6' },
+                { id: 'qf_4', prev1: 'r8_7', prev2: 'r8_8' }
+              ].map(matchup => (
+                <MatchCard
+                  key={matchup.id}
+                  match={{
+                    id: matchup.id,
+                    home: getWinnerTeam(matchup.prev1),
+                    away: getWinnerTeam(matchup.prev2)
+                  }}
+                  isEditable={true}
+                  onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
+                  onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
+                />
+              ))}
+            </div>
 
-          {/* Demi-Finale */}
-          <Column
-            title="🏅 Semis (2)"
-            matches={[
-              {
-                id: 'sf_1',
-                home: getWinnerTeam('qf_1'),
-                away: getWinnerTeam('qf_2')
-              },
-              {
-                id: 'sf_2',
-                home: getWinnerTeam('qf_3'),
-                away: getWinnerTeam('qf_4')
-              }
-            ]}
-          />
+            {/* Semis - Column 4 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '500px', paddingTop: '500px' }}>
+              {[
+                { id: 'sf_1', prev1: 'qf_1', prev2: 'qf_2' },
+                { id: 'sf_2', prev1: 'qf_3', prev2: 'qf_4' }
+              ].map(matchup => (
+                <MatchCard
+                  key={matchup.id}
+                  match={{
+                    id: matchup.id,
+                    home: getWinnerTeam(matchup.prev1),
+                    away: getWinnerTeam(matchup.prev2)
+                  }}
+                  isEditable={true}
+                  onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
+                  onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
+                />
+              ))}
+            </div>
 
-          {/* Finale */}
-          <Column
-            title="👑 FINALE"
-            matches={[
-              {
-                id: 'final',
-                home: getWinnerTeam('sf_1'),
-                away: getWinnerTeam('sf_2')
-              }
-            ]}
-          />
+            {/* Final - Column 5 */}
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: '550px' }}>
+              <MatchCard
+                match={{
+                  id: 'final',
+                  home: getWinnerTeam('sf_1'),
+                  away: getWinnerTeam('sf_2')
+                }}
+                isEditable={true}
+                onHome={(val) => onScoreChange('final', 'team1_goals', val)}
+                onAway={(val) => onScoreChange('final', 'team2_goals', val)}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -291,11 +296,14 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
               home: getWinnerTeam('sf_2'),
               away: getWinnerTeam('sf_1')
             }}
+            isEditable={true}
+            onHome={(val) => onScoreChange('third', 'team1_goals', val)}
+            onAway={(val) => onScoreChange('third', 'team2_goals', val)}
           />
         </div>
       </div>
 
-      {/* Info Box */}
+      {/* Info */}
       <div
         style={{
           marginTop: '30px',
@@ -307,7 +315,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           color: '#1e40af'
         }}
       >
-        💡 <strong>Comment ça marche:</strong> Entrez les scores des 16ème (colonnes gauche). Les équipes gagnantes remontent automatiquement dans les phases suivantes. Le bracket se complète tout seul! 🚀
+        💡 <strong>Comment ça marche:</strong> Entrez les scores pour TOUS les matchs. Les gagnants remontent automatiquement dans les phases suivantes! 🚀
       </div>
     </div>
   );
