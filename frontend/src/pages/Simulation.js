@@ -166,6 +166,191 @@ function Simulation() {
           </p>
         </div>
 
+        {/* 16ème de Finale Preview */}
+        {(() => {
+          const getWinnerAndRunner = (groupLetter) => {
+            const stats = calculateGroupStats(groupLetter);
+            const teams = getTeamsInGroup(groupLetter);
+            const sorted = teams
+              .map(team => ({ team, ...stats[team] }))
+              .sort((a, b) => {
+                if (b.points !== a.points) return b.points - a.points;
+                return (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst);
+              });
+            return { winner: sorted[0]?.team, runner: sorted[1]?.team, third: sorted[2]?.team };
+          };
+
+          const groupPairs = [
+            { g1: 'A', g2: 'B' },
+            { g1: 'C', g2: 'D' },
+            { g1: 'E', g2: 'F' },
+            { g1: 'G', g2: 'H' },
+            { g1: 'I', g2: 'J' },
+            { g1: 'K', g2: 'L' }
+          ];
+
+          return (
+            <div style={{ marginBottom: '30px' }}>
+              <div style={{
+                background: GRADIENT,
+                color: 'white',
+                padding: '12px 15px',
+                borderRadius: '8px 8px 0 0'
+              }}>
+                <h2 style={{ margin: '0', fontSize: '18px', fontWeight: 'bold' }}>
+                  🏟️ 16ème de Finale (Preview)
+                </h2>
+              </div>
+              <div style={{
+                background: 'white',
+                borderRadius: '0 0 8px 8px',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+                overflow: 'hidden',
+                padding: '15px',
+                marginBottom: '20px'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '15px' }}>
+                  {groupPairs.map(pair => {
+                    const g1 = getWinnerAndRunner(pair.g1);
+                    const g2 = getWinnerAndRunner(pair.g2);
+
+                    return (
+                      <div key={pair.g1 + pair.g2} style={{
+                        border: '1px solid #eee',
+                        borderRadius: '6px',
+                        padding: '12px',
+                        background: '#f9f9f9'
+                      }}>
+                        <div style={{ fontSize: '11px', color: '#999', marginBottom: '8px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                          G{pair.g1} 1er vs G{pair.g2} 2e
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                          fontSize: '13px',
+                          fontWeight: '500'
+                        }}>
+                          <div style={{ padding: '6px', background: 'white', borderRadius: '4px' }}>
+                            {g1.winner || 'TBD'}
+                          </div>
+                          <div style={{ textAlign: 'center', color: '#999', fontSize: '11px' }}>vs</div>
+                          <div style={{ padding: '6px', background: 'white', borderRadius: '4px' }}>
+                            {g2.runner || 'TBD'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Meilleurs tiers */}
+        {(() => {
+          const thirdPlaces = [];
+          groups.forEach(groupLetter => {
+            const stats = calculateGroupStats(groupLetter);
+            const teams = getTeamsInGroup(groupLetter);
+            const sorted = teams
+              .map(team => ({ team, ...stats[team] }))
+              .sort((a, b) => {
+                if (b.points !== a.points) return b.points - a.points;
+                return (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst);
+              });
+
+            if (sorted.length >= 3) {
+              thirdPlaces.push({
+                team: sorted[2].team,
+                group: groupLetter,
+                points: sorted[2].points,
+                gf: sorted[2].goalsFor,
+                ga: sorted[2].goalsAgainst,
+                diff: sorted[2].goalsFor - sorted[2].goalsAgainst
+              });
+            }
+          });
+
+          const qualified = thirdPlaces
+            .sort((a, b) => {
+              if (b.points !== a.points) return b.points - a.points;
+              return b.diff - a.diff;
+            })
+            .slice(0, 4);
+
+          return (
+            <div style={{ marginBottom: '30px' }}>
+              <div style={{
+                background: GRADIENT,
+                color: 'white',
+                padding: '12px 15px',
+                borderRadius: '8px 8px 0 0'
+              }}>
+                <h2 style={{ margin: '0', fontSize: '18px', fontWeight: 'bold' }}>
+                  🥉 Meilleurs 3e (Qualifiés)
+                </h2>
+              </div>
+              <div style={{
+                background: 'white',
+                borderRadius: '0 0 8px 8px',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+                overflow: 'hidden',
+                padding: '15px',
+                marginBottom: '20px'
+              }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '12px'
+                }}>
+                  <thead>
+                    <tr style={{ background: '#f3f4f6', borderBottom: '1px solid #ddd' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 'bold' }}>Équipe</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 'bold', width: '40px' }}>Groupe</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 'bold', width: '40px' }}>Pts</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 'bold', width: '40px' }}>+/-</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {qualified.map((data, idx) => (
+                      <tr key={data.team} style={{
+                        background: '#eff6ff',
+                        borderBottom: '1px solid #eee'
+                      }}>
+                        <td style={{ padding: '8px 10px', fontWeight: '500' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            width: '24px',
+                            height: '24px',
+                            background: GRADIENT,
+                            color: 'white',
+                            borderRadius: '50%',
+                            textAlign: 'center',
+                            lineHeight: '24px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            marginRight: '8px'
+                          }}>
+                            {idx + 1}
+                          </span>
+                          {data.team}
+                        </td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', color: '#666' }}>{data.group}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 'bold', color: PRIMARY }}>{data.points}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 'bold', color: data.diff > 0 ? '#059669' : '#dc2626' }}>
+                          {data.diff > 0 ? '+' : ''}{data.diff}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Groups */}
         {groups.map(groupLetter => {
           const groupIndex = groupLetter.charCodeAt(0) - 65;
@@ -200,7 +385,7 @@ function Simulation() {
                 borderRadius: '0 0 8px 8px',
                 boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
                 overflow: 'hidden',
-                minHeight: '400px'
+                minHeight: 'auto'
               }}>
                 {/* Left: Matches */}
                 <div style={{
