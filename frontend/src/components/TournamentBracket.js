@@ -1,57 +1,26 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 
 function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, PRIMARY, SECONDARY, GRADIENT }) {
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
-  // Emoji flags - convert country codes to emojis
-  const countryCodeToFlag = {
-    'ZA': '🇿🇦', 'DZ': '🇩🇿', 'DE': '🇩🇪', 'GB': '🇬🇧', 'SA': '🇸🇦', 'AR': '🇦🇷',
-    'AU': '🇦🇺', 'AT': '🇦🇹', 'BE': '🇧🇪', 'BA': '🇧🇦', 'BR': '🇧🇷', 'CA': '🇨🇦',
-    'CV': '🇨🇻', 'CL': '🇨🇱', 'CO': '🇨🇴', 'KR': '🇰🇷', 'CI': '🇨🇮', 'HR': '🇭🇷',
-    'CW': '🇨🇼', 'EG': '🇪🇬', 'ES': '🇪🇸', 'US': '🇺🇸', 'FR': '🇫🇷', 'GH': '🇬🇭',
-    'HT': '🇭🇹', 'HU': '🇭🇺', 'IQ': '🇮🇶', 'IR': '🇮🇷', 'IE': '🇮🇪', 'IS': '🇮🇸',
-    'IL': '🇮🇱', 'IT': '🇮🇹', 'JM': '🇯🇲', 'JP': '🇯🇵', 'JO': '🇯🇴', 'KZ': '🇰🇿',
-    'MW': '🇲🇼', 'ML': '🇲🇱', 'MA': '🇲🇦', 'MX': '🇲🇽', 'MD': '🇲🇩', 'ME': '🇲🇪',
-    'MZ': '🇲🇿', 'NP': '🇳🇵', 'NZ': '🇳🇿', 'NO': '🇳🇴', 'OM': '🇴🇲', 'UZ': '🇺🇿',
-    'PS': '🇵🇸', 'PA': '🇵🇦', 'PG': '🇵🇬', 'PY': '🇵🇾', 'NL': '🇳🇱', 'PE': '🇵🇪',
-    'PH': '🇵🇭', 'PL': '🇵🇱', 'PT': '🇵🇹', 'QA': '🇶🇦', 'RO': '🇷🇴', 'RU': '🇷🇺',
-    'RW': '🇷🇼', 'EH': '🇪🇭', 'SV': '🇸🇻', 'WS': '🇼🇸', 'AS': '🇦🇸', 'SM': '🇸🇲',
-    'SN': '🇸🇳', 'RS': '🇷🇸', 'SC': '🇸🇨', 'SL': '🇸🇱', 'SG': '🇸🇬', 'SX': '🇸🇽',
-    'SK': '🇸🇰', 'SI': '🇸🇮', 'SO': '🇸🇴', 'SD': '🇸🇩', 'SS': '🇸🇸', 'LK': '🇱🇰',
-    'SE': '🇸🇪', 'CH': '🇨🇭', 'SR': '🇸🇷', 'SZ': '🇸🇿', 'SY': '🇸🇾', 'TJ': '🇹🇯',
-    'TW': '🇹🇼', 'TZ': '🇹🇿', 'TD': '🇹🇩', 'TH': '🇹🇭', 'TL': '🇹🇱', 'TG': '🇹🇬',
-    'TK': '🇹🇰', 'TO': '🇹🇴', 'TT': '🇹🇹', 'TN': '🇹🇳', 'TM': '🇹🇲', 'TR': '🇹🇷',
-    'TV': '🇹🇻', 'UA': '🇺🇦', 'KM': '🇰🇲', 'UY': '🇺🇾', 'VU': '🇻🇺', 'VA': '🇻🇦',
-    'VE': '🇻🇪', 'VN': '🇻🇳', 'WF': '🇼🇫', 'YE': '🇾🇪', 'ZM': '🇿🇲', 'ZW': '🇿🇼',
-    'CZ': '🇨🇿', 'EC': '🇪🇨', 'SC': '🇬🇧'
+  // Simple team name to flag
+  const teamFlags = {
+    'Belgique': '🇧🇪', 'Canada': '🇨🇦', 'Mexique': '🇲🇽', 'Afrique du Sud': '🇿🇦',
+    'Corée du Sud': '🇰🇷', 'République tchèque': '🇨🇿', 'Bosnie-Herzégovine': '🇧🇦',
+    'Qatar': '🇶🇦', 'Suisse': '🇨🇭', 'Brésil': '🇧🇷', 'Maroc': '🇲🇦',
+    'Haïti': '🇭🇹', 'Écosse': '🇬🇧', 'États-Unis': '🇺🇸', 'Paraguay': '🇵🇾',
+    'Australie': '🇦🇺', 'Turquie': '🇹🇷', 'Allemagne': '🇩🇪', 'Curaçao': '🇨🇼',
+    'Côte d\'Ivoire': '🇨🇮', 'Équateur': '🇪🇨', 'Pays-Bas': '🇳🇱', 'Japon': '🇯🇵',
+    'Suède': '🇸🇪', 'Tunisie': '🇹🇳', 'Égypte': '🇪🇬', 'Iran': '🇮🇷',
+    'Nouvelle-Zélande': '🇳🇿', 'Espagne': '🇪🇸', 'Cap-Vert': '🇨🇻',
+    'Arabie saoudite': '🇸🇦', 'Uruguay': '🇺🇾', 'France': '🇫🇷', 'Sénégal': '🇸🇳',
+    'Irak': '🇮🇶', 'Norvège': '🇳🇴', 'Argentine': '🇦🇷', 'Algérie': '🇩🇿',
+    'Autriche': '🇦🇹', 'Jordanie': '🇯🇴', 'Portugal': '🇵🇹', 'RD Congo': '🇨🇩',
+    'Ouzbékistan': '🇺🇿', 'Colombie': '🇨🇴', 'Angleterre': '🇬🇧', 'Croatie': '🇭🇷',
+    'Ghana': '🇬🇭', 'Panama': '🇵🇦'
   };
 
-  // Fallback team name to flag
-  const teamNameToFlag = {
-    'Mexique': '🇲🇽', 'Afrique du Sud': '🇿🇦', 'Corée du Sud': '🇰🇷', 'République tchèque': '🇨🇿',
-    'Canada': '🇨🇦', 'Bosnie-Herzégovine': '🇧🇦', 'Qatar': '🇶🇦', 'Suisse': '🇨🇭',
-    'Brésil': '🇧🇷', 'Maroc': '🇲🇦', 'Haïti': '🇭🇹', 'Écosse': '🇬🇧',
-    'États-Unis': '🇺🇸', 'Paraguay': '🇵🇾', 'Australie': '🇦🇺', 'Turquie': '🇹🇷',
-    'Allemagne': '🇩🇪', 'Curaçao': '🇨🇼', 'Côte d\'Ivoire': '🇨🇮', 'Équateur': '🇪🇨',
-    'Pays-Bas': '🇳🇱', 'Japon': '🇯🇵', 'Suède': '🇸🇪', 'Tunisie': '🇹🇳',
-    'Belgique': '🇧🇪', 'Égypte': '🇪🇬', 'Iran': '🇮🇷', 'Nouvelle-Zélande': '🇳🇿',
-    'Espagne': '🇪🇸', 'Cap-Vert': '🇨🇻', 'Arabie saoudite': '🇸🇦', 'Uruguay': '🇺🇾',
-    'France': '🇫🇷', 'Sénégal': '🇸🇳', 'Irak': '🇮🇶', 'Norvège': '🇳🇴',
-    'Argentine': '🇦🇷', 'Algérie': '🇩🇿', 'Autriche': '🇦🇹', 'Jordanie': '🇯🇴',
-    'Portugal': '🇵🇹', 'RD Congo': '🇨🇩', 'Ouzbékistan': '🇺🇿', 'Colombie': '🇨🇴',
-    'Angleterre': '🇬🇧', 'Croatie': '🇭🇷', 'Ghana': '🇬🇭', 'Panama': '🇵🇦'
-  };
-
-  const getFlag = (team) => {
-    if (!team) return '🌍';
-    // Try team name first
-    if (teamNameToFlag[team]) return teamNameToFlag[team];
-    // Try country code
-    if (team.length <= 2 && countryCodeToFlag[team.toUpperCase()]) {
-      return countryCodeToFlag[team.toUpperCase()];
-    }
-    return '🌍';
-  };
+  const getFlag = (team) => teamFlags[team] || '🌍';
 
   const bracket = useMemo(() => {
     const classifications = {};
@@ -70,24 +39,23 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
 
     const qualifiedThirds = allThirdPlaces.slice(0, 4);
 
-    // 16ème - Using correct order from 2026 World Cup bracket
     const round16 = [
-      { id: 'r16_1', home: firstPlaces['A'], away: secondPlaces['B'], round: '16ème' },
-      { id: 'r16_2', home: firstPlaces['C'], away: secondPlaces['D'], round: '16ème' },
-      { id: 'r16_3', home: firstPlaces['E'], away: secondPlaces['F'], round: '16ème' },
-      { id: 'r16_4', home: firstPlaces['G'], away: secondPlaces['H'], round: '16ème' },
-      { id: 'r16_5', home: firstPlaces['B'], away: secondPlaces['A'], round: '16ème' },
-      { id: 'r16_6', home: firstPlaces['D'], away: secondPlaces['C'], round: '16ème' },
-      { id: 'r16_7', home: firstPlaces['F'], away: secondPlaces['E'], round: '16ème' },
-      { id: 'r16_8', home: firstPlaces['H'], away: secondPlaces['G'], round: '16ème' },
-      { id: 'r16_9', home: firstPlaces['I'], away: secondPlaces['J'], round: '16ème' },
-      { id: 'r16_10', home: firstPlaces['K'], away: secondPlaces['L'], round: '16ème' },
-      { id: 'r16_11', home: firstPlaces['J'], away: secondPlaces['I'], round: '16ème' },
-      { id: 'r16_12', home: firstPlaces['L'], away: secondPlaces['K'], round: '16ème' },
-      { id: 'r16_13', home: qualifiedThirds[0]?.team, away: firstPlaces['B'], round: '16ème' },
-      { id: 'r16_14', home: qualifiedThirds[1]?.team, away: firstPlaces['D'], round: '16ème' },
-      { id: 'r16_15', home: qualifiedThirds[2]?.team, away: firstPlaces['F'], round: '16ème' },
-      { id: 'r16_16', home: qualifiedThirds[3]?.team, away: firstPlaces['H'], round: '16ème' }
+      { id: 'r16_1', home: firstPlaces['A'], away: secondPlaces['B'] },
+      { id: 'r16_2', home: firstPlaces['C'], away: secondPlaces['D'] },
+      { id: 'r16_3', home: firstPlaces['E'], away: secondPlaces['F'] },
+      { id: 'r16_4', home: firstPlaces['G'], away: secondPlaces['H'] },
+      { id: 'r16_5', home: firstPlaces['B'], away: secondPlaces['A'] },
+      { id: 'r16_6', home: firstPlaces['D'], away: secondPlaces['C'] },
+      { id: 'r16_7', home: firstPlaces['F'], away: secondPlaces['E'] },
+      { id: 'r16_8', home: firstPlaces['H'], away: secondPlaces['G'] },
+      { id: 'r16_9', home: firstPlaces['I'], away: secondPlaces['J'] },
+      { id: 'r16_10', home: firstPlaces['K'], away: secondPlaces['L'] },
+      { id: 'r16_11', home: firstPlaces['J'], away: secondPlaces['I'] },
+      { id: 'r16_12', home: firstPlaces['L'], away: secondPlaces['K'] },
+      { id: 'r16_13', home: qualifiedThirds[0]?.team, away: firstPlaces['B'] },
+      { id: 'r16_14', home: qualifiedThirds[1]?.team, away: firstPlaces['D'] },
+      { id: 'r16_15', home: qualifiedThirds[2]?.team, away: firstPlaces['F'] },
+      { id: 'r16_16', home: qualifiedThirds[3]?.team, away: firstPlaces['H'] }
     ];
 
     return { round16 };
@@ -101,30 +69,26 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
   }, [koSimulations]);
 
   const getWinnerTeam = useCallback((matchId) => {
-    if (!bracket.round16) return null;
-    const allMatches = bracket.round16;
-    const match = allMatches.find(m => m.id === matchId);
+    const match = bracket.round16.find(m => m.id === matchId);
     if (!match) return null;
     const winner = getWinner(matchId);
     return winner === 'home' ? match.home : winner === 'away' ? match.away : null;
   }, [bracket, getWinner]);
 
   const MatchTeam = ({ team, isWinner = false, isEditable = false, goals, onGoalsChange }) => (
-    <div
-      style={{
-        padding: '8px 10px',
-        borderBottom: '1px solid #e0e0e0',
-        background: isWinner ? '#eff6ff' : 'white',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        minHeight: '32px'
-      }}
-    >
+    <div style={{
+      padding: '6px 8px',
+      borderBottom: '1px solid #e0e0e0',
+      background: isWinner ? '#eff6ff' : 'white',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      minHeight: '28px'
+    }}>
       <div style={{
         flex: 1,
         minWidth: 0,
-        fontSize: '12px',
+        fontSize: '11px',
         fontWeight: '500',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
@@ -140,9 +104,9 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           value={goals || 0}
           onChange={(e) => onGoalsChange(e.target.value)}
           style={{
-            width: '35px',
-            padding: '4px',
-            fontSize: '11px',
+            width: '32px',
+            padding: '3px',
+            fontSize: '10px',
             fontWeight: 'bold',
             border: `1px solid ${PRIMARY}`,
             borderRadius: '3px',
@@ -150,7 +114,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           }}
         />
       )}
-      {isWinner && !isEditable && <div style={{ fontSize: '14px', color: '#059669', fontWeight: 'bold' }}>✓</div>}
+      {isWinner && !isEditable && <div style={{ fontSize: '12px', color: '#059669', fontWeight: 'bold' }}>✓</div>}
     </div>
   );
 
@@ -159,35 +123,20 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     const winner = getWinner(match.id);
 
     return (
-      <div
-        style={{
-          background: 'white',
-          border: '1px solid #d0d0d0',
-          borderRadius: '6px',
-          overflow: 'hidden',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-          minWidth: '160px'
-        }}
-      >
-        <MatchTeam
-          team={match.home}
-          isWinner={winner === 'home'}
-          isEditable={isEditable}
-          goals={sim.team1_goals}
-          onGoalsChange={onHome}
-        />
-        <MatchTeam
-          team={match.away}
-          isWinner={winner === 'away'}
-          isEditable={isEditable}
-          goals={sim.team2_goals}
-          onGoalsChange={onAway}
-        />
+      <div style={{
+        background: 'white',
+        border: '1px solid #d0d0d0',
+        borderRadius: '4px',
+        overflow: 'hidden',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        minWidth: '140px'
+      }}>
+        <MatchTeam team={match.home} isWinner={winner === 'home'} isEditable={isEditable} goals={sim.team1_goals} onGoalsChange={onHome} />
+        <MatchTeam team={match.away} isWinner={winner === 'away'} isEditable={isEditable} goals={sim.team2_goals} onGoalsChange={onAway} />
       </div>
     );
   };
 
-  // KO structure - each round winners
   const round8 = [
     { id: 'r8_1', prev: ['r16_1', 'r16_2'] },
     { id: 'r8_2', prev: ['r16_3', 'r16_4'] },
@@ -211,113 +160,116 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     { id: 'sf_2', prev: ['qf_3', 'qf_4'] }
   ];
 
-  const final = {
-    id: 'final',
-    prev: ['sf_1', 'sf_2']
-  };
-
   return (
     <div style={{ marginBottom: '50px' }}>
-      <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '30px', fontWeight: 'bold' }}>
+      <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '20px', fontWeight: 'bold' }}>
         🏆 Phase Éliminatoire - Bracket Officiel
       </h2>
 
-      <div
-        style={{
-          background: 'white',
-          borderRadius: '12px',
-          padding: '30px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-          overflowX: 'auto'
-        }}
-      >
-        <div style={{ minWidth: '1600px' }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        padding: '20px',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+        overflowX: 'auto'
+      }}>
+        <div style={{ minWidth: '1000px' }}>
           {/* Headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '40px', marginBottom: '30px', textAlign: 'center' }}>
-            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY }}>🥊 16ème</div>
-            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY }}>⚡ 8ème</div>
-            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY }}>🎯 Quarts</div>
-            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY }}>🏅 Semis</div>
-            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY }}>👑 FINAL</div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '180px 140px 120px 120px 120px',
+            gap: '20px',
+            marginBottom: '20px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '12px', fontWeight: 'bold', color: PRIMARY }}>🥊 16ème</div>
+            <div style={{ fontSize: '12px', fontWeight: 'bold', color: PRIMARY }}>⚡ 8ème</div>
+            <div style={{ fontSize: '12px', fontWeight: 'bold', color: PRIMARY }}>🎯 Quarts</div>
+            <div style={{ fontSize: '12px', fontWeight: 'bold', color: PRIMARY }}>🏅 Semis</div>
+            <div style={{ fontSize: '12px', fontWeight: 'bold', color: PRIMARY }}>👑 FINAL</div>
           </div>
 
-          {/* Matches */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '40px', alignItems: 'start' }}>
+          {/* Bracket */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '180px 140px 120px 120px 120px',
+            gap: '20px'
+          }}>
             {/* 16ème */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '80px' }}>
-              {bracket.round16.map(match => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+              {bracket.round16.map(m => (
                 <MatchCard
-                  key={match.id}
-                  match={match}
+                  key={m.id}
+                  match={m}
                   isEditable={true}
-                  onHome={(val) => onScoreChange(match.id, 'team1_goals', val)}
-                  onAway={(val) => onScoreChange(match.id, 'team2_goals', val)}
+                  onHome={(val) => onScoreChange(m.id, 'team1_goals', val)}
+                  onAway={(val) => onScoreChange(m.id, 'team2_goals', val)}
                 />
               ))}
             </div>
 
             {/* 8ème */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '200px', paddingTop: '100px' }}>
-              {round8.map(matchup => {
-                const home = getWinnerTeam(matchup.prev[0]);
-                const away = getWinnerTeam(matchup.prev[1]);
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '60px', paddingTop: '15px' }}>
+              {round8.map(m => {
+                const home = getWinnerTeam(m.prev[0]);
+                const away = getWinnerTeam(m.prev[1]);
                 return (
                   <MatchCard
-                    key={matchup.id}
-                    match={{ id: matchup.id, home, away }}
+                    key={m.id}
+                    match={{ id: m.id, home, away }}
                     isEditable={true}
-                    onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
-                    onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
+                    onHome={(val) => onScoreChange(m.id, 'team1_goals', val)}
+                    onAway={(val) => onScoreChange(m.id, 'team2_goals', val)}
                   />
                 );
               })}
             </div>
 
             {/* Quarts */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '400px', paddingTop: '350px' }}>
-              {round4.map(matchup => {
-                const home = getWinnerTeam(matchup.prev[0]);
-                const away = getWinnerTeam(matchup.prev[1]);
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '120px', paddingTop: '90px' }}>
+              {round4.map(m => {
+                const home = getWinnerTeam(m.prev[0]);
+                const away = getWinnerTeam(m.prev[1]);
                 return (
                   <MatchCard
-                    key={matchup.id}
-                    match={{ id: matchup.id, home, away }}
+                    key={m.id}
+                    match={{ id: m.id, home, away }}
                     isEditable={true}
-                    onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
-                    onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
+                    onHome={(val) => onScoreChange(m.id, 'team1_goals', val)}
+                    onAway={(val) => onScoreChange(m.id, 'team2_goals', val)}
                   />
                 );
               })}
             </div>
 
             {/* Semis */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '800px', paddingTop: '750px' }}>
-              {round2.map(matchup => {
-                const home = getWinnerTeam(matchup.prev[0]);
-                const away = getWinnerTeam(matchup.prev[1]);
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '240px', paddingTop: '180px' }}>
+              {round2.map(m => {
+                const home = getWinnerTeam(m.prev[0]);
+                const away = getWinnerTeam(m.prev[1]);
                 return (
                   <MatchCard
-                    key={matchup.id}
-                    match={{ id: matchup.id, home, away }}
+                    key={m.id}
+                    match={{ id: m.id, home, away }}
                     isEditable={true}
-                    onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
-                    onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
+                    onHome={(val) => onScoreChange(m.id, 'team1_goals', val)}
+                    onAway={(val) => onScoreChange(m.id, 'team2_goals', val)}
                   />
                 );
               })}
             </div>
 
             {/* Final */}
-            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '850px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '210px' }}>
               <MatchCard
                 match={{
-                  id: final.id,
-                  home: getWinnerTeam(final.prev[0]),
-                  away: getWinnerTeam(final.prev[1])
+                  id: 'final',
+                  home: getWinnerTeam('sf_1'),
+                  away: getWinnerTeam('sf_2')
                 }}
                 isEditable={true}
-                onHome={(val) => onScoreChange(final.id, 'team1_goals', val)}
-                onAway={(val) => onScoreChange(final.id, 'team2_goals', val)}
+                onHome={(val) => onScoreChange('final', 'team1_goals', val)}
+                onAway={(val) => onScoreChange('final', 'team2_goals', val)}
               />
             </div>
           </div>
@@ -325,11 +277,11 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
       </div>
 
       {/* 3e Place */}
-      <div style={{ marginTop: '40px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: PRIMARY, marginBottom: '15px' }}>
+      <div style={{ marginTop: '30px' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: PRIMARY, marginBottom: '12px' }}>
           🥉 Match pour la 3ème place
         </h3>
-        <div style={{ maxWidth: '200px' }}>
+        <div style={{ maxWidth: '140px' }}>
           <MatchCard
             match={{
               id: 'third',
@@ -343,18 +295,16 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
         </div>
       </div>
 
-      <div
-        style={{
-          marginTop: '30px',
-          background: 'linear-gradient(135deg, #eff6ff 0%, #fce7f3 100%)',
-          padding: '20px',
-          borderRadius: '8px',
-          border: `1px solid ${PRIMARY}`,
-          fontSize: '13px',
-          color: '#1e40af'
-        }}
-      >
-        💡 <strong>Entrez les scores pour TOUS les matchs.</strong> Les gagnants remontent automatiquement! 🚀
+      <div style={{
+        marginTop: '20px',
+        background: 'linear-gradient(135deg, #eff6ff 0%, #fce7f3 100%)',
+        padding: '15px',
+        borderRadius: '8px',
+        border: `1px solid ${PRIMARY}`,
+        fontSize: '12px',
+        color: '#1e40af'
+      }}>
+        💡 Entrez les scores pour TOUS les matchs. Les gagnants remontent automatiquement!
       </div>
     </div>
   );
