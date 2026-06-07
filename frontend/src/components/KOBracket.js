@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { getCountryFlag } from '../utils/flags';
+import CountryFlag from 'react-country-flag';
+import { getCountryCode } from '../utils/countryCode';
 
 function KOBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, PRIMARY, SECONDARY, GRADIENT }) {
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
@@ -123,7 +124,12 @@ function KOBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, P
               overflow: 'hidden',
               textOverflow: 'ellipsis'
             }}>
-              {match.home ? `${getCountryFlag(match.home)} ${match.home}` : 'TBD'}
+              {match.home ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CountryFlag countryCode={getCountryCode(match.home)} svg style={{ width: '1.2em', height: '1.2em', flexShrink: 0 }} />
+                  <span>{match.home}</span>
+                </div>
+              ) : 'TBD'}
             </div>
           </div>
           {isEditable && (
@@ -166,7 +172,12 @@ function KOBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, P
               overflow: 'hidden',
               textOverflow: 'ellipsis'
             }}>
-              {match.away ? `${getCountryFlag(match.away)} ${match.away}` : 'TBD'}
+              {match.away ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CountryFlag countryCode={getCountryCode(match.away)} svg style={{ width: '1.2em', height: '1.2em', flexShrink: 0 }} />
+                  <span>{match.away}</span>
+                </div>
+              ) : 'TBD'}
             </div>
           </div>
           {isEditable && (

@@ -1,26 +1,9 @@
 import React, { useMemo, useCallback } from 'react';
+import CountryFlag from 'react-country-flag';
+import { getCountryCode } from '../utils/countryCode';
 
 function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, PRIMARY, SECONDARY, GRADIENT }) {
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-
-  // Simple team name to flag
-  const teamFlags = {
-    'Belgique': '🇧🇪', 'Canada': '🇨🇦', 'Mexique': '🇲🇽', 'Afrique du Sud': '🇿🇦',
-    'Corée du Sud': '🇰🇷', 'République tchèque': '🇨🇿', 'Bosnie-Herzégovine': '🇧🇦',
-    'Qatar': '🇶🇦', 'Suisse': '🇨🇭', 'Brésil': '🇧🇷', 'Maroc': '🇲🇦',
-    'Haïti': '🇭🇹', 'Écosse': '🇬🇧', 'États-Unis': '🇺🇸', 'Paraguay': '🇵🇾',
-    'Australie': '🇦🇺', 'Turquie': '🇹🇷', 'Allemagne': '🇩🇪', 'Curaçao': '🇨🇼',
-    'Côte d\'Ivoire': '🇨🇮', 'Équateur': '🇪🇨', 'Pays-Bas': '🇳🇱', 'Japon': '🇯🇵',
-    'Suède': '🇸🇪', 'Tunisie': '🇹🇳', 'Égypte': '🇪🇬', 'Iran': '🇮🇷',
-    'Nouvelle-Zélande': '🇳🇿', 'Espagne': '🇪🇸', 'Cap-Vert': '🇨🇻',
-    'Arabie saoudite': '🇸🇦', 'Uruguay': '🇺🇾', 'France': '🇫🇷', 'Sénégal': '🇸🇳',
-    'Irak': '🇮🇶', 'Norvège': '🇳🇴', 'Argentine': '🇦🇷', 'Algérie': '🇩🇿',
-    'Autriche': '🇦🇹', 'Jordanie': '🇯🇴', 'Portugal': '🇵🇹', 'RD Congo': '🇨🇩',
-    'Ouzbékistan': '🇺🇿', 'Colombie': '🇨🇴', 'Angleterre': '🇬🇧', 'Croatie': '🇭🇷',
-    'Ghana': '🇬🇭', 'Panama': '🇵🇦'
-  };
-
-  const getFlag = (team) => teamFlags[team] || '🌍';
 
   const bracket = useMemo(() => {
     const classifications = {};
@@ -92,9 +75,13 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
         fontWeight: '500',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
-        textOverflow: 'ellipsis'
+        textOverflow: 'ellipsis',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px'
       }}>
-        {getFlag(team)} {team || 'TBD'}
+        <CountryFlag countryCode={getCountryCode(team)} svg style={{ width: '1.2em', height: '1.2em', flexShrink: 0 }} />
+        <span>{team || 'TBD'}</span>
       </div>
       {isEditable && (
         <input
