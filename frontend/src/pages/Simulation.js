@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { matchesService, predictionsService } from '../services/api';
 import { getCountryFlag } from '../utils/flags';
+import KOBracket from '../components/KOBracket';
 
 function Simulation() {
   const [matches, setMatches] = useState([]);
@@ -570,114 +571,15 @@ function Simulation() {
           </div>
         </div>
 
-        {/* PHASE ÉLIMINATOIRE */}
-        <div style={{ marginBottom: '50px' }}>
-          <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '20px', fontWeight: 'bold' }}>
-            🏟️ 16ème de Finale
-          </h2>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '15px'
-          }}>
-            {getKOMatchups.round16.map((match, idx) => {
-              const sim = koSimulations[match.id] || { team1_goals: 0, team2_goals: 0 };
-
-              return (
-                <div key={idx} style={{
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  padding: '12px',
-                  background: 'white',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
-                }}>
-                  <div style={{
-                    fontSize: '10px',
-                    color: '#999',
-                    marginBottom: '8px',
-                    fontWeight: 'bold',
-                    textTransform: 'uppercase'
-                  }}>
-                    {match.desc}
-                  </div>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '3px',
-                    fontSize: '12px',
-                    fontWeight: '500'
-                  }}>
-                    {/* Team 1 */}
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <div style={{
-                        flex: 1,
-                        padding: '8px',
-                        background: '#f9f9f9',
-                        borderRadius: '4px',
-                        borderLeft: `3px solid ${PRIMARY}`,
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap',
-                        textOverflow: 'ellipsis'
-                      }}>
-                        {match.home ? `${getCountryFlag(match.home)} ${match.home}` : '?'}
-                      </div>
-                      <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={sim.team1_goals}
-                        onChange={(e) => handleKoSimulationChange(match.id, 'team1_goals', e.target.value)}
-                        style={{
-                          width: '40px',
-                          padding: '6px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          border: `1px solid ${PRIMARY}`,
-                          borderRadius: '4px',
-                          textAlign: 'center'
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ textAlign: 'center', color: '#999', fontSize: '10px' }}>vs</div>
-
-                    {/* Team 2 */}
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={sim.team2_goals}
-                        onChange={(e) => handleKoSimulationChange(match.id, 'team2_goals', e.target.value)}
-                        style={{
-                          width: '40px',
-                          padding: '6px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          border: `1px solid ${PRIMARY}`,
-                          borderRadius: '4px',
-                          textAlign: 'center'
-                        }}
-                      />
-                      <div style={{
-                        flex: 1,
-                        padding: '8px',
-                        background: '#f9f9f9',
-                        borderRadius: '4px',
-                        borderLeft: `3px solid ${SECONDARY}`,
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap',
-                        textOverflow: 'ellipsis'
-                      }}>
-                        {match.away ? `${getCountryFlag(match.away)} ${match.away}` : '?'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {/* PHASE ÉLIMINATOIRE - Bracket */}
+        <KOBracket
+          groupsData={groupsData}
+          koSimulations={koSimulations}
+          onScoreChange={handleKoSimulationChange}
+          PRIMARY={PRIMARY}
+          SECONDARY={SECONDARY}
+          GRADIENT={GRADIENT}
+        />
       </div>
 
       <style>{`
