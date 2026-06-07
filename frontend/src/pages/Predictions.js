@@ -84,10 +84,23 @@ function Predictions() {
     return grouped;
   };
 
-  const getGroupLetter = (matchId) => {
-    // Groupes A-L basés sur les IDs (72 matchs total, 6 par groupe)
-    const groupIndex = Math.floor((matchId - 1) / 6);
-    return String.fromCharCode(65 + groupIndex); // A-L
+  const getMatchLabel = (matchId) => {
+    // Matchs de groupes: A-L (IDs 1-72)
+    if (matchId <= 72) {
+      const groupIndex = Math.floor((matchId - 1) / 6);
+      return `Groupe ${String.fromCharCode(65 + groupIndex)}`; // Groupe A-L
+    }
+
+    // Matchs KO (IDs 73+)
+    const koId = matchId - 72;
+    if (koId <= 16) return '16ème';
+    if (koId <= 24) return '8ème';
+    if (koId <= 28) return 'Quart';
+    if (koId <= 30) return 'Semi';
+    if (koId === 31) return '3e place';
+    if (koId === 32) return 'Final';
+
+    return 'Match';
   };
 
   const groupedMatches = groupByDate(matches);
@@ -160,7 +173,7 @@ function Predictions() {
                 const scores = tempScores[match.id] || { team1: pred?.team1_goals || 0, team2: pred?.team2_goals || 0 };
                 const isDeadline = new Date(match.start_time) < new Date();
                 const isSaved = pred && pred.team1_goals === scores.team1 && pred.team2_goals === scores.team2;
-                const groupLetter = getGroupLetter(match.id);
+                const matchLabel = getMatchLabel(match.id);
 
                 return (
                   <div
@@ -177,18 +190,19 @@ function Predictions() {
                       flexWrap: 'wrap'
                     }}
                   >
-                    {/* Group Badge */}
+                    {/* Match Type Badge */}
                     <div style={{
                       background: GRADIENT,
                       color: 'white',
                       padding: '2px 8px',
-                      borderRadius: '20px',
-                      fontSize: '11px',
+                      borderRadius: '4px',
+                      fontSize: '10px',
                       fontWeight: 'bold',
-                      minWidth: '35px',
-                      textAlign: 'center'
+                      minWidth: '50px',
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap'
                     }}>
-                      G{groupLetter}
+                      {matchLabel}
                     </div>
 
                     {/* Time */}
