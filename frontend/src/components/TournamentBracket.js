@@ -1,10 +1,33 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 
 function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, PRIMARY, SECONDARY, GRADIENT }) {
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
-  // Emoji flags mapping (fallback if DB doesn't provide them)
-  const flagMap = {
+  // Emoji flags - convert country codes to emojis
+  const countryCodeToFlag = {
+    'ZA': '🇿🇦', 'DZ': '🇩🇿', 'DE': '🇩🇪', 'GB': '🇬🇧', 'SA': '🇸🇦', 'AR': '🇦🇷',
+    'AU': '🇦🇺', 'AT': '🇦🇹', 'BE': '🇧🇪', 'BA': '🇧🇦', 'BR': '🇧🇷', 'CA': '🇨🇦',
+    'CV': '🇨🇻', 'CL': '🇨🇱', 'CO': '🇨🇴', 'KR': '🇰🇷', 'CI': '🇨🇮', 'HR': '🇭🇷',
+    'CW': '🇨🇼', 'EG': '🇪🇬', 'ES': '🇪🇸', 'US': '🇺🇸', 'FR': '🇫🇷', 'GH': '🇬🇭',
+    'HT': '🇭🇹', 'HU': '🇭🇺', 'IQ': '🇮🇶', 'IR': '🇮🇷', 'IE': '🇮🇪', 'IS': '🇮🇸',
+    'IL': '🇮🇱', 'IT': '🇮🇹', 'JM': '🇯🇲', 'JP': '🇯🇵', 'JO': '🇯🇴', 'KZ': '🇰🇿',
+    'MW': '🇲🇼', 'ML': '🇲🇱', 'MA': '🇲🇦', 'MX': '🇲🇽', 'MD': '🇲🇩', 'ME': '🇲🇪',
+    'MZ': '🇲🇿', 'NP': '🇳🇵', 'NZ': '🇳🇿', 'NO': '🇳🇴', 'OM': '🇴🇲', 'UZ': '🇺🇿',
+    'PS': '🇵🇸', 'PA': '🇵🇦', 'PG': '🇵🇬', 'PY': '🇵🇾', 'NL': '🇳🇱', 'PE': '🇵🇪',
+    'PH': '🇵🇭', 'PL': '🇵🇱', 'PT': '🇵🇹', 'QA': '🇶🇦', 'RO': '🇷🇴', 'RU': '🇷🇺',
+    'RW': '🇷🇼', 'EH': '🇪🇭', 'SV': '🇸🇻', 'WS': '🇼🇸', 'AS': '🇦🇸', 'SM': '🇸🇲',
+    'SN': '🇸🇳', 'RS': '🇷🇸', 'SC': '🇸🇨', 'SL': '🇸🇱', 'SG': '🇸🇬', 'SX': '🇸🇽',
+    'SK': '🇸🇰', 'SI': '🇸🇮', 'SO': '🇸🇴', 'SD': '🇸🇩', 'SS': '🇸🇸', 'LK': '🇱🇰',
+    'SE': '🇸🇪', 'CH': '🇨🇭', 'SR': '🇸🇷', 'SZ': '🇸🇿', 'SY': '🇸🇾', 'TJ': '🇹🇯',
+    'TW': '🇹🇼', 'TZ': '🇹🇿', 'TD': '🇹🇩', 'TH': '🇹🇭', 'TL': '🇹🇱', 'TG': '🇹🇬',
+    'TK': '🇹🇰', 'TO': '🇹🇴', 'TT': '🇹🇹', 'TN': '🇹🇳', 'TM': '🇹🇲', 'TR': '🇹🇷',
+    'TV': '🇹🇻', 'UA': '🇺🇦', 'KM': '🇰🇲', 'UY': '🇺🇾', 'VU': '🇻🇺', 'VA': '🇻🇦',
+    'VE': '🇻🇪', 'VN': '🇻🇳', 'WF': '🇼🇫', 'YE': '🇾🇪', 'ZM': '🇿🇲', 'ZW': '🇿🇼',
+    'CZ': '🇨🇿', 'EC': '🇪🇨', 'SC': '🇬🇧'
+  };
+
+  // Fallback team name to flag
+  const teamNameToFlag = {
     'Mexique': '🇲🇽', 'Afrique du Sud': '🇿🇦', 'Corée du Sud': '🇰🇷', 'République tchèque': '🇨🇿',
     'Canada': '🇨🇦', 'Bosnie-Herzégovine': '🇧🇦', 'Qatar': '🇶🇦', 'Suisse': '🇨🇭',
     'Brésil': '🇧🇷', 'Maroc': '🇲🇦', 'Haïti': '🇭🇹', 'Écosse': '🇬🇧',
@@ -21,7 +44,13 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
 
   const getFlag = (team) => {
     if (!team) return '🌍';
-    return flagMap[team] || '🌍';
+    // Try team name first
+    if (teamNameToFlag[team]) return teamNameToFlag[team];
+    // Try country code
+    if (team.length <= 2 && countryCodeToFlag[team.toUpperCase()]) {
+      return countryCodeToFlag[team.toUpperCase()];
+    }
+    return '🌍';
   };
 
   const bracket = useMemo(() => {
@@ -41,53 +70,44 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
 
     const qualifiedThirds = allThirdPlaces.slice(0, 4);
 
+    // 16ème - Using correct order from 2026 World Cup bracket
     const round16 = [
-      { id: 'r16_1', home: firstPlaces['A'], away: secondPlaces['B'] },
-      { id: 'r16_2', home: firstPlaces['C'], away: secondPlaces['D'] },
-      { id: 'r16_3', home: firstPlaces['E'], away: secondPlaces['F'] },
-      { id: 'r16_4', home: firstPlaces['G'], away: secondPlaces['H'] },
-      { id: 'r16_5', home: firstPlaces['B'], away: secondPlaces['A'] },
-      { id: 'r16_6', home: firstPlaces['D'], away: secondPlaces['C'] },
-      { id: 'r16_7', home: firstPlaces['F'], away: secondPlaces['E'] },
-      { id: 'r16_8', home: firstPlaces['H'], away: secondPlaces['G'] },
-      { id: 'r16_9', home: firstPlaces['I'], away: secondPlaces['J'] },
-      { id: 'r16_10', home: firstPlaces['K'], away: secondPlaces['L'] },
-      { id: 'r16_11', home: firstPlaces['J'], away: secondPlaces['I'] },
-      { id: 'r16_12', home: firstPlaces['L'], away: secondPlaces['K'] },
-      { id: 'r16_13', home: qualifiedThirds[0]?.team, away: firstPlaces['B'] },
-      { id: 'r16_14', home: qualifiedThirds[1]?.team, away: firstPlaces['D'] },
-      { id: 'r16_15', home: qualifiedThirds[2]?.team, away: firstPlaces['F'] },
-      { id: 'r16_16', home: qualifiedThirds[3]?.team, away: firstPlaces['H'] }
+      { id: 'r16_1', home: firstPlaces['A'], away: secondPlaces['B'], round: '16ème' },
+      { id: 'r16_2', home: firstPlaces['C'], away: secondPlaces['D'], round: '16ème' },
+      { id: 'r16_3', home: firstPlaces['E'], away: secondPlaces['F'], round: '16ème' },
+      { id: 'r16_4', home: firstPlaces['G'], away: secondPlaces['H'], round: '16ème' },
+      { id: 'r16_5', home: firstPlaces['B'], away: secondPlaces['A'], round: '16ème' },
+      { id: 'r16_6', home: firstPlaces['D'], away: secondPlaces['C'], round: '16ème' },
+      { id: 'r16_7', home: firstPlaces['F'], away: secondPlaces['E'], round: '16ème' },
+      { id: 'r16_8', home: firstPlaces['H'], away: secondPlaces['G'], round: '16ème' },
+      { id: 'r16_9', home: firstPlaces['I'], away: secondPlaces['J'], round: '16ème' },
+      { id: 'r16_10', home: firstPlaces['K'], away: secondPlaces['L'], round: '16ème' },
+      { id: 'r16_11', home: firstPlaces['J'], away: secondPlaces['I'], round: '16ème' },
+      { id: 'r16_12', home: firstPlaces['L'], away: secondPlaces['K'], round: '16ème' },
+      { id: 'r16_13', home: qualifiedThirds[0]?.team, away: firstPlaces['B'], round: '16ème' },
+      { id: 'r16_14', home: qualifiedThirds[1]?.team, away: firstPlaces['D'], round: '16ème' },
+      { id: 'r16_15', home: qualifiedThirds[2]?.team, away: firstPlaces['F'], round: '16ème' },
+      { id: 'r16_16', home: qualifiedThirds[3]?.team, away: firstPlaces['H'], round: '16ème' }
     ];
 
     return { round16 };
   }, [groupsData, allThirdPlaces]);
 
-  const getWinner = (matchId) => {
+  const getWinner = useCallback((matchId) => {
     const sim = koSimulations[matchId];
-    if (!sim || sim.team1_goals === sim.team2_goals) return null;
+    if (!sim || sim.team1_goals === undefined || sim.team2_goals === undefined) return null;
+    if (sim.team1_goals === sim.team2_goals) return null;
     return sim.team1_goals > sim.team2_goals ? 'home' : 'away';
-  };
+  }, [koSimulations]);
 
-  const getWinnerTeam = (matchId) => {
+  const getWinnerTeam = useCallback((matchId) => {
     if (!bracket.round16) return null;
-    const match = bracket.round16.find(m => m.id === matchId);
+    const allMatches = bracket.round16;
+    const match = allMatches.find(m => m.id === matchId);
     if (!match) return null;
     const winner = getWinner(matchId);
     return winner === 'home' ? match.home : winner === 'away' ? match.away : null;
-  };
-
-  // 8ème matchups
-  const round8Matchups = [
-    { id: 'r8_1', prev1: 'r16_1', prev2: 'r16_2' },
-    { id: 'r8_2', prev1: 'r16_3', prev2: 'r16_4' },
-    { id: 'r8_3', prev1: 'r16_5', prev2: 'r16_6' },
-    { id: 'r8_4', prev1: 'r16_7', prev2: 'r16_8' },
-    { id: 'r8_5', prev1: 'r16_9', prev2: 'r16_10' },
-    { id: 'r8_6', prev1: 'r16_11', prev2: 'r16_12' },
-    { id: 'r8_7', prev1: 'r16_13', prev2: 'r16_14' },
-    { id: 'r8_8', prev1: 'r16_15', prev2: 'r16_16' }
-  ];
+  }, [bracket, getWinner]);
 
   const MatchTeam = ({ team, isWinner = false, isEditable = false, goals, onGoalsChange }) => (
     <div
@@ -117,7 +137,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           type="number"
           min="0"
           max="20"
-          value={goals}
+          value={goals || 0}
           onChange={(e) => onGoalsChange(e.target.value)}
           style={{
             width: '35px',
@@ -167,6 +187,35 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     );
   };
 
+  // KO structure - each round winners
+  const round8 = [
+    { id: 'r8_1', prev: ['r16_1', 'r16_2'] },
+    { id: 'r8_2', prev: ['r16_3', 'r16_4'] },
+    { id: 'r8_3', prev: ['r16_5', 'r16_6'] },
+    { id: 'r8_4', prev: ['r16_7', 'r16_8'] },
+    { id: 'r8_5', prev: ['r16_9', 'r16_10'] },
+    { id: 'r8_6', prev: ['r16_11', 'r16_12'] },
+    { id: 'r8_7', prev: ['r16_13', 'r16_14'] },
+    { id: 'r8_8', prev: ['r16_15', 'r16_16'] }
+  ];
+
+  const round4 = [
+    { id: 'qf_1', prev: ['r8_1', 'r8_2'] },
+    { id: 'qf_2', prev: ['r8_3', 'r8_4'] },
+    { id: 'qf_3', prev: ['r8_5', 'r8_6'] },
+    { id: 'qf_4', prev: ['r8_7', 'r8_8'] }
+  ];
+
+  const round2 = [
+    { id: 'sf_1', prev: ['qf_1', 'qf_2'] },
+    { id: 'sf_2', prev: ['qf_3', 'qf_4'] }
+  ];
+
+  const final = {
+    id: 'final',
+    prev: ['sf_1', 'sf_2']
+  };
+
   return (
     <div style={{ marginBottom: '50px' }}>
       <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '30px', fontWeight: 'bold' }}>
@@ -182,22 +231,21 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           overflowX: 'auto'
         }}
       >
-        {/* Main Bracket Grid */}
-        <div style={{ minWidth: '1400px' }}>
+        <div style={{ minWidth: '1600px' }}>
           {/* Headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '30px', marginBottom: '30px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY, textAlign: 'center' }}>🥊 16ème (16)</div>
-            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY, textAlign: 'center' }}>⚡ 8ème (8)</div>
-            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY, textAlign: 'center' }}>🎯 Quarts (4)</div>
-            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY, textAlign: 'center' }}>🏅 Semis (2)</div>
-            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY, textAlign: 'center' }}>👑 FINALE</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '40px', marginBottom: '30px', textAlign: 'center' }}>
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY }}>🥊 16ème</div>
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY }}>⚡ 8ème</div>
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY }}>🎯 Quarts</div>
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY }}>🏅 Semis</div>
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: PRIMARY }}>👑 FINAL</div>
           </div>
 
-          {/* Matches Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '30px' }}>
-            {/* 16ème - Column 1 */}
+          {/* Matches */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '40px', alignItems: 'start' }}>
+            {/* 16ème */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '80px' }}>
-              {bracket.round16.map((match) => (
+              {bracket.round16.map(match => (
                 <MatchCard
                   key={match.id}
                   match={match}
@@ -208,76 +256,68 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
               ))}
             </div>
 
-            {/* 8ème - Column 2 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '80px', paddingTop: '100px' }}>
-              {round8Matchups.map(matchup => (
-                <MatchCard
-                  key={matchup.id}
-                  match={{
-                    id: matchup.id,
-                    home: getWinnerTeam(matchup.prev1),
-                    away: getWinnerTeam(matchup.prev2)
-                  }}
-                  isEditable={true}
-                  onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
-                  onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
-                />
-              ))}
+            {/* 8ème */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '200px', paddingTop: '100px' }}>
+              {round8.map(matchup => {
+                const home = getWinnerTeam(matchup.prev[0]);
+                const away = getWinnerTeam(matchup.prev[1]);
+                return (
+                  <MatchCard
+                    key={matchup.id}
+                    match={{ id: matchup.id, home, away }}
+                    isEditable={true}
+                    onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
+                    onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
+                  />
+                );
+              })}
             </div>
 
-            {/* Quarts - Column 3 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '200px', paddingTop: '300px' }}>
-              {[
-                { id: 'qf_1', prev1: 'r8_1', prev2: 'r8_2' },
-                { id: 'qf_2', prev1: 'r8_3', prev2: 'r8_4' },
-                { id: 'qf_3', prev1: 'r8_5', prev2: 'r8_6' },
-                { id: 'qf_4', prev1: 'r8_7', prev2: 'r8_8' }
-              ].map(matchup => (
-                <MatchCard
-                  key={matchup.id}
-                  match={{
-                    id: matchup.id,
-                    home: getWinnerTeam(matchup.prev1),
-                    away: getWinnerTeam(matchup.prev2)
-                  }}
-                  isEditable={true}
-                  onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
-                  onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
-                />
-              ))}
+            {/* Quarts */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '400px', paddingTop: '350px' }}>
+              {round4.map(matchup => {
+                const home = getWinnerTeam(matchup.prev[0]);
+                const away = getWinnerTeam(matchup.prev[1]);
+                return (
+                  <MatchCard
+                    key={matchup.id}
+                    match={{ id: matchup.id, home, away }}
+                    isEditable={true}
+                    onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
+                    onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
+                  />
+                );
+              })}
             </div>
 
-            {/* Semis - Column 4 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '500px', paddingTop: '500px' }}>
-              {[
-                { id: 'sf_1', prev1: 'qf_1', prev2: 'qf_2' },
-                { id: 'sf_2', prev1: 'qf_3', prev2: 'qf_4' }
-              ].map(matchup => (
-                <MatchCard
-                  key={matchup.id}
-                  match={{
-                    id: matchup.id,
-                    home: getWinnerTeam(matchup.prev1),
-                    away: getWinnerTeam(matchup.prev2)
-                  }}
-                  isEditable={true}
-                  onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
-                  onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
-                />
-              ))}
+            {/* Semis */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '800px', paddingTop: '750px' }}>
+              {round2.map(matchup => {
+                const home = getWinnerTeam(matchup.prev[0]);
+                const away = getWinnerTeam(matchup.prev[1]);
+                return (
+                  <MatchCard
+                    key={matchup.id}
+                    match={{ id: matchup.id, home, away }}
+                    isEditable={true}
+                    onHome={(val) => onScoreChange(matchup.id, 'team1_goals', val)}
+                    onAway={(val) => onScoreChange(matchup.id, 'team2_goals', val)}
+                  />
+                );
+              })}
             </div>
 
-            {/* Final - Column 5 */}
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: '550px' }}>
+            {/* Final */}
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '850px' }}>
               <MatchCard
                 match={{
-                  id: 'final',
-                  home: getWinnerTeam('sf_1'),
-                  away: getWinnerTeam('sf_2')
+                  id: final.id,
+                  home: getWinnerTeam(final.prev[0]),
+                  away: getWinnerTeam(final.prev[1])
                 }}
                 isEditable={true}
-                onHome={(val) => onScoreChange('final', 'team1_goals', val)}
-                onAway={(val) => onScoreChange('final', 'team2_goals', val)}
+                onHome={(val) => onScoreChange(final.id, 'team1_goals', val)}
+                onAway={(val) => onScoreChange(final.id, 'team2_goals', val)}
               />
             </div>
           </div>
@@ -303,7 +343,6 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
         </div>
       </div>
 
-      {/* Info */}
       <div
         style={{
           marginTop: '30px',
@@ -315,7 +354,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           color: '#1e40af'
         }}
       >
-        💡 <strong>Comment ça marche:</strong> Entrez les scores pour TOUS les matchs. Les gagnants remontent automatiquement dans les phases suivantes! 🚀
+        💡 <strong>Entrez les scores pour TOUS les matchs.</strong> Les gagnants remontent automatiquement! 🚀
       </div>
     </div>
   );
