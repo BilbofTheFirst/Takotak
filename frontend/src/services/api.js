@@ -43,7 +43,7 @@ export const resultsService = {
 };
 
 export const teamsService = {
-  getLiveInfo: (teamName) => api.get(`/teams/${encodeURIComponent(teamName)}/live-info`)
+  getInfo: (teamName) => api.get(`/teams/${encodeURIComponent(teamName)}/info`)
 };
 
 export default api;

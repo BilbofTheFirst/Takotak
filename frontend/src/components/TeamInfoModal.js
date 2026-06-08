@@ -13,7 +13,7 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
 
   const loadTeamInfo = async () => {
     try {
-      const res = await teamsService.getLiveInfo(teamName);
+      const res = await teamsService.getInfo(teamName);
       setInfo(res.data);
     } catch (err) {
       setError('Infos non disponibles');

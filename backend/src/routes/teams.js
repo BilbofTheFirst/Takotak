@@ -1,5 +1,4 @@
 const express = require('express');
-const axios = require('axios');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -57,12 +56,12 @@ const TEAM_NAME_MAPPING = {
   'Panama': 'Panama'
 };
 
-// Get team info from football-data.org: last 5 matches + stats
-router.get('/:teamName/live-info', authenticateToken, async (req, res) => {
+// Get team info with FIFA ranking + last 5 matches from football-data.org
+router.get('/:teamName/info', authenticateToken, async (req, res) => {
   try {
     const frenchTeamName = req.params.teamName;
 
-    // Get FIFA ranking from our DB
+    // Get FIFA ranking from DB
     const fifarankResult = await pool.query(
       'SELECT fifa_ranking FROM teams WHERE name = $1',
       [frenchTeamName]
@@ -70,66 +69,72 @@ router.get('/:teamName/live-info', authenticateToken, async (req, res) => {
 
     const fifaRanking = fifarankResult.rows[0]?.fifa_ranking || null;
 
-    // Convert French name to English for API search
+    // Convert to English for API
     const englishTeamName = TEAM_NAME_MAPPING[frenchTeamName] || frenchTeamName;
 
-    // Search for team in football-data.org
-    const teamsRes = await axios.get(`${FOOTBALL_DATA_API}/teams`, {
+    // Fetch teams from football-data.org using native fetch
+    const teamsResponse = await fetch(`${FOOTBALL_DATA_API}/teams`, {
       headers: { 'X-Auth-Token': API_KEY }
     });
 
-    // Find team by name (exact match or partial match)
-    const team = teamsRes.data.teams.find(t =>
+    if (!teamsResponse.ok) {
+      return res.json({
+        team: { name: frenchTeamName, fifaRanking },
+        lastMatches: []
+      });
+    }
+
+    const teamsData = await teamsResponse.json();
+    const team = teamsData.teams?.find(t =>
       t.name.toLowerCase() === englishTeamName.toLowerCase() ||
       t.name.toLowerCase().includes(englishTeamName.toLowerCase())
     );
 
     if (!team) {
-      return res.status(404).json({ error: 'Team not found in external API' });
+      return res.json({
+        team: { name: frenchTeamName, fifaRanking },
+        lastMatches: []
+      });
     }
 
-    // Get team's last matches
-    const matchesRes = await axios.get(`${FOOTBALL_DATA_API}/teams/${team.id}/matches`, {
-      headers: { 'X-Auth-Token': API_KEY },
-      params: { limit: 10, status: 'FINISHED' }
-    });
+    // Fetch team's matches
+    const matchesResponse = await fetch(
+      `${FOOTBALL_DATA_API}/teams/${team.id}/matches?limit=10&status=FINISHED`,
+      { headers: { 'X-Auth-Token': API_KEY } }
+    );
 
-    const matches = (matchesRes.data.matches || []).slice(0, 5).map(match => {
-      const isHome = match.homeTeam.id === team.id;
-      const goalsFor = isHome ? match.score.fullTime.home : match.score.fullTime.away;
-      const goalsAgainst = isHome ? match.score.fullTime.away : match.score.fullTime.home;
-      const opponent = isHome ? match.awayTeam.name : match.homeTeam.name;
+    let matches = [];
+    if (matchesResponse.ok) {
+      const matchesData = await matchesResponse.json();
+      matches = (matchesData.matches || []).slice(0, 5).map(match => {
+        const isHome = match.homeTeam.id === team.id;
+        const goalsFor = isHome ? match.score.fullTime.home : match.score.fullTime.away;
+        const goalsAgainst = isHome ? match.score.fullTime.away : match.score.fullTime.home;
+        const opponent = isHome ? match.awayTeam.name : match.homeTeam.name;
 
-      let result = 'vs';
-      if (goalsFor !== null && goalsAgainst !== null) {
-        if (goalsFor > goalsAgainst) result = 'W';
-        else if (goalsFor < goalsAgainst) result = 'L';
-        else result = 'D';
-      }
+        let result = 'vs';
+        if (goalsFor !== null && goalsAgainst !== null) {
+          if (goalsFor > goalsAgainst) result = 'W';
+          else if (goalsFor < goalsAgainst) result = 'L';
+          else result = 'D';
+        }
 
-      return {
-        opponent,
-        result,
-        score: goalsFor !== null ? `${goalsFor}-${goalsAgainst}` : '-',
-        date: match.utcDate
-      };
-    });
+        return {
+          opponent,
+          result,
+          score: goalsFor !== null ? `${goalsFor}-${goalsAgainst}` : '-',
+          date: match.utcDate
+        };
+      });
+    }
 
     res.json({
-      team: {
-        name: team.name,
-        fifaRanking
-      },
+      team: { name: frenchTeamName, fifaRanking },
       lastMatches: matches
     });
   } catch (error) {
-    console.error('Get team live info error:', error.message);
-    console.error('Error details:', error.response?.data || error);
-    console.error('API Key present:', !!API_KEY);
-    res.status(500).json({
-      error: 'Erreur lors de la récupération des infos',
-      debug: error.message
-    });
+    console.error('Get team info error:', error.message);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
