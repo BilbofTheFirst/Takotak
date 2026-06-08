@@ -72,12 +72,18 @@ router.get('/:teamName/info', authenticateToken, async (req, res) => {
     // Convert to English for API
     const englishTeamName = TEAM_NAME_MAPPING[frenchTeamName] || frenchTeamName;
 
+    console.log(`[TEAMS] Fetching info for: ${frenchTeamName} (English: ${englishTeamName})`);
+    console.log(`[TEAMS] API Key present: ${!!API_KEY}`);
+
     // Fetch teams from football-data.org using native fetch
     const teamsResponse = await fetch(`${FOOTBALL_DATA_API}/teams`, {
       headers: { 'X-Auth-Token': API_KEY }
     });
 
+    console.log(`[TEAMS] Teams API status: ${teamsResponse.status}`);
+
     if (!teamsResponse.ok) {
+      console.log(`[TEAMS] Teams API failed, returning FIFA ranking only`);
       return res.json({
         team: { name: frenchTeamName, fifaRanking },
         lastMatches: []
@@ -90,7 +96,10 @@ router.get('/:teamName/info', authenticateToken, async (req, res) => {
       t.name.toLowerCase().includes(englishTeamName.toLowerCase())
     );
 
+    console.log(`[TEAMS] Team found: ${team?.name} (ID: ${team?.id})`);
+
     if (!team) {
+      console.log(`[TEAMS] Team not found in API`);
       return res.json({
         team: { name: frenchTeamName, fifaRanking },
         lastMatches: []
@@ -98,18 +107,24 @@ router.get('/:teamName/info', authenticateToken, async (req, res) => {
     }
 
     // Fetch team's matches (ALL matches, no status filter)
+    console.log(`[TEAMS] Fetching matches for team ID: ${team.id}`);
     const matchesResponse = await fetch(
       `${FOOTBALL_DATA_API}/teams/${team.id}/matches?limit=20`,
       { headers: { 'X-Auth-Token': API_KEY } }
     );
 
+    console.log(`[TEAMS] Matches API status: ${matchesResponse.status}`);
+
     let matches = [];
     if (matchesResponse.ok) {
       const matchesData = await matchesResponse.json();
-      console.log(`Matches found for ${frenchTeamName}:`, matchesData.matches?.length || 0);
+      console.log(`[TEAMS] Total matches from API: ${matchesData.matches?.length || 0}`);
+      console.log(`[TEAMS] Raw matches:`, JSON.stringify(matchesData.matches?.slice(0, 2)));
 
       // Filter for finished matches only
       const finishedMatches = (matchesData.matches || []).filter(m => m.status === 'FINISHED');
+      console.log(`[TEAMS] Finished matches: ${finishedMatches.length}`);
+
       matches = finishedMatches.slice(0, 5).map(match => {
         const isHome = match.homeTeam.id === team.id;
         const goalsFor = isHome ? match.score.fullTime.home : match.score.fullTime.away;
