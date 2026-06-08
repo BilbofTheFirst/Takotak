@@ -73,28 +73,86 @@ router.get('/:teamName/info', authenticateToken, async (req, res) => {
     const englishTeamName = TEAM_NAME_MAPPING[frenchTeamName] || frenchTeamName;
 
     console.log(`[TEAMS] Fetching info for: ${frenchTeamName} (English: ${englishTeamName})`);
-    console.log(`[TEAMS] API Key present: ${!!API_KEY}`);
 
-    // Fetch teams from football-data.org using native fetch
-    const teamsResponse = await fetch(`${FOOTBALL_DATA_API}/teams`, {
+    // Fetch World Cup 2026 competition first to get teams
+    const competitionResponse = await fetch(`${FOOTBALL_DATA_API}/competitions/WC/teams`, {
       headers: { 'X-Auth-Token': API_KEY }
     });
 
-    console.log(`[TEAMS] Teams API status: ${teamsResponse.status}`);
+    console.log(`[TEAMS] WC 2026 API status: ${competitionResponse.status}`);
 
-    if (!teamsResponse.ok) {
-      console.log(`[TEAMS] Teams API failed, returning FIFA ranking only`);
+    if (!competitionResponse.ok) {
+      console.log(`[TEAMS] WC API failed, trying with ID 501`);
+      // Try alternative ID
+      const altResponse = await fetch(`${FOOTBALL_DATA_API}/competitions/501/teams`, {
+        headers: { 'X-Auth-Token': API_KEY }
+      });
+
+      if (!altResponse.ok) {
+        return res.json({
+          team: { name: frenchTeamName, fifaRanking },
+          lastMatches: []
+        });
+      }
+
+      const compData = await altResponse.json();
+      const team = compData.teams?.find(t =>
+        t.name.toLowerCase() === englishTeamName.toLowerCase() ||
+        t.name.toLowerCase().includes(englishTeamName.toLowerCase())
+      );
+
+      if (!team) {
+        console.log(`[TEAMS] Team ${englishTeamName} not found`);
+        return res.json({
+          team: { name: frenchTeamName, fifaRanking },
+          lastMatches: []
+        });
+      }
+
+      console.log(`[TEAMS] Team found: ${team.name} (ID: ${team.id})`);
+
+      // Continue with fetching matches
+      const matchesResponse = await fetch(
+        `${FOOTBALL_DATA_API}/teams/${team.id}/matches?limit=20`,
+        { headers: { 'X-Auth-Token': API_KEY } }
+      );
+
+      let matches = [];
+      if (matchesResponse.ok) {
+        const matchesData = await matchesResponse.json();
+        const finishedMatches = (matchesData.matches || []).filter(m => m.status === 'FINISHED');
+        matches = finishedMatches.slice(0, 5).map(match => {
+          const isHome = match.homeTeam.id === team.id;
+          const goalsFor = isHome ? match.score.fullTime.home : match.score.fullTime.away;
+          const goalsAgainst = isHome ? match.score.fullTime.away : match.score.fullTime.home;
+          const opponent = isHome ? match.awayTeam.name : match.homeTeam.name;
+
+          let result = 'vs';
+          if (goalsFor !== null && goalsAgainst !== null) {
+            if (goalsFor > goalsAgainst) result = 'W';
+            else if (goalsFor < goalsAgainst) result = 'L';
+            else result = 'D';
+          }
+
+          return {
+            opponent,
+            result,
+            score: goalsFor !== null ? `${goalsFor}-${goalsAgainst}` : '-',
+            date: match.utcDate
+          };
+        });
+      }
+
       return res.json({
         team: { name: frenchTeamName, fifaRanking },
-        lastMatches: []
+        lastMatches: matches
       });
     }
 
-    const teamsData = await teamsResponse.json();
-    console.log(`[TEAMS] Teams data keys:`, Object.keys(teamsData));
-    console.log(`[TEAMS] First 2 teams:`, JSON.stringify(teamsData.teams?.slice(0, 2)));
+    const compData = await competitionResponse.json();
+    console.log(`[TEAMS] Teams found in WC 2026: ${compData.teams?.length || 0}`);
 
-    const team = teamsData.teams?.find(t =>
+    const team = compData.teams?.find(t =>
       t.name.toLowerCase() === englishTeamName.toLowerCase() ||
       t.name.toLowerCase().includes(englishTeamName.toLowerCase())
     );
