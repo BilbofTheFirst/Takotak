@@ -97,16 +97,20 @@ router.get('/:teamName/info', authenticateToken, async (req, res) => {
       });
     }
 
-    // Fetch team's matches
+    // Fetch team's matches (ALL matches, no status filter)
     const matchesResponse = await fetch(
-      `${FOOTBALL_DATA_API}/teams/${team.id}/matches?limit=10&status=FINISHED`,
+      `${FOOTBALL_DATA_API}/teams/${team.id}/matches?limit=20`,
       { headers: { 'X-Auth-Token': API_KEY } }
     );
 
     let matches = [];
     if (matchesResponse.ok) {
       const matchesData = await matchesResponse.json();
-      matches = (matchesData.matches || []).slice(0, 5).map(match => {
+      console.log(`Matches found for ${frenchTeamName}:`, matchesData.matches?.length || 0);
+
+      // Filter for finished matches only
+      const finishedMatches = (matchesData.matches || []).filter(m => m.status === 'FINISHED');
+      matches = finishedMatches.slice(0, 5).map(match => {
         const isHome = match.homeTeam.id === team.id;
         const goalsFor = isHome ? match.score.fullTime.home : match.score.fullTime.away;
         const goalsAgainst = isHome ? match.score.fullTime.away : match.score.fullTime.home;
