@@ -1,0 +1,2993 @@
+{
+  "generatedAt": "2026-06-08",
+  "competition": "FIFA World Cup 2026",
+  "description": "5 derniers matches internationaux disponibles par équipe qualifiée, compilés pour usage applicatif.",
+  "qualifiedTeamsSourceUrl": "https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_qualification",
+  "matchDataSource": "International-Football.net country pages, section 'last international games'",
+  "teamCount": 48,
+  "matchesPerTeam": 5,
+  "notes": [
+    "Données consultées le 2026-06-08.",
+    "Les matches de la Coupe du Monde 2026 ne sont pas inclus si la compétition n'a pas encore commencé; il s'agit de la forme actuelle des sélections.",
+    "resultForTeam est calculé du point de vue de l'équipe concernée: W, D ou L.",
+    "Le champ homeTeam/awayTeam reprend l'ordre affiché par la source; certains matches amicaux peuvent être joués sur terrain neutre."
+  ],
+  "teams": [
+    {
+      "team": "Canada",
+      "sourceTeamName": "Canada",
+      "sourceUrl": "https://www.international-football.net/country?team=Canada",
+      "lastMatches": [
+        {
+          "date": "2026-06-05",
+          "competition": "Friendly",
+          "homeTeam": "Canada",
+          "awayTeam": "Ireland",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-06-01",
+          "competition": "Friendly",
+          "homeTeam": "Canada",
+          "awayTeam": "Uzbekistan",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly tournament",
+          "homeTeam": "Canada",
+          "awayTeam": "Tunisia",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly tournament",
+          "homeTeam": "Canada",
+          "awayTeam": "Iceland",
+          "score": {
+            "home": 2,
+            "away": 2
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-01-17",
+          "competition": "Friendly",
+          "homeTeam": "Canada",
+          "awayTeam": "Guatemala",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Mexico",
+      "sourceTeamName": "Mexico",
+      "sourceUrl": "https://www.international-football.net/country?team=Mexico",
+      "lastMatches": [
+        {
+          "date": "2026-06-04",
+          "competition": "Friendly",
+          "homeTeam": "Mexico",
+          "awayTeam": "Serbia",
+          "score": {
+            "home": 5,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-30",
+          "competition": "Friendly",
+          "homeTeam": "Mexico",
+          "awayTeam": "Australia",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-22",
+          "competition": "Friendly",
+          "homeTeam": "Mexico",
+          "awayTeam": "Ghana",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Belgium",
+          "awayTeam": "Mexico",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly",
+          "homeTeam": "Mexico",
+          "awayTeam": "Portugal",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "United States",
+      "sourceTeamName": "United States",
+      "sourceUrl": "https://www.international-football.net/country?team=United+States",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "United States",
+          "awayTeam": "Germany",
+          "score": {
+            "home": 1,
+            "away": 2
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-05-31",
+          "competition": "Friendly",
+          "homeTeam": "United States",
+          "awayTeam": "Senegal",
+          "score": {
+            "home": 3,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "United States",
+          "awayTeam": "Portugal",
+          "score": {
+            "home": 0,
+            "away": 2
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly",
+          "homeTeam": "United States",
+          "awayTeam": "Belgium",
+          "score": {
+            "home": 2,
+            "away": 5
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly",
+          "homeTeam": "United States",
+          "awayTeam": "Uruguay",
+          "score": {
+            "home": 5,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Japan",
+      "sourceTeamName": "Japan",
+      "sourceUrl": "https://www.international-football.net/country?team=Japan",
+      "lastMatches": [
+        {
+          "date": "2026-05-31",
+          "competition": "Friendly",
+          "homeTeam": "Japan",
+          "awayTeam": "Iceland",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "England",
+          "awayTeam": "Japan",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly",
+          "homeTeam": "Scotland",
+          "awayTeam": "Japan",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly",
+          "homeTeam": "Japan",
+          "awayTeam": "Bolivia",
+          "score": {
+            "home": 3,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-14",
+          "competition": "Friendly",
+          "homeTeam": "Japan",
+          "awayTeam": "Ghana",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "New Zealand",
+      "sourceTeamName": "New Zealand",
+      "sourceUrl": "https://www.international-football.net/country?team=New+Zealand",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "England",
+          "awayTeam": "New Zealand",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-06-02",
+          "competition": "Friendly",
+          "homeTeam": "Haiti",
+          "awayTeam": "New Zealand",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-30",
+          "competition": "FIFA Series",
+          "homeTeam": "New Zealand",
+          "awayTeam": "Chile",
+          "score": {
+            "home": 4,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "FIFA Series",
+          "homeTeam": "New Zealand",
+          "awayTeam": "Finland",
+          "score": {
+            "home": 0,
+            "away": 2
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly",
+          "homeTeam": "Ecuador",
+          "awayTeam": "New Zealand",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        }
+      ]
+    },
+    {
+      "team": "Iran",
+      "sourceTeamName": "Iran",
+      "sourceUrl": "https://www.international-football.net/country?team=Iran",
+      "lastMatches": [
+        {
+          "date": "2026-06-04",
+          "competition": "Friendly",
+          "homeTeam": "Iran",
+          "awayTeam": "Mali",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-29",
+          "competition": "Friendly",
+          "homeTeam": "Iran",
+          "awayTeam": "Gambia",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Al-Nashama Tournament",
+          "homeTeam": "Costa Rica",
+          "awayTeam": "Iran",
+          "score": {
+            "home": 0,
+            "away": 5
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Al-Nashama Tournament",
+          "homeTeam": "Nigeria",
+          "awayTeam": "Iran",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly tournament",
+          "homeTeam": "Iran",
+          "awayTeam": "Uzbekistan",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Argentina",
+      "sourceTeamName": "Argentina",
+      "sourceUrl": "https://www.international-football.net/country?team=Argentina",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Argentina",
+          "awayTeam": "Honduras",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Argentina",
+          "awayTeam": "Zambia",
+          "score": {
+            "home": 5,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Argentina",
+          "awayTeam": "Mauritania",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-14",
+          "competition": "Friendly",
+          "homeTeam": "Angola",
+          "awayTeam": "Argentina",
+          "score": {
+            "home": 0,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-10-14",
+          "competition": "Friendly",
+          "homeTeam": "Argentina",
+          "awayTeam": "Puerto Rico",
+          "score": {
+            "home": 6,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Uzbekistan",
+      "sourceTeamName": "Uzbekistan",
+      "sourceUrl": "https://www.international-football.net/country?team=Uzbekistan",
+      "lastMatches": [
+        {
+          "date": "2026-06-01",
+          "competition": "Friendly",
+          "homeTeam": "Canada",
+          "awayTeam": "Uzbekistan",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-30",
+          "competition": "FIFA Series",
+          "homeTeam": "Uzbekistan",
+          "awayTeam": "Venezuela",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "FIFA Series",
+          "homeTeam": "Uzbekistan",
+          "awayTeam": "Gabon",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-01-26",
+          "competition": "Friendly",
+          "homeTeam": "China",
+          "awayTeam": "Uzbekistan",
+          "score": {
+            "home": 2,
+            "away": 2
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly tournament",
+          "homeTeam": "Iran",
+          "awayTeam": "Uzbekistan",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Jordan",
+      "sourceTeamName": "Jordan",
+      "sourceUrl": "https://www.international-football.net/country?team=Jordan",
+      "lastMatches": [
+        {
+          "date": "2026-05-31",
+          "competition": "Friendly",
+          "homeTeam": "Switzerland",
+          "awayTeam": "Jordan",
+          "score": {
+            "home": 4,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Al-Nashama Tournament",
+          "homeTeam": "Jordan",
+          "awayTeam": "Nigeria",
+          "score": {
+            "home": 2,
+            "away": 2
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Al-Nashama Tournament",
+          "homeTeam": "Costa Rica",
+          "awayTeam": "Jordan",
+          "score": {
+            "home": 2,
+            "away": 2
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-12-18",
+          "competition": "Arab Cup",
+          "homeTeam": "Morocco",
+          "awayTeam": "Jordan",
+          "score": {
+            "home": 3,
+            "away": 2
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-12-15",
+          "competition": "Arab Cup",
+          "homeTeam": "Jordan",
+          "awayTeam": "Saudi Arabia",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "South Korea",
+      "sourceTeamName": "South Korea",
+      "sourceUrl": "https://www.international-football.net/country?team=South+Korea",
+      "lastMatches": [
+        {
+          "date": "2026-06-03",
+          "competition": "Friendly",
+          "homeTeam": "South Korea",
+          "awayTeam": "El Salvador",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-30",
+          "competition": "Friendly",
+          "homeTeam": "South Korea",
+          "awayTeam": "Trinidad & Tobago",
+          "score": {
+            "home": 5,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Austria",
+          "awayTeam": "South Korea",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly",
+          "homeTeam": "Ivory Coast",
+          "awayTeam": "South Korea",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly",
+          "homeTeam": "South Korea",
+          "awayTeam": "Ghana",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Australia",
+      "sourceTeamName": "Australia",
+      "sourceUrl": "https://www.international-football.net/country?team=Australia",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Australia",
+          "awayTeam": "Switzerland",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-05-30",
+          "competition": "Friendly",
+          "homeTeam": "Mexico",
+          "awayTeam": "Australia",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "FIFA Series",
+          "homeTeam": "Australia",
+          "awayTeam": "Curaçao",
+          "score": {
+            "home": 5,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "FIFA Series",
+          "homeTeam": "Australia",
+          "awayTeam": "Cameroon",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly",
+          "homeTeam": "Colombia",
+          "awayTeam": "Australia",
+          "score": {
+            "home": 3,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        }
+      ]
+    },
+    {
+      "team": "Brazil",
+      "sourceTeamName": "Brazil",
+      "sourceUrl": "https://www.international-football.net/country?team=Brazil",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Brazil",
+          "awayTeam": "Egypt",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-31",
+          "competition": "Friendly",
+          "homeTeam": "Brazil",
+          "awayTeam": "Panama",
+          "score": {
+            "home": 6,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Brazil",
+          "awayTeam": "Croatia",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-26",
+          "competition": "Friendly",
+          "homeTeam": "France",
+          "awayTeam": "Brazil",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly",
+          "homeTeam": "Brazil",
+          "awayTeam": "Tunisia",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Ecuador",
+      "sourceTeamName": "Ecuador",
+      "sourceUrl": "https://www.international-football.net/country?team=Ecuador",
+      "lastMatches": [
+        {
+          "date": "2026-05-30",
+          "competition": "Friendly",
+          "homeTeam": "Ecuador",
+          "awayTeam": "Saudi Arabia",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Netherlands",
+          "awayTeam": "Ecuador",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Ecuador",
+          "awayTeam": "Morocco",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly",
+          "homeTeam": "Ecuador",
+          "awayTeam": "New Zealand",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-13",
+          "competition": "Friendly",
+          "homeTeam": "Canada",
+          "awayTeam": "Ecuador",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Paraguay",
+      "sourceTeamName": "Paraguay",
+      "sourceUrl": "https://www.international-football.net/country?team=Paraguay",
+      "lastMatches": [
+        {
+          "date": "2026-06-05",
+          "competition": "Friendly",
+          "homeTeam": "Paraguay",
+          "awayTeam": "Nicaragua",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Morocco",
+          "awayTeam": "Paraguay",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Greece",
+          "awayTeam": "Paraguay",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly",
+          "homeTeam": "Paraguay",
+          "awayTeam": "Mexico",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-15",
+          "competition": "Friendly",
+          "homeTeam": "United States",
+          "awayTeam": "Paraguay",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        }
+      ]
+    },
+    {
+      "team": "Uruguay",
+      "sourceTeamName": "Uruguay",
+      "sourceUrl": "https://www.international-football.net/country?team=Uruguay",
+      "lastMatches": [
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Algeria",
+          "awayTeam": "Uruguay",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "England",
+          "awayTeam": "Uruguay",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly",
+          "homeTeam": "United States",
+          "awayTeam": "Uruguay",
+          "score": {
+            "home": 5,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-15",
+          "competition": "Friendly",
+          "homeTeam": "Mexico",
+          "awayTeam": "Uruguay",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-10-13",
+          "competition": "Friendly",
+          "homeTeam": "Uruguay",
+          "awayTeam": "Uzbekistan",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Colombia",
+      "sourceTeamName": "Colombia",
+      "sourceUrl": "https://www.international-football.net/country?team=Colombia",
+      "lastMatches": [
+        {
+          "date": "2026-06-01",
+          "competition": "Friendly",
+          "homeTeam": "Colombia",
+          "awayTeam": "Costa Rica",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-29",
+          "competition": "Friendly",
+          "homeTeam": "France",
+          "awayTeam": "Colombia",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-26",
+          "competition": "Friendly",
+          "homeTeam": "Croatia",
+          "awayTeam": "Colombia",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly",
+          "homeTeam": "Colombia",
+          "awayTeam": "Australia",
+          "score": {
+            "home": 3,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-15",
+          "competition": "Friendly",
+          "homeTeam": "Colombia",
+          "awayTeam": "New Zealand",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Morocco",
+      "sourceTeamName": "Morocco",
+      "sourceUrl": "https://www.international-football.net/country?team=Morocco",
+      "lastMatches": [
+        {
+          "date": "2026-06-02",
+          "competition": "Friendly",
+          "homeTeam": "Morocco",
+          "awayTeam": "Madagascar",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-26",
+          "competition": "Friendly",
+          "homeTeam": "Morocco",
+          "awayTeam": "Burundi",
+          "score": {
+            "home": 5,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Morocco",
+          "awayTeam": "Paraguay",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Ecuador",
+          "awayTeam": "Morocco",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-01-18",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Morocco",
+          "awayTeam": "Senegal",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        }
+      ]
+    },
+    {
+      "team": "Tunisia",
+      "sourceTeamName": "Tunisia",
+      "sourceUrl": "https://www.international-football.net/country?team=Tunisia",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Belgium",
+          "awayTeam": "Tunisia",
+          "score": {
+            "home": 5,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-06-01",
+          "competition": "Friendly",
+          "homeTeam": "Austria",
+          "awayTeam": "Tunisia",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly tournament",
+          "homeTeam": "Canada",
+          "awayTeam": "Tunisia",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly tournament",
+          "homeTeam": "Tunisia",
+          "awayTeam": "Haiti",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-01-03",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Mali",
+          "awayTeam": "Tunisia",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Egypt",
+      "sourceTeamName": "Egypt",
+      "sourceUrl": "https://www.international-football.net/country?team=Egypt",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Brazil",
+          "awayTeam": "Egypt",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-05-28",
+          "competition": "Friendly",
+          "homeTeam": "Egypt",
+          "awayTeam": "Russia",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Spain",
+          "awayTeam": "Egypt",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Saudi Arabia",
+          "awayTeam": "Egypt",
+          "score": {
+            "home": 0,
+            "away": 4
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-01-17",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Egypt",
+          "awayTeam": "Nigeria",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Algeria",
+      "sourceTeamName": "Algeria",
+      "sourceUrl": "https://www.international-football.net/country?team=Algeria",
+      "lastMatches": [
+        {
+          "date": "2026-06-03",
+          "competition": "Friendly",
+          "homeTeam": "Netherlands",
+          "awayTeam": "Algeria",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Algeria",
+          "awayTeam": "Uruguay",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Algeria",
+          "awayTeam": "Guatemala",
+          "score": {
+            "home": 7,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-01-10",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Nigeria",
+          "awayTeam": "Algeria",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-01-06",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Algeria",
+          "awayTeam": "Dem. Rep. of Congo",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Ghana",
+      "sourceTeamName": "Ghana",
+      "sourceUrl": "https://www.international-football.net/country?team=Ghana",
+      "lastMatches": [
+        {
+          "date": "2026-06-02",
+          "competition": "Friendly",
+          "homeTeam": "Wales",
+          "awayTeam": "Ghana",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-05-22",
+          "competition": "Friendly",
+          "homeTeam": "Mexico",
+          "awayTeam": "Ghana",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-30",
+          "competition": "Friendly",
+          "homeTeam": "Germany",
+          "awayTeam": "Ghana",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Austria",
+          "awayTeam": "Ghana",
+          "score": {
+            "home": 5,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "Friendly",
+          "homeTeam": "South Korea",
+          "awayTeam": "Ghana",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        }
+      ]
+    },
+    {
+      "team": "Cape Verde",
+      "sourceTeamName": "Cape Verde",
+      "sourceUrl": "https://www.international-football.net/country?team=Cape+Verde",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Cape Verde",
+          "awayTeam": "Bermuda",
+          "score": {
+            "home": 3,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-31",
+          "competition": "Friendly",
+          "homeTeam": "Cape Verde",
+          "awayTeam": "Serbia",
+          "score": {
+            "home": 3,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-30",
+          "competition": "FIFA Series",
+          "homeTeam": "Cape Verde",
+          "awayTeam": "Finland",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "FIFA Series",
+          "homeTeam": "Chile",
+          "awayTeam": "Cape Verde",
+          "score": {
+            "home": 4,
+            "away": 2
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-17",
+          "competition": "Friendly tournament",
+          "homeTeam": "Cape Verde",
+          "awayTeam": "Egypt",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Qatar",
+      "sourceTeamName": "Qatar",
+      "sourceUrl": "https://www.international-football.net/country?team=Qatar",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "El Salvador",
+          "awayTeam": "Qatar",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-05-28",
+          "competition": "Friendly",
+          "homeTeam": "Ireland",
+          "awayTeam": "Qatar",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-12-07",
+          "competition": "Arab Cup",
+          "homeTeam": "Qatar",
+          "awayTeam": "Tunisia",
+          "score": {
+            "home": 0,
+            "away": 3
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-12-04",
+          "competition": "Arab Cup",
+          "homeTeam": "Qatar",
+          "awayTeam": "Syria",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-12-01",
+          "competition": "Arab Cup",
+          "homeTeam": "Qatar",
+          "awayTeam": "Palestine",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        }
+      ]
+    },
+    {
+      "team": "Saudi Arabia",
+      "sourceTeamName": "Saudi Arabia",
+      "sourceUrl": "https://www.international-football.net/country?team=Saudi+Arabia",
+      "lastMatches": [
+        {
+          "date": "2026-06-05",
+          "competition": "Friendly",
+          "homeTeam": "Saudi Arabia",
+          "awayTeam": "Puerto Rico",
+          "score": {
+            "home": 3,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-30",
+          "competition": "Friendly",
+          "homeTeam": "Ecuador",
+          "awayTeam": "Saudi Arabia",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Serbia",
+          "awayTeam": "Saudi Arabia",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Saudi Arabia",
+          "awayTeam": "Egypt",
+          "score": {
+            "home": 0,
+            "away": 4
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-12-18",
+          "competition": "Arab Cup",
+          "homeTeam": "Saudi Arabia",
+          "awayTeam": "United Arab Emirates",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Senegal",
+      "sourceTeamName": "Senegal",
+      "sourceUrl": "https://www.international-football.net/country?team=Senegal",
+      "lastMatches": [
+        {
+          "date": "2026-05-31",
+          "competition": "Friendly",
+          "homeTeam": "United States",
+          "awayTeam": "Senegal",
+          "score": {
+            "home": 3,
+            "away": 2
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Senegal",
+          "awayTeam": "Gambia",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly",
+          "homeTeam": "Senegal",
+          "awayTeam": "Peru",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-01-18",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Morocco",
+          "awayTeam": "Senegal",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-01-14",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Senegal",
+          "awayTeam": "Egypt",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "South Africa",
+      "sourceTeamName": "South Africa",
+      "sourceUrl": "https://www.international-football.net/country?team=South+Africa",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "South Africa",
+          "awayTeam": "Jamaica",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-29",
+          "competition": "Friendly",
+          "homeTeam": "South Africa",
+          "awayTeam": "Nicaragua",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "South Africa",
+          "awayTeam": "Panama",
+          "score": {
+            "home": 1,
+            "away": 2
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "South Africa",
+          "awayTeam": "Panama",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-01-04",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Cameroon",
+          "awayTeam": "South Africa",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        }
+      ]
+    },
+    {
+      "team": "Ivory Coast",
+      "sourceTeamName": "Ivory Coast",
+      "sourceUrl": "https://www.international-football.net/country?team=Ivory+Coast",
+      "lastMatches": [
+        {
+          "date": "2026-06-04",
+          "competition": "Friendly",
+          "homeTeam": "France",
+          "awayTeam": "Ivory Coast",
+          "score": {
+            "home": 1,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Ivory Coast",
+          "awayTeam": "Scotland",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly",
+          "homeTeam": "Ivory Coast",
+          "awayTeam": "South Korea",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-01-10",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Egypt",
+          "awayTeam": "Ivory Coast",
+          "score": {
+            "home": 3,
+            "away": 2
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-01-06",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Ivory Coast",
+          "awayTeam": "Burkina Faso",
+          "score": {
+            "home": 3,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "England",
+      "sourceTeamName": "England",
+      "sourceUrl": "https://www.international-football.net/country?team=England",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "England",
+          "awayTeam": "New Zealand",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "England",
+          "awayTeam": "Japan",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "England",
+          "awayTeam": "Uruguay",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-11-16",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Albania",
+          "awayTeam": "England",
+          "score": {
+            "home": 0,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-13",
+          "competition": "World Cup qualifier",
+          "homeTeam": "England",
+          "awayTeam": "Serbia",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "France",
+      "sourceTeamName": "France",
+      "sourceUrl": "https://www.international-football.net/country?team=France",
+      "lastMatches": [
+        {
+          "date": "2026-06-04",
+          "competition": "Friendly",
+          "homeTeam": "France",
+          "awayTeam": "Ivory Coast",
+          "score": {
+            "home": 1,
+            "away": 2
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-29",
+          "competition": "Friendly",
+          "homeTeam": "France",
+          "awayTeam": "Colombia",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-26",
+          "competition": "Friendly",
+          "homeTeam": "France",
+          "awayTeam": "Brazil",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-16",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Azerbaijan",
+          "awayTeam": "France",
+          "score": {
+            "home": 1,
+            "away": 3
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-13",
+          "competition": "World Cup qualifier",
+          "homeTeam": "France",
+          "awayTeam": "Ukraine",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Croatia",
+      "sourceTeamName": "Croatia",
+      "sourceUrl": "https://www.international-football.net/country?team=Croatia",
+      "lastMatches": [
+        {
+          "date": "2026-06-02",
+          "competition": "Friendly",
+          "homeTeam": "Croatia",
+          "awayTeam": "Belgium",
+          "score": {
+            "home": 0,
+            "away": 2
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Brazil",
+          "awayTeam": "Croatia",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-26",
+          "competition": "Friendly",
+          "homeTeam": "Croatia",
+          "awayTeam": "Colombia",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-17",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Montenegro",
+          "awayTeam": "Croatia",
+          "score": {
+            "home": 2,
+            "away": 3
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-14",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Croatia",
+          "awayTeam": "Faroe Islands",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Portugal",
+      "sourceTeamName": "Portugal",
+      "sourceUrl": "https://www.international-football.net/country?team=Portugal",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Portugal",
+          "awayTeam": "Chile",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "United States",
+          "awayTeam": "Portugal",
+          "score": {
+            "home": 0,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly",
+          "homeTeam": "Mexico",
+          "awayTeam": "Portugal",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-11-16",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Portugal",
+          "awayTeam": "Armenia",
+          "score": {
+            "home": 9,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-13",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Ireland",
+          "awayTeam": "Portugal",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        }
+      ]
+    },
+    {
+      "team": "Norway",
+      "sourceTeamName": "Norway",
+      "sourceUrl": "https://www.international-football.net/country?team=Norway",
+      "lastMatches": [
+        {
+          "date": "2026-06-01",
+          "competition": "Friendly",
+          "homeTeam": "Norway",
+          "awayTeam": "Sweden",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Norway",
+          "awayTeam": "Switzerland",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Netherlands",
+          "awayTeam": "Norway",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-16",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Italy",
+          "awayTeam": "Norway",
+          "score": {
+            "home": 1,
+            "away": 4
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-13",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Norway",
+          "awayTeam": "Estonia",
+          "score": {
+            "home": 4,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Germany",
+      "sourceTeamName": "Germany",
+      "sourceUrl": "https://www.international-football.net/country?team=Germany",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "United States",
+          "awayTeam": "Germany",
+          "score": {
+            "home": 1,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-31",
+          "competition": "Friendly",
+          "homeTeam": "Germany",
+          "awayTeam": "Finland",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-30",
+          "competition": "Friendly",
+          "homeTeam": "Germany",
+          "awayTeam": "Ghana",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Switzerland",
+          "awayTeam": "Germany",
+          "score": {
+            "home": 3,
+            "away": 4
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-17",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Germany",
+          "awayTeam": "Slovakia",
+          "score": {
+            "home": 6,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Netherlands",
+      "sourceTeamName": "Netherlands",
+      "sourceUrl": "https://www.international-football.net/country?team=Netherlands",
+      "lastMatches": [
+        {
+          "date": "2026-06-03",
+          "competition": "Friendly",
+          "homeTeam": "Netherlands",
+          "awayTeam": "Algeria",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Netherlands",
+          "awayTeam": "Ecuador",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Netherlands",
+          "awayTeam": "Norway",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-17",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Netherlands",
+          "awayTeam": "Lithuania",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-14",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Poland",
+          "awayTeam": "Netherlands",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Switzerland",
+      "sourceTeamName": "Switzerland",
+      "sourceUrl": "https://www.international-football.net/country?team=Switzerland",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Australia",
+          "awayTeam": "Switzerland",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-05-31",
+          "competition": "Friendly",
+          "homeTeam": "Switzerland",
+          "awayTeam": "Jordan",
+          "score": {
+            "home": 4,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Norway",
+          "awayTeam": "Switzerland",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Switzerland",
+          "awayTeam": "Germany",
+          "score": {
+            "home": 3,
+            "away": 4
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Kosovo",
+          "awayTeam": "Switzerland",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Scotland",
+      "sourceTeamName": "Scotland",
+      "sourceUrl": "https://www.international-football.net/country?team=Scotland",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Scotland",
+          "awayTeam": "Bolivia",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-30",
+          "competition": "Friendly",
+          "homeTeam": "Scotland",
+          "awayTeam": "Curaçao",
+          "score": {
+            "home": 4,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Ivory Coast",
+          "awayTeam": "Scotland",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly",
+          "homeTeam": "Scotland",
+          "awayTeam": "Japan",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Scotland",
+          "awayTeam": "Denmark",
+          "score": {
+            "home": 4,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Spain",
+      "sourceTeamName": "Spain",
+      "sourceUrl": "https://www.international-football.net/country?team=Spain",
+      "lastMatches": [
+        {
+          "date": "2026-06-04",
+          "competition": "Friendly",
+          "homeTeam": "Spain",
+          "awayTeam": "Iraq",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Spain",
+          "awayTeam": "Egypt",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Spain",
+          "awayTeam": "Serbia",
+          "score": {
+            "home": 3,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Spain",
+          "awayTeam": "Turkey",
+          "score": {
+            "home": 2,
+            "away": 2
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-11-15",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Georgia",
+          "awayTeam": "Spain",
+          "score": {
+            "home": 0,
+            "away": 4
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Austria",
+      "sourceTeamName": "Austria",
+      "sourceUrl": "https://www.international-football.net/country?team=Austria",
+      "lastMatches": [
+        {
+          "date": "2026-06-01",
+          "competition": "Friendly",
+          "homeTeam": "Austria",
+          "awayTeam": "Tunisia",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Austria",
+          "awayTeam": "South Korea",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Austria",
+          "awayTeam": "Ghana",
+          "score": {
+            "home": 5,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Austria",
+          "awayTeam": "Bosnia & Herzegovina",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-11-15",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Cyprus",
+          "awayTeam": "Austria",
+          "score": {
+            "home": 0,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Belgium",
+      "sourceTeamName": "Belgium",
+      "sourceUrl": "https://www.international-football.net/country?team=Belgium",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Belgium",
+          "awayTeam": "Tunisia",
+          "score": {
+            "home": 5,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-06-02",
+          "competition": "Friendly",
+          "homeTeam": "Croatia",
+          "awayTeam": "Belgium",
+          "score": {
+            "home": 0,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "Belgium",
+          "awayTeam": "Mexico",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly",
+          "homeTeam": "United States",
+          "awayTeam": "Belgium",
+          "score": {
+            "home": 2,
+            "away": 5
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Belgium",
+          "awayTeam": "Liechtenstein",
+          "score": {
+            "home": 7,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Panama",
+      "sourceTeamName": "Panama",
+      "sourceUrl": "https://www.international-football.net/country?team=Panama",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Bosnia & Herzegovina",
+          "awayTeam": "Panama",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-06-03",
+          "competition": "Friendly",
+          "homeTeam": "Panama",
+          "awayTeam": "Dominican Republic",
+          "score": {
+            "home": 4,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-31",
+          "competition": "Friendly",
+          "homeTeam": "Brazil",
+          "awayTeam": "Panama",
+          "score": {
+            "home": 6,
+            "away": 2
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly",
+          "homeTeam": "South Africa",
+          "awayTeam": "Panama",
+          "score": {
+            "home": 1,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "South Africa",
+          "awayTeam": "Panama",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Curaçao",
+      "sourceTeamName": "Curaçao",
+      "sourceUrl": "https://www.international-football.net/country?team=Curaçao",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Curaçao",
+          "awayTeam": "Aruba",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-30",
+          "competition": "Friendly",
+          "homeTeam": "Scotland",
+          "awayTeam": "Curaçao",
+          "score": {
+            "home": 4,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "FIFA Series",
+          "homeTeam": "Australia",
+          "awayTeam": "Curaçao",
+          "score": {
+            "home": 5,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "FIFA Series",
+          "homeTeam": "China",
+          "awayTeam": "Curaçao",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Jamaica",
+          "awayTeam": "Curaçao",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Haiti",
+      "sourceTeamName": "Haiti",
+      "sourceUrl": "https://www.international-football.net/country?team=Haiti",
+      "lastMatches": [
+        {
+          "date": "2026-06-05",
+          "competition": "Friendly",
+          "homeTeam": "Peru",
+          "awayTeam": "Haiti",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-06-02",
+          "competition": "Friendly",
+          "homeTeam": "Haiti",
+          "awayTeam": "New Zealand",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "Friendly tournament",
+          "homeTeam": "Haiti",
+          "awayTeam": "Iceland",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-28",
+          "competition": "Friendly tournament",
+          "homeTeam": "Tunisia",
+          "awayTeam": "Haiti",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Haiti",
+          "awayTeam": "Nicaragua",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Bosnia and Herzegovina",
+      "sourceTeamName": "Bosnia and Herzegovina",
+      "sourceUrl": "https://www.international-football.net/country?team=Bosnia+and+Herzegovina",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Bosnia & Herzegovina",
+          "awayTeam": "Panama",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-05-29",
+          "competition": "Friendly",
+          "homeTeam": "Bosnia & Herzegovina",
+          "awayTeam": "North Macedonia",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Bosnia & Herzegovina",
+          "awayTeam": "Italy",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-26",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Wales",
+          "awayTeam": "Bosnia & Herzegovina",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Austria",
+          "awayTeam": "Bosnia & Herzegovina",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Sweden",
+      "sourceTeamName": "Sweden",
+      "sourceUrl": "https://www.international-football.net/country?team=Sweden",
+      "lastMatches": [
+        {
+          "date": "2026-06-04",
+          "competition": "Friendly",
+          "homeTeam": "Sweden",
+          "awayTeam": "Greece",
+          "score": {
+            "home": 2,
+            "away": 2
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-06-01",
+          "competition": "Friendly",
+          "homeTeam": "Norway",
+          "awayTeam": "Sweden",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Sweden",
+          "awayTeam": "Poland",
+          "score": {
+            "home": 3,
+            "away": 2
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-26",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Sweden",
+          "awayTeam": "Ukraine",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Sweden",
+          "awayTeam": "Slovenia",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Turkey",
+      "sourceTeamName": "Turkey",
+      "sourceUrl": "https://www.international-football.net/country?team=Turkey",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Turkey",
+          "awayTeam": "Venezuela",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-06-01",
+          "competition": "Friendly",
+          "homeTeam": "Turkey",
+          "awayTeam": "North Macedonia",
+          "score": {
+            "home": 4,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Kosovo",
+          "awayTeam": "Turkey",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-26",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Turkey",
+          "awayTeam": "Romania",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-11-18",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Spain",
+          "awayTeam": "Turkey",
+          "score": {
+            "home": 2,
+            "away": 2
+          },
+          "resultForTeam": "D"
+        }
+      ]
+    },
+    {
+      "team": "Czech Republic",
+      "sourceTeamName": "Czech Republic",
+      "sourceUrl": "https://www.international-football.net/country?team=Czech+Republic",
+      "lastMatches": [
+        {
+          "date": "2026-06-04",
+          "competition": "Friendly",
+          "homeTeam": "Czech Republic",
+          "awayTeam": "Guatemala",
+          "score": {
+            "home": 3,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-05-31",
+          "competition": "Friendly",
+          "homeTeam": "Czech Republic",
+          "awayTeam": "Kosovo",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Czech Republic",
+          "awayTeam": "Denmark",
+          "score": {
+            "home": 2,
+            "away": 2
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-26",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Czech Republic",
+          "awayTeam": "Ireland",
+          "score": {
+            "home": 2,
+            "away": 2
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2025-11-17",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Czech Republic",
+          "awayTeam": "Gibraltar",
+          "score": {
+            "home": 6,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "DR Congo",
+      "sourceTeamName": "Dem. Rep. of Congo",
+      "sourceUrl": "https://www.international-football.net/country?team=Dem.+Rep.+of+Congo",
+      "lastMatches": [
+        {
+          "date": "2026-06-03",
+          "competition": "Friendly",
+          "homeTeam": "Denmark",
+          "awayTeam": "Dem. Rep. of Congo",
+          "score": {
+            "home": 0,
+            "away": 0
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Dem. Rep. of Congo",
+          "awayTeam": "Jamaica",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-25",
+          "competition": "Friendly",
+          "homeTeam": "Dem. Rep. of Congo",
+          "awayTeam": "Bermuda",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-01-06",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Algeria",
+          "awayTeam": "Dem. Rep. of Congo",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-12-30",
+          "competition": "Africa Cup of Nations",
+          "homeTeam": "Dem. Rep. of Congo",
+          "awayTeam": "Botswana",
+          "score": {
+            "home": 3,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Iraq",
+      "sourceTeamName": "Iraq",
+      "sourceUrl": "https://www.international-football.net/country?team=Iraq",
+      "lastMatches": [
+        {
+          "date": "2026-06-04",
+          "competition": "Friendly",
+          "homeTeam": "Spain",
+          "awayTeam": "Iraq",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-05-29",
+          "competition": "Friendly",
+          "homeTeam": "Iraq",
+          "awayTeam": "Andorra",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "World Cup qualifier",
+          "homeTeam": "Iraq",
+          "awayTeam": "Bolivia",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2025-12-12",
+          "competition": "Arab Cup",
+          "homeTeam": "Jordan",
+          "awayTeam": "Iraq",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2025-12-09",
+          "competition": "Arab Cup",
+          "homeTeam": "Algeria",
+          "awayTeam": "Iraq",
+          "score": {
+            "home": 2,
+            "away": 0
+          },
+          "resultForTeam": "L"
+        }
+      ]
+    }
+  ]
+}

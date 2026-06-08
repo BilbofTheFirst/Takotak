@@ -12,18 +12,23 @@ function Navigation({ user, onLogout }) {
   if (!user) return null;
 
   return (
-    <nav style={{ background: '#333', color: 'white', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div style={{ display: 'flex', gap: '20px' }}>
-        <Link to="/predictions" style={{ color: 'white', textDecoration: 'none' }}>🎯 Pronostics</Link>
-        <Link to="/rankings" style={{ color: 'white', textDecoration: 'none' }}>🏆 Classement</Link>
-        <Link to="/stats" style={{ color: 'white', textDecoration: 'none' }}>📊 Mes Stats</Link>
-        <Link to="/simulation" style={{ color: 'white', textDecoration: 'none' }}>🎮 Simulation</Link>
-        <Link to="/rules" style={{ color: 'white', textDecoration: 'none' }}>📋 Règles</Link>
-        <Link to="/admin" style={{ color: 'white', textDecoration: 'none' }}>⚙️ Admin</Link>
+    <nav className="top-nav">
+      <div className="brand">
+        <Link to="/predictions">⚽ TakoTak</Link>
       </div>
-      <div>
-        <span style={{ marginRight: '15px' }}>Bienvenue, {user.username}!</span>
-        <button onClick={onLogout} style={{ padding: '5px 15px', background: '#dc3545', color: 'white', border: 'none', cursor: 'pointer' }}>
+
+      <div className="nav-links">
+        <Link to="/predictions">🎯 Pronostics</Link>
+        <Link to="/rankings">🏆 Classement</Link>
+        <Link to="/stats">📊 Mes Stats</Link>
+        <Link to="/simulation">🎮 Simulation</Link>
+        <Link to="/rules">📋 Règles</Link>
+        {user?.is_admin && <Link to="/admin">⚙️ Admin</Link>}
+      </div>
+
+      <div className="nav-user">
+        <span>Bienvenue, {user.username}</span>
+        <button onClick={onLogout} className="button button-danger button-small">
           Déconnexion
         </button>
       </div>
@@ -64,7 +69,7 @@ function AppContent() {
         <Route path="/stats" element={user ? <UserStats /> : <Home onLogin={handleLogin} />} />
         <Route path="/simulation" element={user ? <Simulation /> : <Home onLogin={handleLogin} />} />
         <Route path="/rules" element={<Rules />} />
-        <Route path="/admin" element={user ? <Admin /> : <Home onLogin={handleLogin} />} />
+        <Route path="/admin" element={user?.is_admin ? <Admin /> : <Predictions />} />
       </Routes>
     </>
   );

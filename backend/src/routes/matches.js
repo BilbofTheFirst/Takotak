@@ -21,7 +21,21 @@ router.get('/', authenticateToken, async (req, res) => {
         m.status,
         m.created_at,
         r.team1_goals,
-        r.team2_goals
+        r.team2_goals,
+        CASE
+          WHEN m.team1_id IS NOT NULL
+           AND m.team2_id IS NOT NULL
+           AND m.start_time > NOW()
+           AND COALESCE(m.status, 'scheduled') <> 'finished'
+          THEN true
+          ELSE false
+        END AS can_predict,
+        CASE
+          WHEN m.start_time <= NOW()
+            OR COALESCE(m.status, 'scheduled') = 'finished'
+          THEN true
+          ELSE false
+        END AS is_locked
       FROM matches m
       LEFT JOIN teams t1 ON m.team1_id = t1.id
       LEFT JOIN teams t2 ON m.team2_id = t2.id

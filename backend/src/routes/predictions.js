@@ -4,31 +4,52 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
+const isValidScore = (value) => {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 && n <= 20;
+};
+
 // Create/Update prediction
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { match_id, team1_goals, team2_goals } = req.body;
     const user_id = req.user.id;
 
-    if (team1_goals === undefined || team2_goals === undefined) {
-      return res.status(400).json({ error: 'Goals required' });
+    if (!match_id) {
+      return res.status(400).json({ error: 'Match required' });
     }
 
-    // Check if match is open for predictions
+    if (!isValidScore(team1_goals) || !isValidScore(team2_goals)) {
+      return res.status(400).json({ error: 'Goals must be integers between 0 and 20' });
+    }
+
     const match = await pool.query('SELECT * FROM matches WHERE id = $1', [match_id]);
     if (match.rows.length === 0) {
       return res.status(404).json({ error: 'Match not found' });
     }
 
+    const selectedMatch = match.rows[0];
+
+    if (!selectedMatch.team1_id || !selectedMatch.team2_id) {
+      return res.status(400).json({ error: 'Teams are not known yet for this match' });
+    }
+
     const now = new Date();
-    const matchTime = new Date(match.rows[0].start_time);
+    const matchTime = new Date(selectedMatch.start_time);
     if (now >= matchTime) {
       return res.status(400).json({ error: 'Match already started' });
     }
 
     const result = await pool.query(
-      'INSERT INTO predictions (user_id, match_id, team1_goals, team2_goals) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, match_id) DO UPDATE SET team1_goals = $3, team2_goals = $4 RETURNING *',
-      [user_id, match_id, team1_goals, team2_goals]
+      `INSERT INTO predictions (user_id, match_id, team1_goals, team2_goals)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id, match_id)
+       DO UPDATE SET
+         team1_goals = EXCLUDED.team1_goals,
+         team2_goals = EXCLUDED.team2_goals,
+         updated_at = NOW()
+       RETURNING *`,
+      [user_id, match_id, Number(team1_goals), Number(team2_goals)]
     );
 
     res.json(result.rows[0]);

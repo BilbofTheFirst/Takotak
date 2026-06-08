@@ -18,6 +18,17 @@ api.interceptors.request.use(config => {
   return config;
 });
 
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Keep it soft: do not auto-redirect from public pages such as rankings.
+      console.warn('Authentication/authorization error', error.response?.data);
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const authService = {
   register: (username, email, password) =>
     api.post('/auth/register', { username, email, password }),
@@ -39,7 +50,8 @@ export const predictionsService = {
 export const resultsService = {
   create: (match_id, team1_goals, team2_goals) =>
     api.post('/results', { match_id, team1_goals, team2_goals }),
-  getLeaderboard: () => api.get('/results/leaderboard')
+  getLeaderboard: () => api.get('/results/leaderboard'),
+  getUserStats: () => api.get('/results/user/stats')
 };
 
 export const teamsService = {

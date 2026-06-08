@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+import { resultsService } from '../services/api';
 
 function UserStats() {
   const [stats, setStats] = useState(null);
@@ -9,16 +7,11 @@ function UserStats() {
 
   useEffect(() => {
     loadStats();
-    const interval = setInterval(loadStats, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   const loadStats = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/results/user/stats`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await resultsService.getUserStats();
       setStats(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des stats:', error);
@@ -27,53 +20,61 @@ function UserStats() {
     }
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '20px' }}>Chargement...</div>;
-  if (!stats) return <div style={{ textAlign: 'center', padding: '20px' }}>Pas de stats pour le moment</div>;
+  if (loading) return <div className="page-shell"><div className="page-container">Chargement...</div></div>;
+  if (!stats) return <div className="page-shell"><div className="page-container">Pas de stats pour le moment</div></div>;
+
+  const statCards = [
+    { label: 'Points totaux', value: stats.total_points || 0, icon: '🏆' },
+    { label: 'Classement', value: stats.rank ? `#${stats.rank}` : '-', icon: '🥇' },
+    { label: 'Matchs scorés', value: stats.matches_played || 0, icon: '⚽' },
+    { label: 'Moyenne / match', value: stats.avg_points_per_match || 0, icon: '📈' }
+  ];
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-      <h1>📊 Vos Statistiques</h1>
+    <div className="page-shell">
+      <div className="page-container">
+        <div className="section-title">
+          <div>
+            <h1>📊 Mes statistiques</h1>
+            <p>Suivi des points calculés après encodage des résultats officiels.</p>
+          </div>
+          <button className="button" onClick={loadStats}>Rafraîchir</button>
+        </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '30px' }}>
-        <div style={{ background: '#f0f0f0', padding: '15px', borderRadius: '8px' }}>
-          <h3>🏆 {stats.total_points || 0}</h3>
-          <p>Points totaux</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '15px', marginBottom: '24px' }}>
+          {statCards.map(card => (
+            <div className="card" key={card.label}>
+              <div style={{ fontSize: 26 }}>{card.icon}</div>
+              <h2 style={{ margin: '6px 0', color: 'var(--grass-900)' }}>{card.value}</h2>
+              <p style={{ margin: 0, color: 'var(--muted)' }}>{card.label}</p>
+            </div>
+          ))}
         </div>
-        <div style={{ background: '#f0f0f0', padding: '15px', borderRadius: '8px' }}>
-          <h3>🥇 #{stats.rank || '-'}</h3>
-          <p>Votre classement</p>
-        </div>
-        <div style={{ background: '#f0f0f0', padding: '15px', borderRadius: '8px' }}>
-          <h3>⚽ {stats.matches_played || 0}</h3>
-          <p>Matchs pronostiqués</p>
-        </div>
-        <div style={{ background: '#f0f0f0', padding: '15px', borderRadius: '8px' }}>
-          <h3>📈 {stats.avg_points_per_match || 0}</h3>
-          <p>Pts moyens/Match</p>
+
+        <div className="card">
+          <h2 style={{ marginTop: 0 }}>Précision des pronostics</h2>
+          <table className="table-modern">
+            <tbody>
+              <tr>
+                <td>✓ Scores exacts</td>
+                <td><strong>{stats.exact_scores || 0}</strong> × 3 pts</td>
+              </tr>
+              <tr>
+                <td>≈ Bonnes différences</td>
+                <td><strong>{stats.correct_differences || 0}</strong> × 2 pts</td>
+              </tr>
+              <tr>
+                <td>→ Bons vainqueurs / bons nuls simples</td>
+                <td><strong>{stats.correct_winners || 0}</strong> × 1 pt</td>
+              </tr>
+              <tr>
+                <td>✗ Mauvais pronostics</td>
+                <td><strong>{stats.wrong_predictions || 0}</strong> × 0 pt</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-
-      <h2>Précision des pronostics</h2>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <tbody>
-          <tr style={{ background: '#e8f5e9' }}>
-            <td style={{ border: '1px solid #ddd', padding: '10px' }}>✓ Scores exacts</td>
-            <td style={{ border: '1px solid #ddd', padding: '10px', fontWeight: 'bold' }}>{stats.exact_scores || 0} (3 pts chacun)</td>
-          </tr>
-          <tr>
-            <td style={{ border: '1px solid #ddd', padding: '10px' }}>≈ Bonnes différences</td>
-            <td style={{ border: '1px solid #ddd', padding: '10px', fontWeight: 'bold' }}>{stats.correct_differences || 0} (2 pts chacun)</td>
-          </tr>
-          <tr style={{ background: '#fff3e0' }}>
-            <td style={{ border: '1px solid #ddd', padding: '10px' }}>→ Bons vainqueurs</td>
-            <td style={{ border: '1px solid #ddd', padding: '10px', fontWeight: 'bold' }}>{stats.correct_winners || 0} (1 pt chacun)</td>
-          </tr>
-          <tr>
-            <td style={{ border: '1px solid #ddd', padding: '10px' }}>✗ Mauvais pronostics</td>
-            <td style={{ border: '1px solid #ddd', padding: '10px', fontWeight: 'bold' }}>{stats.wrong_predictions || 0} (0 pt)</td>
-          </tr>
-        </tbody>
-      </table>
     </div>
   );
 }

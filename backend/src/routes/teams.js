@@ -1,19 +1,17 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
+const worldCupForm = require('../data/worldcup_2026_last5_matches.json');
 
 const router = express.Router();
 
-const FOOTBALL_DATA_API = 'https://api.football-data.org/v4';
-const API_KEY = process.env.FOOTBALL_DATA_API_KEY;
-
-// Mapping French team names to English
+// Mapping French team names to the English names used in the local JSON file.
 const TEAM_NAME_MAPPING = {
   'Mexique': 'Mexico',
   'Afrique du Sud': 'South Africa',
   'Corée du Sud': 'South Korea',
   'République tchèque': 'Czech Republic',
-  'Bosnie-Herzégovine': 'Bosnia and Herzegovina',
+  'Bosnie-Herzégovine': 'Bosnia & Herzegovina',
   'Brésil': 'Brazil',
   'Maroc': 'Morocco',
   'Haïti': 'Haiti',
@@ -56,164 +54,74 @@ const TEAM_NAME_MAPPING = {
   'Panama': 'Panama'
 };
 
-// Get team info with FIFA ranking + last 5 matches from football-data.org
+const normalize = (value) =>
+  (value || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+
+const findTeamForm = (teamName) => {
+  const englishTeamName = TEAM_NAME_MAPPING[teamName] || teamName;
+  const candidates = [teamName, englishTeamName].map(normalize);
+
+  return worldCupForm.teams.find((entry) =>
+    candidates.includes(normalize(entry.team)) ||
+    candidates.includes(normalize(entry.sourceTeamName))
+  );
+};
+
+const formatLastMatchesForUi = (teamForm) => {
+  if (!teamForm) return [];
+
+  const teamNames = [teamForm.team, teamForm.sourceTeamName].map(normalize);
+
+  return teamForm.lastMatches.map((match) => {
+    const isHomeTeam = teamNames.includes(normalize(match.homeTeam));
+    const isAwayTeam = teamNames.includes(normalize(match.awayTeam));
+    const opponent = isHomeTeam ? match.awayTeam : isAwayTeam ? match.homeTeam : `${match.homeTeam} - ${match.awayTeam}`;
+
+    return {
+      opponent,
+      result: match.resultForTeam,
+      score: `${match.score.home}-${match.score.away}`,
+      date: match.date,
+      competition: match.competition,
+      homeTeam: match.homeTeam,
+      awayTeam: match.awayTeam,
+      goals: match.score
+    };
+  });
+};
+
+// Get team info with FIFA ranking + local last 5 matches.
+// No external API call here: this endpoint is deterministic and safe for Railway/Vercel usage.
 router.get('/:teamName/info', authenticateToken, async (req, res) => {
   try {
-    const frenchTeamName = req.params.teamName;
+    const teamName = req.params.teamName;
 
-    // Get FIFA ranking from DB
     const fifarankResult = await pool.query(
       'SELECT fifa_ranking FROM teams WHERE name = $1',
-      [frenchTeamName]
+      [teamName]
     );
 
-    const fifaRanking = fifarankResult.rows[0]?.fifa_ranking || null;
-
-    // Convert to English for API
-    const englishTeamName = TEAM_NAME_MAPPING[frenchTeamName] || frenchTeamName;
-
-    console.log(`[TEAMS] Fetching info for: ${frenchTeamName} (English: ${englishTeamName})`);
-
-    // Fetch World Cup 2026 competition first to get teams
-    const competitionResponse = await fetch(`${FOOTBALL_DATA_API}/competitions/WC/teams`, {
-      headers: { 'X-Auth-Token': API_KEY }
-    });
-
-    console.log(`[TEAMS] WC 2026 API status: ${competitionResponse.status}`);
-
-    if (!competitionResponse.ok) {
-      console.log(`[TEAMS] WC API failed, trying with ID 501`);
-      // Try alternative ID
-      const altResponse = await fetch(`${FOOTBALL_DATA_API}/competitions/501/teams`, {
-        headers: { 'X-Auth-Token': API_KEY }
-      });
-
-      if (!altResponse.ok) {
-        return res.json({
-          team: { name: frenchTeamName, fifaRanking },
-          lastMatches: []
-        });
-      }
-
-      const compData = await altResponse.json();
-      const team = compData.teams?.find(t =>
-        t.name.toLowerCase() === englishTeamName.toLowerCase() ||
-        t.name.toLowerCase().includes(englishTeamName.toLowerCase())
-      );
-
-      if (!team) {
-        console.log(`[TEAMS] Team ${englishTeamName} not found`);
-        return res.json({
-          team: { name: frenchTeamName, fifaRanking },
-          lastMatches: []
-        });
-      }
-
-      console.log(`[TEAMS] Team found: ${team.name} (ID: ${team.id})`);
-
-      // Continue with fetching matches
-      const matchesResponse = await fetch(
-        `${FOOTBALL_DATA_API}/teams/${team.id}/matches?limit=20`,
-        { headers: { 'X-Auth-Token': API_KEY } }
-      );
-
-      let matches = [];
-      if (matchesResponse.ok) {
-        const matchesData = await matchesResponse.json();
-        const finishedMatches = (matchesData.matches || []).filter(m => m.status === 'FINISHED');
-        matches = finishedMatches.slice(0, 5).map(match => {
-          const isHome = match.homeTeam.id === team.id;
-          const goalsFor = isHome ? match.score.fullTime.home : match.score.fullTime.away;
-          const goalsAgainst = isHome ? match.score.fullTime.away : match.score.fullTime.home;
-          const opponent = isHome ? match.awayTeam.name : match.homeTeam.name;
-
-          let result = 'vs';
-          if (goalsFor !== null && goalsAgainst !== null) {
-            if (goalsFor > goalsAgainst) result = 'W';
-            else if (goalsFor < goalsAgainst) result = 'L';
-            else result = 'D';
-          }
-
-          return {
-            opponent,
-            result,
-            score: goalsFor !== null ? `${goalsFor}-${goalsAgainst}` : '-',
-            date: match.utcDate
-          };
-        });
-      }
-
-      return res.json({
-        team: { name: frenchTeamName, fifaRanking },
-        lastMatches: matches
-      });
-    }
-
-    const compData = await competitionResponse.json();
-    console.log(`[TEAMS] Teams found in WC 2026: ${compData.teams?.length || 0}`);
-
-    const team = compData.teams?.find(t =>
-      t.name.toLowerCase() === englishTeamName.toLowerCase() ||
-      t.name.toLowerCase().includes(englishTeamName.toLowerCase())
-    );
-
-    console.log(`[TEAMS] Team found: ${team?.name} (ID: ${team?.id})`);
-
-    if (!team) {
-      console.log(`[TEAMS] Team not found in API`);
-      return res.json({
-        team: { name: frenchTeamName, fifaRanking },
-        lastMatches: []
-      });
-    }
-
-    // Fetch team's matches (ALL matches, no status filter)
-    console.log(`[TEAMS] Fetching matches for team ID: ${team.id}`);
-    const matchesResponse = await fetch(
-      `${FOOTBALL_DATA_API}/teams/${team.id}/matches?limit=20`,
-      { headers: { 'X-Auth-Token': API_KEY } }
-    );
-
-    console.log(`[TEAMS] Matches API status: ${matchesResponse.status}`);
-
-    let matches = [];
-    if (matchesResponse.ok) {
-      const matchesData = await matchesResponse.json();
-      console.log(`[TEAMS] Total matches from API: ${matchesData.matches?.length || 0}`);
-      console.log(`[TEAMS] Raw matches:`, JSON.stringify(matchesData.matches?.slice(0, 2)));
-
-      // Filter for finished matches only
-      const finishedMatches = (matchesData.matches || []).filter(m => m.status === 'FINISHED');
-      console.log(`[TEAMS] Finished matches: ${finishedMatches.length}`);
-
-      matches = finishedMatches.slice(0, 5).map(match => {
-        const isHome = match.homeTeam.id === team.id;
-        const goalsFor = isHome ? match.score.fullTime.home : match.score.fullTime.away;
-        const goalsAgainst = isHome ? match.score.fullTime.away : match.score.fullTime.home;
-        const opponent = isHome ? match.awayTeam.name : match.homeTeam.name;
-
-        let result = 'vs';
-        if (goalsFor !== null && goalsAgainst !== null) {
-          if (goalsFor > goalsAgainst) result = 'W';
-          else if (goalsFor < goalsAgainst) result = 'L';
-          else result = 'D';
-        }
-
-        return {
-          opponent,
-          result,
-          score: goalsFor !== null ? `${goalsFor}-${goalsAgainst}` : '-',
-          date: match.utcDate
-        };
-      });
-    }
+    const teamForm = findTeamForm(teamName);
 
     res.json({
-      team: { name: frenchTeamName, fifaRanking },
-      lastMatches: matches
+      team: {
+        name: teamName,
+        sourceName: teamForm?.team || null,
+        fifaRanking: fifarankResult.rows[0]?.fifa_ranking || null
+      },
+      lastMatches: formatLastMatchesForUi(teamForm),
+      dataSource: {
+        generatedAt: worldCupForm.generatedAt,
+        matchDataSource: worldCupForm.matchDataSource
+      }
     });
   } catch (error) {
-    console.error('Get team info error:', error.message);
+    console.error('Get team info error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
