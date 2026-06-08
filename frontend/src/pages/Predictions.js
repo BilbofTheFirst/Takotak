@@ -93,26 +93,17 @@ function Predictions() {
   };
 
   const getMatchLabel = (match) => {
-    // Matchs de groupes: A-L (IDs 1-72)
-    if (match.id <= 72) {
-      const groupIndex = Math.floor((match.id - 1) / 6);
-      return `Groupe ${String.fromCharCode(65 + groupIndex)}`; // Groupe A-L
-    }
-
-    // Matchs KO (IDs 73+) - utiliser la description de la DB
+    // Matchs KO (si description existe)
     if (match.description) {
       return match.description.split('—')[0].trim();
     }
 
-    // Fallback
-    const koId = match.id - 72;
-    if (koId <= 16) return '16ème';
-    if (koId <= 24) return '8ème';
-    if (koId <= 28) return 'Quart';
-    if (koId <= 30) return 'Semi';
-    if (koId === 31) return '3e place';
-    if (koId === 32) return 'Final';
+    // Matchs de groupes: utiliser le groupe de team1 (groupe1)
+    if (match.groupe1) {
+      return `Groupe ${match.groupe1}`;
+    }
 
+    // Fallback
     return 'Match';
   };
 

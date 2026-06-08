@@ -208,7 +208,8 @@ function Simulation() {
 
     return thirds.sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
-      return b.diff - a.diff;
+      if (b.diff !== a.diff) return b.diff - a.diff;
+      return b.gf - a.gf; // Buts marqués
     });
   }, [groupsData]);
 
@@ -531,12 +532,14 @@ function Simulation() {
                   <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '60px' }}>Groupe</th>
                   <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '40px' }}>Pts</th>
                   <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '50px' }}>Diff</th>
+                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '45px' }}>B+</th>
+                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '50px' }}>Statut</th>
                 </tr>
               </thead>
               <tbody>
                 {allThirdPlaces.map((data, idx) => (
                   <tr key={data.team} style={{
-                    background: idx < 4 ? '#eff6ff' : 'white',
+                    background: idx < 8 ? '#eff6ff' : 'white',
                     borderTop: '1px solid #eee'
                   }}>
                     <td style={{ padding: '10px 12px', fontWeight: '500' }}>
@@ -544,7 +547,7 @@ function Simulation() {
                         display: 'inline-block',
                         width: '24px',
                         height: '24px',
-                        background: idx < 4 ? GRADIENT : '#e0e0e0',
+                        background: idx < 8 ? GRADIENT : '#e0e0e0',
                         color: 'white',
                         borderRadius: '50%',
                         textAlign: 'center',
@@ -557,7 +560,6 @@ function Simulation() {
                       </span>
                       <span style={{ marginRight: '6px' }}>{getFlag(data.team)}</span>
                       {data.team}
-                      {idx < 4 && <span style={{ marginLeft: '8px', color: '#059669', fontWeight: 'bold', fontSize: '11px' }}>✓ Qualifié</span>}
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 'bold' }}>{data.group}</td>
                     <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 'bold', color: PRIMARY }}>
@@ -567,9 +569,25 @@ function Simulation() {
                       padding: '10px 12px',
                       textAlign: 'center',
                       fontWeight: 'bold',
-                      color: data.diff > 0 ? '#059669' : '#dc2626'
+                      color: data.diff > 0 ? '#059669' : data.diff < 0 ? '#dc2626' : '#666'
                     }}>
                       {data.diff > 0 ? '+' : ''}{data.diff}
+                    </td>
+                    <td style={{
+                      padding: '10px 12px',
+                      textAlign: 'center',
+                      fontWeight: 'bold'
+                    }}>
+                      {data.gf}
+                    </td>
+                    <td style={{
+                      padding: '10px 12px',
+                      textAlign: 'center',
+                      fontWeight: 'bold',
+                      color: idx < 8 ? '#059669' : '#dc2626',
+                      background: idx < 8 ? 'rgba(16, 185, 129, 0.05)' : 'rgba(220, 38, 38, 0.05)'
+                    }}>
+                      {idx < 8 ? '✓ Qualifié' : '✗ Éliminé'}
                     </td>
                   </tr>
                 ))}
