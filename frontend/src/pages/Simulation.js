@@ -3,6 +3,7 @@ import { matchesService, predictionsService } from '../services/api';
 import { getFlag } from '../utils/countryFlags';
 import TournamentBracket from '../components/TournamentBracket';
 import TeamInfoModal from '../components/TeamInfoModal';
+import TeamInfoButton from '../components/TeamInfoButton';
 
 function Simulation() {
   const [matches, setMatches] = useState([]);
@@ -456,7 +457,7 @@ function Simulation() {
                                 background: idx < 2 ? '#eff6ff' : 'white',
                                 borderTop: '1px solid #eee'
                               }}>
-                                <td style={{ padding: '4px 2px', fontWeight: '500', fontSize: '9px' }}>
+                                <td style={{ padding: '4px 2px', fontWeight: '500', fontSize: '9px', display: 'flex', alignItems: 'center', gap: '2px' }}>
                                   <span style={{
                                     display: 'inline-block',
                                     width: '16px',
@@ -467,13 +468,13 @@ function Simulation() {
                                     textAlign: 'center',
                                     lineHeight: '16px',
                                     fontSize: '8px',
-                                    fontWeight: 'bold',
-                                    marginRight: '2px'
+                                    fontWeight: 'bold'
                                   }}>
                                     {idx + 1}
                                   </span>
-                                  <span style={{ marginRight: '2px' }}>{getFlag(data.team)}</span>
-                                  {data.team}
+                                  <img src={getFlag(data.team)} alt={data.team} style={{ height: '14px', width: '14px', borderRadius: '50%' }} />
+                                  <span>{data.team}</span>
+                                  <button onClick={() => setSelectedTeam(data)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '9px', padding: 0 }}>ℹ️</button>
                                 </td>
                                 <td style={{ padding: '4px 2px', textAlign: 'center', fontSize: '9px' }}>{data.played}</td>
                                 <td style={{ padding: '4px 2px', textAlign: 'center', color: '#059669', fontWeight: 'bold', fontSize: '9px' }}>{data.won}</td>
@@ -546,7 +547,7 @@ function Simulation() {
                     cursor: 'pointer',
                     transition: 'background 0.2s'
                   }} onClick={() => setSelectedTeam(data)} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'} onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>
-                    <td style={{ padding: '10px 12px', fontWeight: '500' }}>
+                    <td style={{ padding: '10px 12px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{
                         display: 'inline-block',
                         width: '24px',
@@ -557,13 +558,13 @@ function Simulation() {
                         textAlign: 'center',
                         lineHeight: '24px',
                         fontSize: '11px',
-                        fontWeight: 'bold',
-                        marginRight: '8px'
+                        fontWeight: 'bold'
                       }}>
                         {idx + 1}
                       </span>
-                      <span style={{ marginRight: '6px' }}>{getFlag(data.team)}</span>
-                      {data.team}
+                      <img src={getFlag(data.team)} alt={data.team} style={{ height: '20px', width: '20px', borderRadius: '50%' }} />
+                      <span>{data.team}</span>
+                      <TeamInfoButton teamName={data.team} onClick={() => setSelectedTeam(data)} />
                     </td>
                     <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 'bold' }}>{data.group}</td>
                     <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 'bold', color: PRIMARY }}>

@@ -1,57 +1,55 @@
 const express = require('express');
+const axios = require('axios');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Get team info: FIFA ranking + last 5 matches
-// Accepte soit l'ID soit le nom de l'équipe
-router.get('/:teamIdentifier/info', authenticateToken, async (req, res) => {
-  try {
-    const teamIdentifier = req.params.teamIdentifier;
+const FOOTBALL_DATA_API = 'https://api.football-data.org/v4';
+const API_KEY = process.env.FOOTBALL_DATA_API_KEY;
 
-    // Try to get team by ID or name
-    const teamResult = await pool.query(
-      'SELECT id, name, groupe, fifa_ranking FROM teams WHERE id = $1 OR name = $2',
-      [isNaN(teamIdentifier) ? null : parseInt(teamIdentifier), teamIdentifier]
+// Get team info from football-data.org: last 5 matches + stats
+router.get('/:teamName/live-info', authenticateToken, async (req, res) => {
+  try {
+    const teamName = req.params.teamName;
+
+    // Get FIFA ranking from our DB
+    const fifarankResult = await pool.query(
+      'SELECT fifa_ranking FROM teams WHERE name = $1',
+      [teamName]
     );
 
-    if (teamResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Team not found' });
+    const fifaRanking = fifarankResult.rows[0]?.fifa_ranking || null;
+
+    // Search for team in football-data.org
+    const teamsRes = await axios.get(`${FOOTBALL_DATA_API}/teams`, {
+      headers: { 'X-Auth-Token': API_KEY }
+    });
+
+    // Find team by name (case-insensitive)
+    const team = teamsRes.data.teams.find(t =>
+      t.name.toLowerCase().includes(teamName.toLowerCase()) ||
+      teamName.toLowerCase().includes(t.name.toLowerCase())
+    );
+
+    if (!team) {
+      return res.status(404).json({ error: 'Team not found in external API' });
     }
 
-    const team = teamResult.rows[0];
+    // Get team's last matches
+    const matchesRes = await axios.get(`${FOOTBALL_DATA_API}/teams/${team.id}/matches`, {
+      headers: { 'X-Auth-Token': API_KEY },
+      params: { limit: 10, status: 'FINISHED' }
+    });
 
-    // Get last 5 matches where this team played
-    const matchesResult = await pool.query(`
-      SELECT
-        m.id,
-        m.team1_id,
-        m.team2_id,
-        t1.name as team1,
-        t2.name as team2,
-        m.start_time,
-        m.status,
-        r.team1_goals,
-        r.team2_goals
-      FROM matches m
-      LEFT JOIN teams t1 ON m.team1_id = t1.id
-      LEFT JOIN teams t2 ON m.team2_id = t2.id
-      LEFT JOIN results r ON m.id = r.match_id
-      WHERE (m.team1_id = $1 OR m.team2_id = $1)
-        AND m.status != 'pending'
-      ORDER BY m.start_time DESC
-      LIMIT 5
-    `, [teamId]);
-
-    const matches = matchesResult.rows.map(match => {
-      const isTeam1 = match.team1_id === teamId;
-      const goalsFor = isTeam1 ? match.team1_goals : match.team2_goals;
-      const goalsAgainst = isTeam1 ? match.team2_goals : match.team1_goals;
-      const opponent = isTeam1 ? match.team2 : match.team1;
+    const matches = (matchesRes.data.matches || []).slice(0, 5).map(match => {
+      const isHome = match.homeTeam.id === team.id;
+      const goalsFor = isHome ? match.score.fullTime.home : match.score.fullTime.away;
+      const goalsAgainst = isHome ? match.score.fullTime.away : match.score.fullTime.home;
+      const opponent = isHome ? match.awayTeam.name : match.homeTeam.name;
 
       let result = 'vs';
-      if (match.team1_goals !== null) {
+      if (goalsFor !== null && goalsAgainst !== null) {
         if (goalsFor > goalsAgainst) result = 'W';
         else if (goalsFor < goalsAgainst) result = 'L';
         else result = 'D';
@@ -60,18 +58,21 @@ router.get('/:teamIdentifier/info', authenticateToken, async (req, res) => {
       return {
         opponent,
         result,
-        score: match.team1_goals !== null ? `${goalsFor}-${goalsAgainst}` : '-',
-        date: match.start_time
+        score: goalsFor !== null ? `${goalsFor}-${goalsAgainst}` : '-',
+        date: match.utcDate
       };
     });
 
     res.json({
-      team,
-      lastMatches: matches.reverse() // Reverse to get chronological order (oldest first)
+      team: {
+        name: team.name,
+        fifaRanking
+      },
+      lastMatches: matches
     });
   } catch (error) {
-    console.error('Get team info error:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Get team live info error:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des infos' });
   }
 });
 

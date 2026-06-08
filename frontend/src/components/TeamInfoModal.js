@@ -13,10 +13,10 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
 
   const loadTeamInfo = async () => {
     try {
-      const res = await teamsService.getInfo(teamId);
+      const res = await teamsService.getLiveInfo(teamName);
       setInfo(res.data);
     } catch (err) {
-      setError('Erreur lors du chargement des infos');
+      setError('Infos non disponibles');
       console.error(err);
     } finally {
       setLoading(false);
@@ -88,17 +88,19 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
         {info && !loading && (
           <>
             {/* FIFA Ranking */}
-            <div style={{
-              background: 'linear-gradient(135deg, #2563eb 0%, #ec4899 100%)',
-              color: 'white',
-              padding: '16px',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '12px', opacity: 0.9 }}>Classement FIFA</div>
-              <div style={{ fontSize: '32px', fontWeight: 'bold' }}>#{info.team.fifa_ranking}</div>
-            </div>
+            {info.team?.fifaRanking && (
+              <div style={{
+                background: 'linear-gradient(135deg, #2563eb 0%, #ec4899 100%)',
+                color: 'white',
+                padding: '16px',
+                borderRadius: '8px',
+                marginBottom: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '12px', opacity: 0.9 }}>Classement FIFA</div>
+                <div style={{ fontSize: '32px', fontWeight: 'bold' }}>#{info.team.fifaRanking}</div>
+              </div>
+            )}
 
             {/* Last 5 Matches */}
             <div>
