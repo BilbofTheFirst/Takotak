@@ -13,7 +13,8 @@ DROP TABLE IF EXISTS teams CASCADE;
 CREATE TABLE teams (
   id SERIAL PRIMARY KEY,
   name VARCHAR(100) UNIQUE NOT NULL,
-  groupe CHAR(1)
+  groupe CHAR(1),
+  fifa_ranking INTEGER
 );
 
 CREATE TABLE users (
@@ -69,20 +70,20 @@ CREATE INDEX idx_matches_status ON matches(status);
 CREATE INDEX idx_matches_team1 ON matches(team1_id);
 CREATE INDEX idx_matches_team2 ON matches(team2_id);
 
--- INSERT 48 ÉQUIPES OFFICIELLES 2026 AVEC GROUPES
-INSERT INTO teams (name, groupe) VALUES
-('Mexique', 'A'), ('Afrique du Sud', 'A'), ('Corée du Sud', 'A'), ('République tchèque', 'A'),
-('Canada', 'B'), ('Bosnie-Herzégovine', 'B'), ('Qatar', 'B'), ('Suisse', 'B'),
-('Brésil', 'C'), ('Maroc', 'C'), ('Haïti', 'C'), ('Écosse', 'C'),
-('États-Unis', 'D'), ('Paraguay', 'D'), ('Australie', 'D'), ('Turquie', 'D'),
-('Allemagne', 'E'), ('Curaçao', 'E'), ('Côte d''Ivoire', 'E'), ('Équateur', 'E'),
-('Pays-Bas', 'F'), ('Japon', 'F'), ('Espagne', 'F'), ('Suède', 'F'), ('Tunisie', 'F'), ('Cap-Vert', 'F'),
-('Belgique', 'G'), ('Égypte', 'G'), ('Iran', 'G'), ('Nouvelle-Zélande', 'G'),
-('Arabie saoudite', 'H'), ('Uruguay', 'H'),
-('France', 'I'), ('Sénégal', 'I'), ('Irak', 'I'), ('Norvège', 'I'),
-('Argentine', 'J'), ('Algérie', 'J'), ('Autriche', 'J'), ('Jordanie', 'J'),
-('Portugal', 'K'), ('RD Congo', 'K'), ('Ouzbékistan', 'K'), ('Colombie', 'K'),
-('Angleterre', 'L'), ('Croatie', 'L'), ('Ghana', 'L'), ('Panama', 'L');
+-- INSERT 48 ÉQUIPES OFFICIELLES 2026 AVEC GROUPES ET CLASSEMENT FIFA
+INSERT INTO teams (name, groupe, fifa_ranking) VALUES
+('Mexique', 'A', 16), ('Afrique du Sud', 'A', 62), ('Corée du Sud', 'A', 23), ('République tchèque', 'A', 41),
+('Canada', 'B', 37), ('Bosnie-Herzégovine', 'B', 54), ('Qatar', 'B', 65), ('Suisse', 'B', 17),
+('Brésil', 'C', 5), ('Maroc', 'C', 11), ('Haïti', 'C', 53), ('Écosse', 'C', 22),
+('États-Unis', 'D', 14), ('Paraguay', 'D', 13), ('Australie', 'D', 23), ('Turquie', 'D', 19),
+('Allemagne', 'E', 8), ('Curaçao', 'E', 79), ('Côte d''Ivoire', 'E', 33), ('Équateur', 'E', 26),
+('Pays-Bas', 'F', 7), ('Japon', 'F', 15), ('Espagne', 'F', 3), ('Suède', 'F', 21), ('Tunisie', 'F', 34), ('Cap-Vert', 'F', 117),
+('Belgique', 'G', 6), ('Égypte', 'G', 39), ('Iran', 'G', 46), ('Nouvelle-Zélande', 'G', 31),
+('Arabie saoudite', 'H', 48), ('Uruguay', 'H', 10),
+('France', 'I', 2), ('Sénégal', 'I', 27), ('Irak', 'I', 89), ('Norvège', 'I', 44),
+('Argentine', 'J', 1), ('Algérie', 'J', 35), ('Autriche', 'J', 17), ('Jordanie', 'J', 92),
+('Portugal', 'K', 9), ('RD Congo', 'K', 74), ('Ouzbékistan', 'K', 38), ('Colombie', 'K', 12),
+('Angleterre', 'L', 4), ('Croatie', 'L', 11), ('Ghana', 'L', 30), ('Panama', 'L', 55);
 
 -- 72 MATCHS DE GROUPES - CALENDRIER EXACT
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES

@@ -42,4 +42,8 @@ export const resultsService = {
   getLeaderboard: () => api.get('/results/leaderboard')
 };
 
+export const teamsService = {
+  getInfo: (teamId) => api.get(`/teams/${teamId}/info`)
+};
+
 export default api;

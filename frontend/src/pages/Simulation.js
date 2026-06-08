@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { matchesService, predictionsService } from '../services/api';
 import { getFlag } from '../utils/countryFlags';
 import TournamentBracket from '../components/TournamentBracket';
+import TeamInfoModal from '../components/TeamInfoModal';
 
 function Simulation() {
   const [matches, setMatches] = useState([]);
@@ -10,6 +11,7 @@ function Simulation() {
   const [koSimulations, setKoSimulations] = useState({});
   const [loading, setLoading] = useState(true);
   const [saveMessage, setSaveMessage] = useState('');
+  const [selectedTeam, setSelectedTeam] = useState(null);
 
   const PRIMARY = '#2563eb';
   const SECONDARY = '#ec4899';
@@ -540,8 +542,10 @@ function Simulation() {
                 {allThirdPlaces.map((data, idx) => (
                   <tr key={data.team} style={{
                     background: idx < 8 ? '#eff6ff' : 'white',
-                    borderTop: '1px solid #eee'
-                  }}>
+                    borderTop: '1px solid #eee',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }} onClick={() => setSelectedTeam(data)} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'} onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>
                     <td style={{ padding: '10px 12px', fontWeight: '500' }}>
                       <span style={{
                         display: 'inline-block',
@@ -607,6 +611,15 @@ function Simulation() {
           GRADIENT={GRADIENT}
         />
       </div>
+
+      {/* Modal infos équipe */}
+      {selectedTeam && (
+        <TeamInfoModal
+          teamId={selectedTeam.team}
+          teamName={selectedTeam.team}
+          onClose={() => setSelectedTeam(null)}
+        />
+      )}
 
       <style>{`
         @keyframes bounce {
