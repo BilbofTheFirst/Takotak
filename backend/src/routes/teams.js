@@ -91,6 +91,9 @@ router.get('/:teamName/info', authenticateToken, async (req, res) => {
     }
 
     const teamsData = await teamsResponse.json();
+    console.log(`[TEAMS] Teams data keys:`, Object.keys(teamsData));
+    console.log(`[TEAMS] First 2 teams:`, JSON.stringify(teamsData.teams?.slice(0, 2)));
+
     const team = teamsData.teams?.find(t =>
       t.name.toLowerCase() === englishTeamName.toLowerCase() ||
       t.name.toLowerCase().includes(englishTeamName.toLowerCase())
