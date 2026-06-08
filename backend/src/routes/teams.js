@@ -124,7 +124,12 @@ router.get('/:teamName/live-info', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get team live info error:', error.message);
-    res.status(500).json({ error: 'Erreur lors de la récupération des infos' });
+    console.error('Error details:', error.response?.data || error);
+    console.error('API Key present:', !!API_KEY);
+    res.status(500).json({
+      error: 'Erreur lors de la récupération des infos',
+      debug: error.message
+    });
   }
 });
 
