@@ -9,7 +9,15 @@ const teamsRoutes = require('./routes/teams');
 
 const app = express();
 
-app.use(cors());
+// CORS config for Vercel frontend
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://takotak.vercel.app',
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
