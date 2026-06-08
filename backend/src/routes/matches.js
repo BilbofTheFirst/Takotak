@@ -15,6 +15,7 @@ router.get('/', authenticateToken, async (req, res) => {
         t1.name as team1,
         t2.name as team2,
         m.start_time,
+        m.description,
         m.status,
         m.created_at,
         r.team1_goals,
@@ -44,6 +45,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         t1.name as team1,
         t2.name as team2,
         m.start_time,
+        m.description,
         m.status,
         m.created_at
       FROM matches m

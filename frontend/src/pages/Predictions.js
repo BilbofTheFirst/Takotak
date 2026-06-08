@@ -92,15 +92,20 @@ function Predictions() {
     return grouped;
   };
 
-  const getMatchLabel = (matchId) => {
+  const getMatchLabel = (match) => {
     // Matchs de groupes: A-L (IDs 1-72)
-    if (matchId <= 72) {
-      const groupIndex = Math.floor((matchId - 1) / 6);
+    if (match.id <= 72) {
+      const groupIndex = Math.floor((match.id - 1) / 6);
       return `Groupe ${String.fromCharCode(65 + groupIndex)}`; // Groupe A-L
     }
 
-    // Matchs KO (IDs 73+)
-    const koId = matchId - 72;
+    // Matchs KO (IDs 73+) - utiliser la description de la DB
+    if (match.description) {
+      return match.description.split('—')[0].trim();
+    }
+
+    // Fallback
+    const koId = match.id - 72;
     if (koId <= 16) return '16ème';
     if (koId <= 24) return '8ème';
     if (koId <= 28) return 'Quart';
@@ -220,7 +225,7 @@ function Predictions() {
                 const scores = tempScores[match.id] || { team1: pred?.team1_goals || 0, team2: pred?.team2_goals || 0 };
                 const isDeadline = new Date(match.start_time) < new Date();
                 const isSaved = pred && pred.team1_goals === scores.team1 && pred.team2_goals === scores.team2;
-                const matchLabel = getMatchLabel(match.id);
+                const matchLabel = getMatchLabel(match);
 
                 return (
                   <div
