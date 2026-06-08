@@ -12,7 +12,8 @@ DROP TABLE IF EXISTS teams CASCADE;
 
 CREATE TABLE teams (
   id SERIAL PRIMARY KEY,
-  name VARCHAR(100) UNIQUE NOT NULL
+  name VARCHAR(100) UNIQUE NOT NULL,
+  groupe CHAR(1)
 );
 
 CREATE TABLE users (
@@ -29,6 +30,7 @@ CREATE TABLE matches (
   team1_id INTEGER REFERENCES teams(id),
   team2_id INTEGER REFERENCES teams(id),
   start_time TIMESTAMP NOT NULL,
+  description VARCHAR(255),
   status VARCHAR(20) DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -67,15 +69,20 @@ CREATE INDEX idx_matches_status ON matches(status);
 CREATE INDEX idx_matches_team1 ON matches(team1_id);
 CREATE INDEX idx_matches_team2 ON matches(team2_id);
 
--- INSERT 48 ÉQUIPES OFFICIELLES 2026
-INSERT INTO teams (name) VALUES
-('Mexique'), ('Afrique du Sud'), ('Corée du Sud'), ('République tchèque'), ('Canada'), ('Bosnie-Herzégovine'),
-('Qatar'), ('Suisse'), ('États-Unis'), ('Paraguay'), ('Australie'), ('Turquie'), ('Brésil'), ('Maroc'),
-('Haïti'), ('Écosse'), ('Allemagne'), ('Curaçao'), ('Pays-Bas'), ('Japon'), ('Côte d''Ivoire'),
-('Équateur'), ('Suède'), ('Tunisie'), ('Espagne'), ('Cap-Vert'), ('Belgique'), ('Égypte'), ('Iran'),
-('Nouvelle-Zélande'), ('Arabie saoudite'), ('Uruguay'), ('France'), ('Sénégal'), ('Irak'), ('Norvège'),
-('Argentine'), ('Algérie'), ('Autriche'), ('Jordanie'), ('Portugal'), ('RD Congo'), ('Ouzbékistan'),
-('Colombie'), ('Angleterre'), ('Croatie'), ('Ghana'), ('Panama');
+-- INSERT 48 ÉQUIPES OFFICIELLES 2026 AVEC GROUPES
+INSERT INTO teams (name, groupe) VALUES
+('Mexique', 'A'), ('Afrique du Sud', 'A'), ('Corée du Sud', 'A'), ('République tchèque', 'A'),
+('Canada', 'B'), ('Bosnie-Herzégovine', 'B'), ('Qatar', 'B'), ('Suisse', 'B'),
+('Brésil', 'C'), ('Maroc', 'C'), ('Haïti', 'C'), ('Écosse', 'C'),
+('États-Unis', 'D'), ('Paraguay', 'D'), ('Australie', 'D'), ('Turquie', 'D'),
+('Allemagne', 'E'), ('Curaçao', 'E'), ('Côte d''Ivoire', 'E'), ('Équateur', 'E'),
+('Pays-Bas', 'F'), ('Japon', 'F'), ('Espagne', 'F'), ('Suède', 'F'), ('Tunisie', 'F'), ('Cap-Vert', 'F'),
+('Belgique', 'G'), ('Égypte', 'G'), ('Iran', 'G'), ('Nouvelle-Zélande', 'G'),
+('Arabie saoudite', 'H'), ('Uruguay', 'H'),
+('France', 'I'), ('Sénégal', 'I'), ('Irak', 'I'), ('Norvège', 'I'),
+('Argentine', 'J'), ('Algérie', 'J'), ('Autriche', 'J'), ('Jordanie', 'J'),
+('Portugal', 'K'), ('RD Congo', 'K'), ('Ouzbékistan', 'K'), ('Colombie', 'K'),
+('Angleterre', 'L'), ('Croatie', 'L'), ('Ghana', 'L'), ('Panama', 'L');
 
 -- 72 MATCHS DE GROUPES - CALENDRIER EXACT
 INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
@@ -152,37 +159,37 @@ INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
 ((SELECT id FROM teams WHERE name='Algérie'), (SELECT id FROM teams WHERE name='Autriche'), '2026-06-28 04:00:00+02', 'pending'),
 ((SELECT id FROM teams WHERE name='Jordanie'), (SELECT id FROM teams WHERE name='Argentine'), '2026-06-28 04:00:00+02', 'pending');
 
--- 32 MATCHS PHASE ÉLIMINATOIRE - CALENDRIER EXACT
-INSERT INTO matches (team1_id, team2_id, start_time, status) VALUES
-(NULL, NULL, '2026-06-28 21:00:00+02', 'pending'),
-(NULL, NULL, '2026-06-29 19:00:00+02', 'pending'),
-(NULL, NULL, '2026-06-29 22:30:00+02', 'pending'),
-(NULL, NULL, '2026-06-30 03:00:00+02', 'pending'),
-(NULL, NULL, '2026-06-30 19:00:00+02', 'pending'),
-(NULL, NULL, '2026-06-30 23:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-01 03:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-01 18:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-01 22:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-02 02:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-02 21:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-03 01:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-03 05:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-03 20:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-04 00:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-04 03:30:00+02', 'pending'),
-(NULL, NULL, '2026-07-04 19:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-04 23:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-05 22:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-06 02:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-06 21:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-07 02:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-07 18:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-07 22:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-09 22:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-10 21:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-11 23:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-12 03:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-14 21:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-15 21:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-18 23:00:00+02', 'pending'),
-(NULL, NULL, '2026-07-19 21:00:00+02', 'pending');
+-- 32 MATCHS PHASE ÉLIMINATOIRE AVEC DESCRIPTIONS
+INSERT INTO matches (team1_id, team2_id, start_time, description, status) VALUES
+(NULL, NULL, '2026-06-28 21:00:00+02', '1/16e — 2e groupe A – 2e groupe B', 'pending'),
+(NULL, NULL, '2026-06-29 19:00:00+02', '1/16e — 1er groupe C – 2e groupe F', 'pending'),
+(NULL, NULL, '2026-06-29 22:30:00+02', '1/16e — 1er groupe E – meilleur 3e', 'pending'),
+(NULL, NULL, '2026-06-30 03:00:00+02', '1/16e — 1er groupe F – 2e groupe C', 'pending'),
+(NULL, NULL, '2026-06-30 19:00:00+02', '1/16e — 2e groupe E – 2e groupe I', 'pending'),
+(NULL, NULL, '2026-06-30 23:00:00+02', '1/16e — 1er groupe I – meilleur 3e', 'pending'),
+(NULL, NULL, '2026-07-01 03:00:00+02', '1/16e — 1er groupe A – meilleur 3e', 'pending'),
+(NULL, NULL, '2026-07-01 18:00:00+02', '1/16e — 1er groupe L – meilleur 3e', 'pending'),
+(NULL, NULL, '2026-07-01 22:00:00+02', '1/16e — 1er groupe G – meilleur 3e', 'pending'),
+(NULL, NULL, '2026-07-02 02:00:00+02', '1/16e — 1er groupe D – meilleur 3e', 'pending'),
+(NULL, NULL, '2026-07-02 21:00:00+02', '1/16e — 1er groupe H – 2e groupe J', 'pending'),
+(NULL, NULL, '2026-07-03 01:00:00+02', '1/16e — 2e groupe K – 2e groupe L', 'pending'),
+(NULL, NULL, '2026-07-03 05:00:00+02', '1/16e — 1er groupe B – meilleur 3e', 'pending'),
+(NULL, NULL, '2026-07-03 20:00:00+02', '1/16e — 2e groupe D – 2e groupe G', 'pending'),
+(NULL, NULL, '2026-07-04 00:00:00+02', '1/16e — 1er groupe J – 2e groupe H', 'pending'),
+(NULL, NULL, '2026-07-04 03:30:00+02', '1/16e — 1er groupe K – meilleur 3e', 'pending'),
+(NULL, NULL, '2026-07-04 19:00:00+02', '1/8e — vainqueur M73 – vainqueur M75', 'pending'),
+(NULL, NULL, '2026-07-04 23:00:00+02', '1/8e — vainqueur M74 – vainqueur M77', 'pending'),
+(NULL, NULL, '2026-07-05 22:00:00+02', '1/8e — vainqueur M76 – vainqueur M78', 'pending'),
+(NULL, NULL, '2026-07-06 02:00:00+02', '1/8e — vainqueur M79 – vainqueur M80', 'pending'),
+(NULL, NULL, '2026-07-06 21:00:00+02', '1/8e — vainqueur M83 – vainqueur M84', 'pending'),
+(NULL, NULL, '2026-07-07 02:00:00+02', '1/8e — vainqueur M81 – vainqueur M82', 'pending'),
+(NULL, NULL, '2026-07-07 18:00:00+02', '1/8e — vainqueur M86 – vainqueur M88', 'pending'),
+(NULL, NULL, '2026-07-07 22:00:00+02', '1/8e — vainqueur M85 – vainqueur M87', 'pending'),
+(NULL, NULL, '2026-07-09 22:00:00+02', 'Quart — vainqueur M89 – vainqueur M90', 'pending'),
+(NULL, NULL, '2026-07-10 21:00:00+02', 'Quart — vainqueur M93 – vainqueur M94', 'pending'),
+(NULL, NULL, '2026-07-11 23:00:00+02', 'Quart — vainqueur M91 – vainqueur M92', 'pending'),
+(NULL, NULL, '2026-07-12 03:00:00+02', 'Quart — vainqueur M95 – vainqueur M96', 'pending'),
+(NULL, NULL, '2026-07-14 21:00:00+02', 'Demi-finale', 'pending'),
+(NULL, NULL, '2026-07-15 21:00:00+02', 'Demi-finale', 'pending'),
+(NULL, NULL, '2026-07-18 23:00:00+02', 'Match pour la 3e place', 'pending'),
+(NULL, NULL, '2026-07-19 21:00:00+02', 'Finale', 'pending');
