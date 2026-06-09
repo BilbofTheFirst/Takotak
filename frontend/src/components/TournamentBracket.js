@@ -36,8 +36,18 @@ const KNOCKOUT = {
   104: { round: 'Finale', team1: 'V101', team2: 'V102' }
 };
 
-function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange }) {
+const ROUND_ROWS = {
+  73: 1, 74: 3, 75: 5, 76: 7, 77: 9, 78: 11, 79: 13, 80: 15, 81: 17, 82: 19, 83: 21, 84: 23, 85: 25, 86: 27, 87: 29, 88: 31,
+  89: 6, 90: 2, 91: 8, 92: 14, 93: 22, 94: 18, 95: 28, 96: 26,
+  97: 4, 98: 20, 99: 11, 100: 27,
+  101: 12, 102: 24,
+  104: 18,
+  103: 26
+};
+
+function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, matchSchedule = [] }) {
   const qualifiedThirds = useMemo(() => allThirdPlaces.slice(0, 8), [allThirdPlaces]);
+  const scheduleById = useMemo(() => new Map(matchSchedule.map(match => [Number(match.id), match])), [matchSchedule]);
 
   const getPlacement = useCallback((token) => {
     if (/^[12][A-L]$/.test(token)) {
@@ -70,14 +80,8 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
 
   const matches = useMemo(() => {
     const map = {};
-
     Object.entries(KNOCKOUT).forEach(([id, config]) => {
-      map[id] = {
-        id: Number(id),
-        ...config,
-        team1Name: getPlacement(config.team1),
-        team2Name: getPlacement(config.team2)
-      };
+      map[id] = { id: Number(id), ...config, team1Name: getPlacement(config.team1), team2Name: getPlacement(config.team2) };
     });
 
     const resolveToken = (token) => {
@@ -95,23 +99,30 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     Object.keys(map).map(Number).sort((a, b) => a - b).forEach(id => {
       map[id].team1Name = resolveToken(map[id].team1);
       map[id].team2Name = resolveToken(map[id].team2);
+      const schedule = scheduleById.get(id);
+      map[id].start_time = schedule?.start_time || null;
     });
 
     return map;
-  }, [getPlacement, getWinner, getLoser]);
+  }, [getPlacement, getWinner, getLoser, scheduleById]);
 
   const rounds = [
-    { title: '16es', ids: Array.from({ length: 16 }, (_, index) => 73 + index) },
-    { title: '8es', ids: Array.from({ length: 8 }, (_, index) => 89 + index) },
-    { title: 'Quarts', ids: [97, 98, 99, 100] },
-    { title: 'Demies', ids: [101, 102] },
-    { title: 'Finale', ids: [104] }
+    { title: '16es', ids: Array.from({ length: 16 }, (_, index) => 73 + index), col: 1 },
+    { title: '8es', ids: Array.from({ length: 8 }, (_, index) => 89 + index), col: 2 },
+    { title: 'Quarts', ids: [97, 98, 99, 100], col: 3 },
+    { title: 'Demies', ids: [101, 102], col: 4 },
+    { title: 'Finale', ids: [104, 103], col: 5 }
   ];
 
   const renderFlag = (team) => {
     if (!team || /^[123VP]/.test(team)) return <span className="bracket-placeholder-ball">⚽</span>;
     const flag = getFlag(team);
     return flag ? <img className="bracket-flag" src={flag} alt={team} /> : <span className="bracket-placeholder-ball">?</span>;
+  };
+
+  const formatDateTime = (value) => {
+    if (!value) return '';
+    return `${value.substring(8, 10)}/${value.substring(5, 7)} ${value.substring(11, 16)}`;
   };
 
   const MatchCard = ({ match }) => {
@@ -122,19 +133,16 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
       <div className={`bracket-team ${winner === side ? 'winner' : ''}`}>
         {renderFlag(teamName)}
         <span className={/^[123VP]/.test(teamName || '') ? 'placeholder' : ''}>{teamName || 'À définir'}</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength="2"
-          value={side === 'team1' ? sim.team1_goals : sim.team2_goals}
-          onChange={(event) => onScoreChange(match.id, `${side}_goals`, event.target.value)}
-        />
+        <input type="text" inputMode="numeric" maxLength="2" value={side === 'team1' ? sim.team1_goals : sim.team2_goals} onChange={(event) => onScoreChange(match.id, `${side}_goals`, event.target.value)} />
       </div>
     );
 
     return (
-      <article className="bracket-match">
-        <header><span>{match.round}</span><strong>M{match.id}</strong></header>
+      <article className={`bracket-match ${match.id === 103 ? 'third-place-match' : ''}`} style={{ gridColumn: match.column, gridRow: ROUND_ROWS[match.id] }}>
+        <header>
+          <div><span>{match.round}</span>{match.start_time && <em>{formatDateTime(match.start_time)}</em>}</div>
+          <strong>M{match.id}</strong>
+        </header>
         {renderTeam('team1', match.team1Name)}
         {renderTeam('team2', match.team2Name)}
       </article>
@@ -143,49 +151,28 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
 
   return (
     <section className="simulation-section knockout-section">
-      <div className="simulation-section-title">
-        <span>🏆 Phase éliminatoire</span>
-        <h2>Tableau final simulé</h2>
-      </div>
-
+      <div className="simulation-section-title"><span>🏆 Phase éliminatoire</span><h2>Tableau final simulé</h2></div>
       <div className="bracket-scroll">
         <div className="bracket-board">
-          {rounds.map(round => (
-            <div key={round.title} className="bracket-round">
-              <h3>{round.title}</h3>
-              <div className="bracket-round-list">
-                {round.ids.map(id => <MatchCard key={id} match={matches[id]} />)}
-              </div>
-            </div>
-          ))}
-
-          <div className="bracket-round third-place-round">
-            <h3>3e place</h3>
-            <div className="bracket-round-list">
-              <MatchCard match={matches[103]} />
-            </div>
-          </div>
+          {rounds.map(round => <h3 key={round.title} className="round-title" style={{ gridColumn: round.col }}>{round.title}</h3>)}
+          {rounds.flatMap(round => round.ids.map(id => <MatchCard key={id} match={{ ...matches[id], column: round.col }} />))}
         </div>
       </div>
-
       <style>{`
         .knockout-section { margin-top: 30px; }
-        .bracket-scroll { overflow-x: auto; border-radius: 22px; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 18px 55px rgba(0,0,0,.2); padding: 16px; }
-        .bracket-board { min-width: 1320px; display: grid; grid-template-columns: 290px 255px 235px 220px 220px 220px; gap: 14px; align-items: start; }
-        .bracket-round h3 { margin: 0 0 10px; padding: 9px 11px; border-radius: 14px; color: white; background: linear-gradient(135deg, #0f766e, #d97706); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; text-align: center; }
-        .bracket-round-list { display: grid; gap: 10px; }
-        .bracket-round:nth-child(2) .bracket-round-list { padding-top: 24px; gap: 22px; }
-        .bracket-round:nth-child(3) .bracket-round-list { padding-top: 70px; gap: 56px; }
-        .bracket-round:nth-child(4) .bracket-round-list { padding-top: 150px; gap: 150px; }
-        .bracket-round:nth-child(5) .bracket-round-list { padding-top: 330px; }
-        .third-place-round .bracket-round-list { padding-top: 330px; }
+        .bracket-scroll { overflow-x: auto; border-radius: 22px; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 18px 55px rgba(0,0,0,.2); padding: 18px; }
+        .bracket-board { min-width: 1380px; display: grid; grid-template-columns: 300px 270px 245px 230px 230px; grid-template-rows: 44px repeat(32, 36px); gap: 7px 18px; align-items: center; }
+        .round-title { margin: 0; padding: 10px 12px; border-radius: 14px; color: white; background: linear-gradient(135deg, #0f766e, #d97706); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; text-align: center; align-self: start; }
         .bracket-match { overflow: hidden; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; box-shadow: 0 10px 24px rgba(15,23,42,.08); }
         .bracket-match header { display: flex; justify-content: space-between; align-items: center; padding: 7px 9px; background: #ecfdf5; color: #047857; font-size: 10px; font-weight: 950; text-transform: uppercase; }
+        .bracket-match header div { display: flex; flex-direction: column; gap: 1px; }
+        .bracket-match header em { color: #64748b; font-size: 9px; font-style: normal; font-weight: 850; }
         .bracket-match header strong { padding: 3px 6px; border-radius: 999px; background: #fff7ed; color: #c2410c; }
+        .third-place-match header { background: #fff7ed; color: #92400e; }
         .bracket-team { display: grid; grid-template-columns: 26px minmax(0,1fr) 34px; gap: 7px; align-items: center; padding: 8px 9px; border-top: 1px solid #e2e8f0; }
         .bracket-team.winner { background: #dcfce7; }
         .bracket-flag, .bracket-placeholder-ball { width: 25px; height: 25px; border-radius: 999px; object-fit: cover; display: grid; place-items: center; background: #e2e8f0; border: 2px solid white; box-shadow: 0 4px 11px rgba(15,23,42,.13); font-size: 14px; }
-        .bracket-team span:not(.bracket-placeholder-ball) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #0f172a; font-size: 12px; font-weight: 950; }
+        .bracket-team span:not(.bracket-placeholder-ball) { min-width: 0; overflow: visible; text-overflow: unset; white-space: normal; color: #0f172a; font-size: 12px; font-weight: 950; line-height: 1.15; }
         .bracket-team .placeholder { color: #64748b !important; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px !important; }
         .bracket-team input { width: 34px; height: 28px; border: 1.5px solid #cbd5e1; border-radius: 9px; text-align: center; font-size: 12px; font-weight: 950; }
       `}</style>
