@@ -1,6 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { teamsService } from '../services/api';
 import { getFlag } from '../utils/countryFlags';
+
+const resultConfig = {
+  W: { label: 'Victoire', short: 'V', className: 'result-win', icon: '✅' },
+  D: { label: 'Nul', short: 'N', className: 'result-draw', icon: '➖' },
+  L: { label: 'Défaite', short: 'D', className: 'result-loss', icon: '❌' }
+};
 
 function TeamInfoModal({ teamId, teamName, onClose }) {
   const [info, setInfo] = useState(null);
@@ -12,6 +18,9 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
   }, [teamId]);
 
   const loadTeamInfo = async () => {
+    setLoading(true);
+    setError(null);
+
     try {
       const res = await teamsService.getInfo(teamName);
       setInfo(res.data);
@@ -23,146 +32,511 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
     }
   };
 
+  const formStats = useMemo(() => {
+    if (!info?.lastMatches) return { wins: 0, draws: 0, losses: 0 };
+
+    return info.lastMatches.reduce((acc, match) => {
+      if (match.result === 'W') acc.wins += 1;
+      else if (match.result === 'D') acc.draws += 1;
+      else if (match.result === 'L') acc.losses += 1;
+      return acc;
+    }, { wins: 0, draws: 0, losses: 0 });
+  }, [info]);
+
+  const formatDate = (date) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const getResultConfig = (result) => resultConfig[result] || resultConfig.D;
+
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: 'white',
-          borderRadius: '12px',
-          padding: '24px',
-          maxWidth: '500px',
-          width: '90%',
-          maxHeight: '80vh',
-          overflow: 'auto',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src={getFlag(teamName)} alt={teamName} style={{ height: '32px', width: '32px', borderRadius: '50%' }} />
-            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>{teamName}</h2>
+    <div className="team-modal-backdrop" onClick={onClose}>
+      <div className="team-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="team-modal-close" type="button" onClick={onClose} aria-label="Fermer">
+          ✕
+        </button>
+
+        <div className="team-modal-hero">
+          <div className="team-modal-title-row">
+            <div className="team-modal-identity">
+              <div className="team-modal-flag-shell">
+                <img src={getFlag(teamName)} alt={teamName} />
+              </div>
+              <div>
+                <span className="team-modal-eyebrow">Forme récente</span>
+                <h2>{teamName}</h2>
+              </div>
+            </div>
+
+            <div className="team-ranking-card">
+              <span>Classement FIFA</span>
+              <strong>{info?.team?.fifaRanking ? `#${info.team.fifaRanking}` : '—'}</strong>
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '24px',
-              cursor: 'pointer',
-              color: '#999'
-            }}
-          >
-            ✕
-          </button>
         </div>
 
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <div style={{ fontSize: '32px', marginBottom: '10px' }}>⏳</div>
-            <p style={{ color: '#666' }}>Chargement...</p>
-          </div>
-        )}
+        <div className="team-modal-body">
+          {loading && (
+            <div className="team-modal-state">
+              <div className="team-modal-ball">⚽</div>
+              <p>Chargement des infos...</p>
+            </div>
+          )}
 
-        {error && (
-          <div style={{ padding: '12px', background: '#fee', color: '#c33', borderRadius: '6px' }}>
-            {error}
-          </div>
-        )}
+          {error && !loading && (
+            <div className="team-modal-error">
+              ⚠️ {error}
+            </div>
+          )}
 
-        {info && !loading && (
-          <>
-            {/* FIFA Ranking */}
-            {info.team?.fifaRanking && (
-              <div style={{
-                background: 'linear-gradient(135deg, #2563eb 0%, #ec4899 100%)',
-                color: 'white',
-                padding: '16px',
-                borderRadius: '8px',
-                marginBottom: '20px',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '12px', opacity: 0.9 }}>Classement FIFA</div>
-                <div style={{ fontSize: '32px', fontWeight: 'bold' }}>#{info.team.fifaRanking}</div>
+          {info && !loading && !error && (
+            <>
+              <div className="team-form-summary">
+                <div className="form-pill result-win"><strong>{formStats.wins}</strong><span>victoires</span></div>
+                <div className="form-pill result-draw"><strong>{formStats.draws}</strong><span>nuls</span></div>
+                <div className="form-pill result-loss"><strong>{formStats.losses}</strong><span>défaites</span></div>
               </div>
-            )}
 
-            {/* Last 5 Matches */}
-            <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '12px', color: '#333' }}>
-                5 derniers matchs
-              </h3>
+              <div className="team-section-title">
+                <div>
+                  <span>📊 Dynamique</span>
+                  <h3>5 derniers matchs</h3>
+                </div>
+              </div>
 
               {info.lastMatches.length === 0 ? (
-                <p style={{ color: '#999', fontSize: '14px' }}>Aucun match joué</p>
+                <div className="empty-form-card">
+                  Aucun match joué pour le moment.
+                </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="team-match-list">
                   {info.lastMatches.map((match, idx) => {
-                    const resultColor = match.result === 'W' ? '#059669' : match.result === 'L' ? '#dc2626' : '#92400e';
-                    const resultBg = match.result === 'W' ? '#d1fae5' : match.result === 'L' ? '#fee2e2' : '#fef3c7';
+                    const config = getResultConfig(match.result);
 
                     return (
-                      <div
-                        key={idx}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '10px 12px',
-                          background: '#f9f9f9',
-                          borderRadius: '6px',
-                          fontSize: '13px',
-                          borderLeft: `4px solid ${resultColor}`
-                        }}
-                      >
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: '500', color: '#333' }}>vs {match.opponent}</div>
-                          <div style={{ fontSize: '11px', color: '#999' }}>
-                            {new Date(match.date).toLocaleDateString('fr-FR')}
+                      <div key={`${match.date}-${idx}`} className={`team-match-card ${config.className}`}>
+                        <div className="team-match-result">
+                          <span>{config.short}</span>
+                        </div>
+
+                        <div className="team-match-main">
+                          <div className="team-match-opponent">
+                            <span className="opponent-label">Adversaire</span>
+                            <strong>{match.opponent}</strong>
+                          </div>
+                          <div className="team-match-meta">
+                            <span>{formatDate(match.date)}</span>
+                            {match.competition && <span>{match.competition}</span>}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>
-                            {match.score}
-                          </div>
-                          <div
-                            style={{
-                              background: resultBg,
-                              color: resultColor,
-                              padding: '4px 10px',
-                              borderRadius: '4px',
-                              fontWeight: 'bold',
-                              fontSize: '12px',
-                              minWidth: '35px',
-                              textAlign: 'center'
-                            }}
-                          >
-                            {match.result === 'W' ? 'V' : match.result === 'L' ? 'D' : 'N'}
-                          </div>
+
+                        <div className="team-match-score-block">
+                          <strong>{match.score}</strong>
+                          <span>{config.icon} {config.label}</span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               )}
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
+
+        <style>{`
+          .team-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 22px;
+            background:
+              radial-gradient(circle at top left, rgba(251, 191, 36, 0.24), transparent 34%),
+              rgba(2, 6, 23, 0.72);
+            backdrop-filter: blur(8px);
+          }
+
+          .team-modal {
+            position: relative;
+            width: min(620px, 100%);
+            max-height: min(84vh, 760px);
+            overflow: hidden;
+            border-radius: 26px;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid rgba(255, 255, 255, 0.62);
+            box-shadow: 0 35px 110px rgba(2, 6, 23, 0.42);
+          }
+
+          .team-modal-close {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 2;
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            color: white;
+            background: rgba(255, 255, 255, 0.16);
+            cursor: pointer;
+            font-weight: 900;
+          }
+
+          .team-modal-close:hover {
+            background: rgba(255, 255, 255, 0.25);
+          }
+
+          .team-modal-hero {
+            padding: 26px 26px 22px;
+            color: white;
+            background:
+              radial-gradient(circle at 12% 15%, rgba(251, 191, 36, 0.36), transparent 26%),
+              linear-gradient(135deg, #06281c 0%, #0f766e 54%, #b45309 142%);
+          }
+
+          .team-modal-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+          }
+
+          .team-modal-identity {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+          }
+
+          .team-modal-flag-shell {
+            width: 58px;
+            height: 58px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid rgba(255, 255, 255, 0.86);
+            box-shadow: 0 16px 38px rgba(2, 6, 23, 0.28);
+          }
+
+          .team-modal-flag-shell img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .team-modal-eyebrow {
+            display: inline-flex;
+            margin-bottom: 5px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            color: #fde68a;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+          }
+
+          .team-modal-identity h2 {
+            margin: 0;
+            font-size: clamp(26px, 4vw, 38px);
+            line-height: 1;
+            letter-spacing: -0.05em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .team-ranking-card {
+            min-width: 132px;
+            padding: 13px 15px;
+            border-radius: 18px;
+            text-align: right;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.17);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          }
+
+          .team-ranking-card span {
+            display: block;
+            color: rgba(255, 255, 255, 0.72);
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+          }
+
+          .team-ranking-card strong {
+            display: block;
+            margin-top: 4px;
+            color: #fde68a;
+            font-size: 32px;
+            line-height: 1;
+            font-weight: 950;
+          }
+
+          .team-modal-body {
+            max-height: calc(84vh - 120px);
+            overflow: auto;
+            padding: 18px;
+            background:
+              radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 28%),
+              #f8fafc;
+          }
+
+          .team-modal-state {
+            display: grid;
+            place-items: center;
+            padding: 44px 10px;
+            color: #64748b;
+            font-weight: 800;
+          }
+
+          .team-modal-ball {
+            margin-bottom: 12px;
+            font-size: 42px;
+            animation: team-modal-bounce 1s infinite;
+          }
+
+          @keyframes team-modal-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+          }
+
+          .team-modal-error {
+            padding: 14px;
+            border-radius: 16px;
+            color: #b91c1c;
+            background: #fee2e2;
+            font-weight: 800;
+          }
+
+          .team-form-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 18px;
+          }
+
+          .form-pill {
+            padding: 13px;
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            text-align: center;
+          }
+
+          .form-pill strong {
+            display: block;
+            font-size: 24px;
+            line-height: 1;
+            font-weight: 950;
+          }
+
+          .form-pill span {
+            display: block;
+            margin-top: 4px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+          }
+
+          .team-section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+          }
+
+          .team-section-title span {
+            display: block;
+            color: #0f766e;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+          }
+
+          .team-section-title h3 {
+            margin: 2px 0 0;
+            color: #0f172a;
+            font-size: 20px;
+            letter-spacing: -0.04em;
+          }
+
+          .team-match-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+          }
+
+          .team-match-card {
+            position: relative;
+            display: grid;
+            grid-template-columns: 42px minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 13px;
+            overflow: hidden;
+            border-radius: 18px;
+            background: white;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+          }
+
+          .team-match-card::before {
+            content: '';
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 5px;
+            background: currentColor;
+          }
+
+          .team-match-result {
+            width: 36px;
+            height: 36px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            font-weight: 950;
+            background: rgba(15, 23, 42, 0.05);
+          }
+
+          .team-match-opponent {
+            min-width: 0;
+          }
+
+          .opponent-label {
+            display: block;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+          }
+
+          .team-match-opponent strong {
+            display: block;
+            margin-top: 2px;
+            overflow: hidden;
+            color: #0f172a;
+            font-size: 15px;
+            font-weight: 900;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .team-match-meta {
+            display: flex;
+            gap: 7px;
+            flex-wrap: wrap;
+            margin-top: 5px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+          }
+
+          .team-match-meta span {
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: #f1f5f9;
+          }
+
+          .team-match-score-block {
+            text-align: right;
+          }
+
+          .team-match-score-block strong {
+            display: block;
+            color: #0f172a;
+            font-size: 21px;
+            line-height: 1;
+            font-weight: 950;
+            font-variant-numeric: tabular-nums;
+          }
+
+          .team-match-score-block span {
+            display: inline-flex;
+            margin-top: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 900;
+            background: currentColor;
+            color: white;
+          }
+
+          .result-win {
+            color: #047857;
+            background: #dcfce7;
+          }
+
+          .result-draw {
+            color: #92400e;
+            background: #fef3c7;
+          }
+
+          .result-loss {
+            color: #b91c1c;
+            background: #fee2e2;
+          }
+
+          .empty-form-card {
+            padding: 18px;
+            border-radius: 18px;
+            color: #64748b;
+            background: white;
+            border: 1px dashed rgba(100, 116, 139, 0.4);
+            font-weight: 800;
+            text-align: center;
+          }
+
+          @media (max-width: 560px) {
+            .team-modal-backdrop {
+              padding: 10px;
+            }
+
+            .team-modal-title-row,
+            .team-modal-identity {
+              align-items: flex-start;
+            }
+
+            .team-modal-title-row {
+              flex-direction: column;
+            }
+
+            .team-ranking-card {
+              width: 100%;
+              text-align: left;
+            }
+
+            .team-form-summary {
+              grid-template-columns: 1fr;
+            }
+
+            .team-match-card {
+              grid-template-columns: 34px minmax(0, 1fr);
+            }
+
+            .team-match-score-block {
+              grid-column: 2;
+              text-align: left;
+            }
+          }
+        `}</style>
       </div>
     </div>
   );
