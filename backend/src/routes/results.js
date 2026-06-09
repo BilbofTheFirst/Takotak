@@ -10,7 +10,7 @@ const isValidScore = (value) => {
   return Number.isInteger(n) && n >= 0 && n <= 20;
 };
 
-// Create result and calculate points
+// Create/update result and calculate points
 router.post('/', authenticateAdmin, async (req, res) => {
   const client = await pool.connect();
   try {
@@ -65,6 +65,41 @@ router.post('/', authenticateAdmin, async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Create result error:', error);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// Delete result and related points
+router.delete('/:matchId', authenticateAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const matchId = Number(req.params.matchId);
+
+    if (!Number.isInteger(matchId)) {
+      return res.status(400).json({ error: 'Valid match id required' });
+    }
+
+    await client.query('BEGIN');
+
+    const deletedResult = await client.query(
+      'DELETE FROM results WHERE match_id = $1 RETURNING *',
+      [matchId]
+    );
+
+    await client.query('DELETE FROM user_scores WHERE match_id = $1', [matchId]);
+    await client.query('UPDATE matches SET status = $1 WHERE id = $2', ['scheduled', matchId]);
+
+    await client.query('COMMIT');
+
+    res.json({
+      message: 'Result deleted and points cleared',
+      deleted: deletedResult.rows.length > 0
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Delete result error:', error);
     res.status(500).json({ error: 'Server error' });
   } finally {
     client.release();
