@@ -246,6 +246,10 @@ a {
   transform: translateY(-1px) !important;
 }
 
+.predictions-page .team-info-hint {
+  display: none !important;
+}
+
 @media (max-width: 900px) {
   .top-nav {
     align-items: flex-start;
