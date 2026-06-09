@@ -72,6 +72,7 @@ function Predictions() {
     try {
       const [matchesRes, predictionsRes] = await Promise.all([matchesService.getAll(), predictionsService.getAll()]);
       setMatches(matchesRes.data);
+
       const predMap = {};
       const tempMap = {};
       predictionsRes.data.forEach(p => {
@@ -133,10 +134,12 @@ function Predictions() {
       setSaveStatus(prev => ({ ...prev, [matchId]: 'invalid' }));
       return;
     }
+
     if (isPredictionSaved(matchId, scores)) {
       setSaveStatus(prev => ({ ...prev, [matchId]: 'saved' }));
       return;
     }
+
     setSaveStatus(prev => ({ ...prev, [matchId]: 'saving' }));
     try {
       const response = await predictionsService.create(matchId, Number(scores.team1), Number(scores.team2));
@@ -145,8 +148,8 @@ function Predictions() {
       setTempScores(prev => ({ ...prev, [matchId]: { team1: String(saved.team1_goals), team2: String(saved.team2_goals) } }));
       setSaveStatus(prev => ({ ...prev, [matchId]: 'saved' }));
     } catch (error) {
-      console.error('Save prediction error:', error);
-      setSaveStatus(prev => ({ ...prev, [matchId]: error.response?.data?.error || 'error' }));
+      console.error('Save prediction error:', error.response?.data || error);
+      setSaveStatus(prev => ({ ...prev, [matchId]: error.response?.data?.detail || error.response?.data?.error || 'error' }));
     }
   }, [predictions]);
 
@@ -155,6 +158,7 @@ function Predictions() {
     const isClosed = new Date(match.start_time) <= new Date();
     const hasKnownTeams = Boolean(match.team1 && match.team2);
     if (isClosed || !hasKnownTeams || hasResult(match)) return;
+
     const cleanedValue = String(value).replace(/[^0-9]/g, '').slice(0, 2);
     const nextScores = { ...getScoresForMatch(matchId), [team]: cleanedValue };
     setTempScores(prev => ({ ...prev, [matchId]: nextScores }));
@@ -167,6 +171,48 @@ function Predictions() {
     const hasKnownTeams = Boolean(match.team1 && match.team2);
     if (isClosed || !hasKnownTeams || hasResult(match)) return;
     savePrediction(matchId, getScoresForMatch(matchId));
+  };
+
+  const renderTeamBlock = (match, position, align) => {
+    const teamName = position === 'team1' ? match.team1 : match.team2;
+    const label = getTeamLabel(match, position);
+    const flag = teamName ? getFlag(teamName) : null;
+    const knockoutPlaceholder = !teamName && isKnockoutMatch(match.id);
+
+    return (
+      <div className={`team-block ${align === 'right' ? 'team-block-right' : ''}`}>
+        {align === 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
+        <span className="flag-shell">{flag ? <img src={flag} alt={teamName} /> : <span>{knockoutPlaceholder ? 'KO' : '?'}</span>}</span>
+        {align !== 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
+      </div>
+    );
+  };
+
+  const renderScoreZone = (match, scores, hasKnownTeams, disabled) => {
+    const prediction = predictions[match.id];
+    const points = calculatePredictionPoints(match, prediction);
+
+    if (!hasKnownTeams) return <div className="unknown-match-note">À définir</div>;
+
+    if (hasResult(match)) {
+      return (
+        <div className="result-zone">
+          <div className="real-score">{match.team1_goals}-{match.team2_goals}</div>
+          <div className="prediction-recap">{prediction ? `Prono ${prediction.team1_goals}-${prediction.team2_goals}` : 'Pas de prono'}</div>
+          {points !== null && <div className={`points-chip points-${points}`}>+{points} pt{points > 1 ? 's' : ''}</div>}
+        </div>
+      );
+    }
+
+    const onFocus = (event) => event.currentTarget.select();
+
+    return (
+      <>
+        <input type="text" inputMode="numeric" maxLength="2" value={scores.team1} onFocus={onFocus} onChange={(e) => handleScoreChange(match, 'team1', e.target.value)} onBlur={() => commitScore(match)} disabled={disabled} aria-label={`Score ${match.team1}`} />
+        <span className="score-separator">-</span>
+        <input type="text" inputMode="numeric" maxLength="2" value={scores.team2} onFocus={onFocus} onChange={(e) => handleScoreChange(match, 'team2', e.target.value)} onBlur={() => commitScore(match)} disabled={disabled} aria-label={`Score ${match.team2}`} />
+      </>
+    );
   };
 
   const dayGroups = useMemo(() => {
@@ -213,6 +259,7 @@ function Predictions() {
     const prediction = predictions[match.id];
     const isSaved = isPredictionSaved(match.id, scores);
     const points = calculatePredictionPoints(match, prediction);
+
     if (!hasKnownTeams) return null;
     if (points !== null) return { label: `+${points} pt${points > 1 ? 's' : ''}`, icon: '🏆', className: `prediction-status points points-${points}` };
     if (isClosed) return { label: 'Fermé', icon: '🔒', className: 'prediction-status locked' };
@@ -223,43 +270,6 @@ function Predictions() {
     if (status && status !== 'saved') return { label: 'Erreur', icon: '⚠️', className: 'prediction-status error', detail: status };
     if (isSaved) return { label: 'Enregistré', icon: '✅', className: 'prediction-status saved' };
     return { label: 'À pronostiquer', icon: '🎯', className: 'prediction-status todo' };
-  };
-
-  const TeamBlock = ({ match, position, align }) => {
-    const teamName = position === 'team1' ? match.team1 : match.team2;
-    const label = getTeamLabel(match, position);
-    const flag = teamName ? getFlag(teamName) : null;
-    const knockoutPlaceholder = !teamName && isKnockoutMatch(match.id);
-    return (
-      <div className={`team-block ${align === 'right' ? 'team-block-right' : ''}`}>
-        {align === 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
-        <span className="flag-shell">{flag ? <img src={flag} alt={teamName} /> : <span>{knockoutPlaceholder ? 'KO' : '?'}</span>}</span>
-        {align !== 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
-      </div>
-    );
-  };
-
-  const ScoreZone = ({ match, scores, hasKnownTeams, disabled }) => {
-    const prediction = predictions[match.id];
-    const points = calculatePredictionPoints(match, prediction);
-    if (!hasKnownTeams) return <div className="unknown-match-note">À définir</div>;
-    if (hasResult(match)) {
-      return (
-        <div className="result-zone">
-          <div className="real-score">{match.team1_goals}-{match.team2_goals}</div>
-          <div className="prediction-recap">{prediction ? `Prono ${prediction.team1_goals}-${prediction.team2_goals}` : 'Pas de prono'}</div>
-          {points !== null && <div className={`points-chip points-${points}`}>+{points} pt{points > 1 ? 's' : ''}</div>}
-        </div>
-      );
-    }
-    const onFocus = (event) => event.currentTarget.select();
-    return (
-      <>
-        <input type="text" inputMode="numeric" maxLength="2" value={scores.team1} onFocus={onFocus} onChange={(e) => handleScoreChange(match, 'team1', e.target.value)} onBlur={() => commitScore(match)} disabled={disabled} aria-label={`Score ${match.team1}`} />
-        <span className="score-separator">-</span>
-        <input type="text" inputMode="numeric" maxLength="2" value={scores.team2} onFocus={onFocus} onChange={(e) => handleScoreChange(match, 'team2', e.target.value)} onBlur={() => commitScore(match)} disabled={disabled} aria-label={`Score ${match.team2}`} />
-      </>
-    );
   };
 
   if (loading) {
@@ -295,7 +305,7 @@ function Predictions() {
                 return (
                   <article key={match.id} className={`match-row ${disabled ? 'match-row-disabled' : ''} ${resultAvailable ? 'match-row-result' : ''}`}>
                     <div className="match-meta"><span className="match-label">{getMatchLabel(match)}</span><span className="match-time">{formatTimeBelge(match.start_time)}</span></div>
-                    <div className="match-main"><TeamBlock match={match} position="team1" align="right" /><div className="score-zone"><ScoreZone match={match} scores={scores} hasKnownTeams={hasKnownTeams} disabled={disabled} /></div><TeamBlock match={match} position="team2" /></div>
+                    <div className="match-main">{renderTeamBlock(match, 'team1', 'right')}<div className="score-zone">{renderScoreZone(match, scores, hasKnownTeams, disabled)}</div>{renderTeamBlock(match, 'team2')}</div>
                     <div className="match-status-zone">{knockout && <span className="match-number">M{match.id}</span>}{statusConfig && <div className={statusConfig.className} title={statusConfig.detail || ''}><span>{statusConfig.icon}</span>{statusConfig.label}</div>}</div>
                   </article>
                 );
