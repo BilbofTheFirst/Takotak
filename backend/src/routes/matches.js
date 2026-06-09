@@ -16,9 +16,26 @@ const MATCH_CAN_PREDICT_SQL = `
   AND COALESCE(m.status, 'scheduled') <> 'finished'
 `;
 
+let resultExtraColumnsReady = false;
+
+const ensureResultExtraColumns = async () => {
+  if (resultExtraColumnsReady) return;
+
+  await pool.query(`
+    ALTER TABLE results
+      ADD COLUMN IF NOT EXISTS team1_penalty_goals integer,
+      ADD COLUMN IF NOT EXISTS team2_penalty_goals integer,
+      ADD COLUMN IF NOT EXISTS winner_team_id integer
+  `);
+
+  resultExtraColumnsReady = true;
+};
+
 // Get all matches with team details
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    await ensureResultExtraColumns();
+
     const result = await pool.query(`
       SELECT
         m.id,
@@ -34,6 +51,9 @@ router.get('/', authenticateToken, async (req, res) => {
         m.created_at,
         r.team1_goals,
         r.team2_goals,
+        r.team1_penalty_goals,
+        r.team2_penalty_goals,
+        r.winner_team_id,
         CASE
           WHEN ${MATCH_CAN_PREDICT_SQL}
           THEN true
@@ -61,6 +81,8 @@ router.get('/', authenticateToken, async (req, res) => {
 // Get single match with predictions
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
+    await ensureResultExtraColumns();
+
     const matchId = req.params.id;
     const match = await pool.query(`
       SELECT
@@ -75,6 +97,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
         m.description,
         m.status,
         m.created_at,
+        r.team1_goals,
+        r.team2_goals,
+        r.team1_penalty_goals,
+        r.team2_penalty_goals,
+        r.winner_team_id,
         CASE
           WHEN ${MATCH_HAS_STARTED_SQL}
             OR COALESCE(m.status, 'scheduled') = 'finished'
@@ -84,6 +111,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       FROM matches m
       LEFT JOIN teams t1 ON m.team1_id = t1.id
       LEFT JOIN teams t2 ON m.team2_id = t2.id
+      LEFT JOIN results r ON m.id = r.match_id
       WHERE m.id = $1
     `, [matchId]);
 
