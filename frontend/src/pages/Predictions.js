@@ -6,7 +6,6 @@ const PRIMARY = '#0f766e';
 const SECONDARY = '#d97706';
 const DARK = '#0f172a';
 const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
-const AUTOSAVE_DELAY_MS = 900;
 
 const KNOCKOUT_MATCHES = {
   73: { round: '16e de finale', team1: '2A', team2: '2B' },
@@ -50,7 +49,6 @@ function Predictions() {
   const [tempScores, setTempScores] = useState({});
   const [saveStatus, setSaveStatus] = useState({});
   const [showPastDays, setShowPastDays] = useState(false);
-  const saveTimers = useRef({});
   const dateRefs = useRef({});
   const hasAutoScrolled = useRef(false);
 
@@ -68,33 +66,19 @@ function Predictions() {
   const formatTimeBelge = (timestamp) => timestamp ? timestamp.substring(11, 16) : '--:--';
   const isKnockoutMatch = (matchId) => Boolean(KNOCKOUT_MATCHES[matchId]);
   const hasResult = (match) => match.team1_goals !== null && match.team1_goals !== undefined && match.team2_goals !== null && match.team2_goals !== undefined;
-  const isValidScoreValue = (value) => /^\d{1,2}$/.test(String(value)) && Number(value) >= 0 && Number(value) <= 99;
+  const isValidScoreValue = (value) => /^[0-9]{1,2}$/.test(String(value)) && Number(value) >= 0 && Number(value) <= 99;
 
   const loadData = useCallback(async () => {
     try {
-      const [matchesRes, predictionsRes] = await Promise.all([
-        matchesService.getAll(),
-        predictionsService.getAll()
-      ]);
-
+      const [matchesRes, predictionsRes] = await Promise.all([matchesService.getAll(), predictionsService.getAll()]);
       setMatches(matchesRes.data);
-
       const predMap = {};
       const tempMap = {};
-
       predictionsRes.data.forEach(p => {
-        const prediction = {
-          ...p,
-          team1_goals: Number(p.team1_goals),
-          team2_goals: Number(p.team2_goals)
-        };
+        const prediction = { ...p, team1_goals: Number(p.team1_goals), team2_goals: Number(p.team2_goals) };
         predMap[p.match_id] = prediction;
-        tempMap[p.match_id] = {
-          team1: String(prediction.team1_goals),
-          team2: String(prediction.team2_goals)
-        };
+        tempMap[p.match_id] = { team1: String(prediction.team1_goals), team2: String(prediction.team2_goals) };
       });
-
       setPredictions(predMap);
       setTempScores(tempMap);
     } catch (error) {
@@ -104,10 +88,7 @@ function Predictions() {
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-    return () => Object.values(saveTimers.current).forEach(clearTimeout);
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const getMatchLabel = (match) => {
     if (KNOCKOUT_MATCHES[match.id]) return KNOCKOUT_MATCHES[match.id].round;
@@ -125,10 +106,7 @@ function Predictions() {
 
   const getScoresForMatch = (matchId) => {
     const pred = predictions[matchId];
-    return tempScores[matchId] || {
-      team1: pred ? String(pred.team1_goals) : '0',
-      team2: pred ? String(pred.team2_goals) : '0'
-    };
+    return tempScores[matchId] || { team1: pred ? String(pred.team1_goals) : '0', team2: pred ? String(pred.team2_goals) : '0' };
   };
 
   const isPredictionSaved = (matchId, scores) => {
@@ -138,22 +116,15 @@ function Predictions() {
 
   const calculatePredictionPoints = (match, prediction) => {
     if (!prediction || !hasResult(match)) return null;
-
     const predictedHome = Number(prediction.team1_goals);
     const predictedAway = Number(prediction.team2_goals);
     const actualHome = Number(match.team1_goals);
     const actualAway = Number(match.team2_goals);
-
     if (predictedHome === actualHome && predictedAway === actualAway) return 3;
-
     const predictedDiff = predictedHome - predictedAway;
     const actualDiff = actualHome - actualAway;
     if (predictedDiff === actualDiff) return 2;
-
-    const predictedOutcome = Math.sign(predictedDiff);
-    const actualOutcome = Math.sign(actualDiff);
-    if (predictedOutcome === actualOutcome) return 1;
-
+    if (Math.sign(predictedDiff) === Math.sign(actualDiff)) return 1;
     return 0;
   };
 
@@ -162,17 +133,14 @@ function Predictions() {
       setSaveStatus(prev => ({ ...prev, [matchId]: 'invalid' }));
       return;
     }
-
+    if (isPredictionSaved(matchId, scores)) {
+      setSaveStatus(prev => ({ ...prev, [matchId]: 'saved' }));
+      return;
+    }
     setSaveStatus(prev => ({ ...prev, [matchId]: 'saving' }));
-
     try {
       const response = await predictionsService.create(matchId, Number(scores.team1), Number(scores.team2));
-      const saved = {
-        ...response.data,
-        team1_goals: Number(response.data.team1_goals),
-        team2_goals: Number(response.data.team2_goals)
-      };
-
+      const saved = { ...response.data, team1_goals: Number(response.data.team1_goals), team2_goals: Number(response.data.team2_goals) };
       setPredictions(prev => ({ ...prev, [matchId]: saved }));
       setTempScores(prev => ({ ...prev, [matchId]: { team1: String(saved.team1_goals), team2: String(saved.team2_goals) } }));
       setSaveStatus(prev => ({ ...prev, [matchId]: 'saved' }));
@@ -180,61 +148,38 @@ function Predictions() {
       console.error('Save prediction error:', error);
       setSaveStatus(prev => ({ ...prev, [matchId]: error.response?.data?.error || 'error' }));
     }
-  }, []);
-
-  const scheduleAutosave = useCallback((matchId, nextScores) => {
-    if (saveTimers.current[matchId]) clearTimeout(saveTimers.current[matchId]);
-
-    if (!isValidScoreValue(nextScores.team1) || !isValidScoreValue(nextScores.team2)) {
-      setSaveStatus(prev => ({ ...prev, [matchId]: 'editing' }));
-      return;
-    }
-
-    setSaveStatus(prev => ({ ...prev, [matchId]: 'dirty' }));
-    saveTimers.current[matchId] = setTimeout(() => savePrediction(matchId, nextScores), AUTOSAVE_DELAY_MS);
-  }, [savePrediction]);
+  }, [predictions]);
 
   const handleScoreChange = (match, team, value) => {
     const matchId = match.id;
     const isClosed = new Date(match.start_time) <= new Date();
     const hasKnownTeams = Boolean(match.team1 && match.team2);
     if (isClosed || !hasKnownTeams || hasResult(match)) return;
-
-    const cleanedValue = String(value).replace(/\D/g, '').slice(0, 2);
-    const nextScores = {
-      ...getScoresForMatch(matchId),
-      [team]: cleanedValue
-    };
-
+    const cleanedValue = String(value).replace(/[^0-9]/g, '').slice(0, 2);
+    const nextScores = { ...getScoresForMatch(matchId), [team]: cleanedValue };
     setTempScores(prev => ({ ...prev, [matchId]: nextScores }));
-    scheduleAutosave(matchId, nextScores);
+    setSaveStatus(prev => ({ ...prev, [matchId]: cleanedValue === '' ? 'editing' : 'dirty' }));
+  };
+
+  const commitScore = (match) => {
+    const matchId = match.id;
+    const isClosed = new Date(match.start_time) <= new Date();
+    const hasKnownTeams = Boolean(match.team1 && match.team2);
+    if (isClosed || !hasKnownTeams || hasResult(match)) return;
+    savePrediction(matchId, getScoresForMatch(matchId));
   };
 
   const dayGroups = useMemo(() => {
     const grouped = new Map();
-
     matches.forEach(match => {
       const key = getDateKey(match.start_time);
-      if (!grouped.has(key)) {
-        grouped.set(key, {
-          key,
-          label: formatDateBelge(match.start_time),
-          date: new Date(`${key}T00:00:00`),
-          matches: []
-        });
-      }
+      if (!grouped.has(key)) grouped.set(key, { key, label: formatDateBelge(match.start_time), date: new Date(`${key}T00:00:00`), matches: [] });
       grouped.get(key).matches.push(match);
     });
-
     return Array.from(grouped.values()).sort((a, b) => a.date - b.date);
   }, [matches]);
 
-  const todayStart = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-
+  const todayStart = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
   const isPastGroup = useCallback((group) => group.matches.every(match => new Date(match.start_time) < todayStart), [todayStart]);
   const hiddenPastGroupsCount = dayGroups.filter(isPastGroup).length;
   const visibleDayGroups = showPastDays ? dayGroups : dayGroups.filter(group => !isPastGroup(group));
@@ -268,12 +213,11 @@ function Predictions() {
     const prediction = predictions[match.id];
     const isSaved = isPredictionSaved(match.id, scores);
     const points = calculatePredictionPoints(match, prediction);
-
     if (!hasKnownTeams) return null;
     if (points !== null) return { label: `+${points} pt${points > 1 ? 's' : ''}`, icon: '🏆', className: `prediction-status points points-${points}` };
     if (isClosed) return { label: 'Fermé', icon: '🔒', className: 'prediction-status locked' };
     if (status === 'saving') return { label: 'Enregistrement...', icon: '⏳', className: 'prediction-status saving' };
-    if (status === 'dirty') return { label: 'Modifié...', icon: '✍️', className: 'prediction-status dirty' };
+    if (status === 'dirty') return { label: 'À enregistrer', icon: '✍️', className: 'prediction-status dirty' };
     if (status === 'editing') return { label: 'Saisie...', icon: '⌨️', className: 'prediction-status dirty' };
     if (status === 'invalid') return { label: 'Score incomplet', icon: '⚠️', className: 'prediction-status error' };
     if (status && status !== 'saved') return { label: 'Erreur', icon: '⚠️', className: 'prediction-status error', detail: status };
@@ -286,13 +230,10 @@ function Predictions() {
     const label = getTeamLabel(match, position);
     const flag = teamName ? getFlag(teamName) : null;
     const knockoutPlaceholder = !teamName && isKnockoutMatch(match.id);
-
     return (
       <div className={`team-block ${align === 'right' ? 'team-block-right' : ''}`}>
         {align === 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
-        <span className="flag-shell">
-          {flag ? <img src={flag} alt={teamName} /> : <span>{knockoutPlaceholder ? 'KO' : '?'}</span>}
-        </span>
+        <span className="flag-shell">{flag ? <img src={flag} alt={teamName} /> : <span>{knockoutPlaceholder ? 'KO' : '?'}</span>}</span>
         {align !== 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
       </div>
     );
@@ -301,76 +242,47 @@ function Predictions() {
   const ScoreZone = ({ match, scores, hasKnownTeams, disabled }) => {
     const prediction = predictions[match.id];
     const points = calculatePredictionPoints(match, prediction);
-
-    if (!hasKnownTeams) {
-      return <div className="unknown-match-note">À définir</div>;
-    }
-
+    if (!hasKnownTeams) return <div className="unknown-match-note">À définir</div>;
     if (hasResult(match)) {
       return (
         <div className="result-zone">
           <div className="real-score">{match.team1_goals}-{match.team2_goals}</div>
-          <div className="prediction-recap">
-            {prediction ? `Prono ${prediction.team1_goals}-${prediction.team2_goals}` : 'Pas de prono'}
-          </div>
+          <div className="prediction-recap">{prediction ? `Prono ${prediction.team1_goals}-${prediction.team2_goals}` : 'Pas de prono'}</div>
           {points !== null && <div className={`points-chip points-${points}`}>+{points} pt{points > 1 ? 's' : ''}</div>}
         </div>
       );
     }
-
+    const onFocus = (event) => event.currentTarget.select();
     return (
       <>
-        <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength="2" value={scores.team1} onChange={(e) => handleScoreChange(match, 'team1', e.target.value)} disabled={disabled} aria-label={`Score ${match.team1}`} />
+        <input type="text" inputMode="numeric" maxLength="2" value={scores.team1} onFocus={onFocus} onChange={(e) => handleScoreChange(match, 'team1', e.target.value)} onBlur={() => commitScore(match)} disabled={disabled} aria-label={`Score ${match.team1}`} />
         <span className="score-separator">-</span>
-        <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength="2" value={scores.team2} onChange={(e) => handleScoreChange(match, 'team2', e.target.value)} disabled={disabled} aria-label={`Score ${match.team2}`} />
+        <input type="text" inputMode="numeric" maxLength="2" value={scores.team2} onFocus={onFocus} onChange={(e) => handleScoreChange(match, 'team2', e.target.value)} onBlur={() => commitScore(match)} disabled={disabled} aria-label={`Score ${match.team2}`} />
       </>
     );
   };
 
   if (loading) {
-    return (
-      <div className="predictions-page loading-page">
-        <div className="loading-card">
-          <div className="loading-ball">⚽</div>
-          <p>Chargement des matchs...</p>
-        </div>
-      </div>
-    );
+    return <div className="predictions-page loading-page"><div className="loading-card"><div className="loading-ball">⚽</div><p>Chargement des matchs...</p></div></div>;
   }
 
   return (
     <div className="predictions-page">
       <div className="predictions-container">
         <section className="predictions-hero">
-          <div>
-            <span className="eyebrow">Coupe du Monde 2026</span>
-            <h1>🎯 Mes pronostics</h1>
-            <p>La page se place automatiquement sur les prochains matchs. Les journées terminées sont masquées par défaut, mais restent consultables.</p>
-          </div>
-          <div className="prediction-summary">
-            <div><strong>{totalPredictions}</strong><span>pronos saisis</span></div>
-            <div><strong>{playableMatches}</strong><span>matchs jouables</span></div>
-            <div><strong>{lockedMatches}</strong><span>fermés/résultats</span></div>
-          </div>
+          <div><span className="eyebrow">Coupe du Monde 2026</span><h1>🎯 Mes pronostics</h1><p>La page se place automatiquement sur les prochains matchs. Les journées terminées sont masquées par défaut, mais restent consultables.</p></div>
+          <div className="prediction-summary"><div><strong>{totalPredictions}</strong><span>pronos saisis</span></div><div><strong>{playableMatches}</strong><span>matchs jouables</span></div><div><strong>{lockedMatches}</strong><span>fermés/résultats</span></div></div>
         </section>
 
         <div className="prediction-toolbar">
           <button type="button" onClick={scrollToRelevantDate}>🎯 Aller aux prochains matchs</button>
-          {hiddenPastGroupsCount > 0 && (
-            <button type="button" onClick={() => setShowPastDays(prev => !prev)}>
-              {showPastDays ? 'Masquer les journées passées' : `Afficher les journées passées (${hiddenPastGroupsCount})`}
-            </button>
-          )}
-          <div className="autosave-inline"><span>💾</span> Sauvegarde automatique</div>
+          {hiddenPastGroupsCount > 0 && <button type="button" onClick={() => setShowPastDays(prev => !prev)}>{showPastDays ? 'Masquer les journées passées' : `Afficher les journées passées (${hiddenPastGroupsCount})`}</button>}
+          <div className="autosave-inline"><span>💾</span> Sauvegarde en quittant le champ</div>
         </div>
 
         {visibleDayGroups.map(group => (
           <section key={group.key} ref={el => { dateRefs.current[group.key] = el; }} className={`match-day-card ${isPastGroup(group) ? 'past-day-card' : ''}`}>
-            <div className="match-day-header">
-              <div><span>📅 Journée</span><h2>{group.label}</h2></div>
-              <span className="match-count">{group.matches.length} match{group.matches.length > 1 ? 's' : ''}</span>
-            </div>
-
+            <div className="match-day-header"><div><span>📅 Journée</span><h2>{group.label}</h2></div><span className="match-count">{group.matches.length} match{group.matches.length > 1 ? 's' : ''}</span></div>
             <div className="match-list">
               {group.matches.map(match => {
                 const scores = getScoresForMatch(match.id);
@@ -380,28 +292,11 @@ function Predictions() {
                 const statusConfig = getStatusConfig(match, scores);
                 const knockout = isKnockoutMatch(match.id);
                 const resultAvailable = hasResult(match);
-
                 return (
                   <article key={match.id} className={`match-row ${disabled ? 'match-row-disabled' : ''} ${resultAvailable ? 'match-row-result' : ''}`}>
-                    <div className="match-meta">
-                      <span className="match-label">{getMatchLabel(match)}</span>
-                      <span className="match-time">{formatTimeBelge(match.start_time)}</span>
-                    </div>
-
-                    <div className="match-main">
-                      <TeamBlock match={match} position="team1" align="right" />
-                      <div className="score-zone"><ScoreZone match={match} scores={scores} hasKnownTeams={hasKnownTeams} disabled={disabled} /></div>
-                      <TeamBlock match={match} position="team2" />
-                    </div>
-
-                    <div className="match-status-zone">
-                      {knockout && <span className="match-number">M{match.id}</span>}
-                      {statusConfig && (
-                        <div className={statusConfig.className} title={statusConfig.detail || ''}>
-                          <span>{statusConfig.icon}</span>{statusConfig.label}
-                        </div>
-                      )}
-                    </div>
+                    <div className="match-meta"><span className="match-label">{getMatchLabel(match)}</span><span className="match-time">{formatTimeBelge(match.start_time)}</span></div>
+                    <div className="match-main"><TeamBlock match={match} position="team1" align="right" /><div className="score-zone"><ScoreZone match={match} scores={scores} hasKnownTeams={hasKnownTeams} disabled={disabled} /></div><TeamBlock match={match} position="team2" /></div>
+                    <div className="match-status-zone">{knockout && <span className="match-number">M{match.id}</span>}{statusConfig && <div className={statusConfig.className} title={statusConfig.detail || ''}><span>{statusConfig.icon}</span>{statusConfig.label}</div>}</div>
                   </article>
                 );
               })}
