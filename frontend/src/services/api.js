@@ -53,6 +53,8 @@ export const resultsService = {
     return api.post('/results', payload);
   },
   delete: (match_id) => api.delete(`/results/${match_id}`),
+  getThirdPlaces: () => api.get('/results/third-places'),
+  saveThirdPlaceOrder: (group_codes) => api.post('/results/third-places/order', { group_codes }),
   getLeaderboard: () => api.get('/results/leaderboard'),
   getUserStats: () => api.get('/results/user/stats')
 };
