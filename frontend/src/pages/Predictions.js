@@ -43,6 +43,22 @@ const KNOCKOUT_MATCHES = {
   104: { round: 'Finale', team1: 'V101', team2: 'V102' }
 };
 
+const getMockNowValue = () => {
+  if (typeof window === 'undefined') return null;
+  return window.__TAKOTAK_MOCK_NOW__ || null;
+};
+
+const isMockResultsEnabled = () => {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('mockResults') === '1';
+};
+
+const buildMockScore = (matchId) => ({
+  team1_goals: (Number(matchId) * 7) % 5,
+  team2_goals: (Number(matchId) * 11) % 4
+});
+
 function Predictions() {
   const [matches, setMatches] = useState([]);
   const [predictions, setPredictions] = useState({});
@@ -54,6 +70,11 @@ function Predictions() {
   const dateRefs = useRef({});
   const hasAutoScrolled = useRef(false);
 
+  const mockNowValue = useMemo(() => getMockNowValue(), []);
+  const mockResultsEnabled = useMemo(() => isMockResultsEnabled(), []);
+  const currentNow = useMemo(() => mockNowValue ? new Date(mockNowValue) : new Date(), [mockNowValue]);
+  const isMockMode = Boolean(mockNowValue);
+
   const formatDateBelge = (timestamp) => {
     if (!timestamp) return '';
     const dateStr = timestamp.substring(0, 10);
@@ -64,11 +85,29 @@ function Predictions() {
     return `${days[date.getDay()]} ${parseInt(day, 10)} ${months[parseInt(month, 10) - 1]} ${year}`;
   };
 
+  const formatMockDate = (date) => date.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+
   const getDateKey = (timestamp) => timestamp ? timestamp.substring(0, 10) : 'unknown';
   const formatTimeBelge = (timestamp) => timestamp ? timestamp.substring(11, 16) : '--:--';
   const isKnockoutMatch = (matchId) => Boolean(KNOCKOUT_MATCHES[matchId]);
   const hasResult = (match) => match.team1_goals !== null && match.team1_goals !== undefined && match.team2_goals !== null && match.team2_goals !== undefined;
   const isValidScoreValue = (value) => /^[0-9]{1,2}$/.test(String(value)) && Number(value) >= 0 && Number(value) <= 99;
+
+  const getDisplayMatch = useCallback((match) => {
+    if (!mockResultsEnabled || hasResult(match) || !match.team1 || !match.team2 || new Date(match.start_time) >= currentNow) {
+      return match;
+    }
+
+    return {
+      ...match,
+      ...buildMockScore(match.id),
+      is_mock_result: true
+    };
+  }, [currentNow, mockResultsEnabled]);
 
   const loadData = useCallback(async () => {
     try {
@@ -157,7 +196,7 @@ function Predictions() {
 
   const handleScoreChange = (match, team, value) => {
     const matchId = match.id;
-    const isClosed = new Date(match.start_time) <= new Date();
+    const isClosed = new Date(match.start_time) <= currentNow;
     const hasKnownTeams = Boolean(match.team1 && match.team2);
     if (isClosed || !hasKnownTeams || hasResult(match)) return;
 
@@ -169,7 +208,7 @@ function Predictions() {
 
   const commitScore = (match) => {
     const matchId = match.id;
-    const isClosed = new Date(match.start_time) <= new Date();
+    const isClosed = new Date(match.start_time) <= currentNow;
     const hasKnownTeams = Boolean(match.team1 && match.team2);
     if (isClosed || !hasKnownTeams || hasResult(match)) return;
     savePrediction(matchId, getScoresForMatch(matchId));
@@ -193,7 +232,6 @@ function Predictions() {
     const flag = teamName ? getFlag(teamName) : null;
     const knockoutPlaceholder = !teamName && isKnockoutMatch(match.id);
     const isClickable = Boolean(teamName);
-    const infoHint = isClickable ? <span className="team-info-hint" aria-hidden="true">ⓘ</span> : null;
 
     return (
       <div
@@ -205,18 +243,16 @@ function Predictions() {
         title={isClickable ? `Voir les 5 derniers matchs de ${teamName}` : undefined}
         aria-label={isClickable ? `Voir les 5 derniers matchs de ${teamName}` : undefined}
       >
-        {align === 'right' && infoHint}
         {align === 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
         <span className="flag-shell">
           {flag ? <img src={flag} alt={teamName} /> : <span className={knockoutPlaceholder ? 'football-placeholder-icon' : ''}>{knockoutPlaceholder ? '⚽' : '?'}</span>}
         </span>
         {align !== 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
-        {align !== 'right' && infoHint}
       </div>
     );
   };
 
-  const renderScoreZone = (match, scores, hasKnownTeams, disabled) => {
+  const renderScoreZone = (match, originalMatch, scores, hasKnownTeams, disabled) => {
     const prediction = predictions[match.id];
     const points = calculatePredictionPoints(match, prediction);
 
@@ -228,6 +264,7 @@ function Predictions() {
           <div className="real-score">{match.team1_goals}-{match.team2_goals}</div>
           <div className="prediction-recap">{prediction ? `Prono ${prediction.team1_goals}-${prediction.team2_goals}` : 'Pas de prono'}</div>
           {points !== null && <div className={`points-chip points-${points}`}>+{points} pt{points > 1 ? 's' : ''}</div>}
+          {match.is_mock_result && <div className="mock-result-note">simulé</div>}
         </div>
       );
     }
@@ -236,9 +273,9 @@ function Predictions() {
 
     return (
       <>
-        <input type="text" inputMode="numeric" maxLength="2" value={scores.team1} onFocus={onFocus} onChange={(e) => handleScoreChange(match, 'team1', e.target.value)} onBlur={() => commitScore(match)} disabled={disabled} aria-label={`Score ${match.team1}`} />
+        <input type="text" inputMode="numeric" maxLength="2" value={scores.team1} onFocus={onFocus} onChange={(e) => handleScoreChange(originalMatch, 'team1', e.target.value)} onBlur={() => commitScore(originalMatch)} disabled={disabled} aria-label={`Score ${match.team1}`} />
         <span className="score-separator">-</span>
-        <input type="text" inputMode="numeric" maxLength="2" value={scores.team2} onFocus={onFocus} onChange={(e) => handleScoreChange(match, 'team2', e.target.value)} onBlur={() => commitScore(match)} disabled={disabled} aria-label={`Score ${match.team2}`} />
+        <input type="text" inputMode="numeric" maxLength="2" value={scores.team2} onFocus={onFocus} onChange={(e) => handleScoreChange(originalMatch, 'team2', e.target.value)} onBlur={() => commitScore(originalMatch)} disabled={disabled} aria-label={`Score ${match.team2}`} />
       </>
     );
   };
@@ -253,16 +290,15 @@ function Predictions() {
     return Array.from(grouped.values()).sort((a, b) => a.date - b.date);
   }, [matches]);
 
-  const todayStart = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
+  const todayStart = useMemo(() => { const d = new Date(currentNow); d.setHours(0, 0, 0, 0); return d; }, [currentNow]);
   const isPastGroup = useCallback((group) => group.matches.every(match => new Date(match.start_time) < todayStart), [todayStart]);
   const hiddenPastGroupsCount = dayGroups.filter(isPastGroup).length;
   const visibleDayGroups = showPastDays ? dayGroups : dayGroups.filter(group => !isPastGroup(group));
 
   const firstRelevantDateKey = useMemo(() => {
-    const now = new Date();
-    const nextGroup = dayGroups.find(group => group.matches.some(match => new Date(match.start_time) >= now || !hasResult(match)));
+    const nextGroup = dayGroups.find(group => !isPastGroup(group));
     return nextGroup?.key || dayGroups[0]?.key;
-  }, [dayGroups]);
+  }, [dayGroups, isPastGroup]);
 
   const scrollToRelevantDate = useCallback(() => {
     const target = dateRefs.current[firstRelevantDateKey];
@@ -276,13 +312,14 @@ function Predictions() {
     }
   }, [loading, firstRelevantDateKey, scrollToRelevantDate]);
 
+  const displayMatches = useMemo(() => matches.map(getDisplayMatch), [matches, getDisplayMatch]);
   const totalPredictions = Object.keys(predictions).length;
-  const playableMatches = matches.filter(m => m.team1 && m.team2 && !hasResult(m)).length;
-  const lockedMatches = matches.filter(m => new Date(m.start_time) <= new Date() || hasResult(m)).length;
+  const playableMatches = displayMatches.filter(m => m.team1 && m.team2 && !hasResult(m) && new Date(m.start_time) > currentNow).length;
+  const lockedMatches = displayMatches.filter(m => new Date(m.start_time) <= currentNow || hasResult(m)).length;
 
   const getStatusConfig = (match, scores) => {
     const status = saveStatus[match.id];
-    const isClosed = new Date(match.start_time) <= new Date();
+    const isClosed = new Date(match.start_time) <= currentNow;
     const hasKnownTeams = Boolean(match.team1 && match.team2);
     const prediction = predictions[match.id];
     const isSaved = isPredictionSaved(match.id, scores);
@@ -312,6 +349,12 @@ function Predictions() {
           <div className="prediction-summary"><div><strong>{totalPredictions}</strong><span>pronos saisis</span></div><div><strong>{playableMatches}</strong><span>matchs jouables</span></div><div><strong>{lockedMatches}</strong><span>fermés/résultats</span></div></div>
         </section>
 
+        {isMockMode && (
+          <div className="mock-mode-banner">
+            🧪 Simulation active : {formatMockDate(currentNow)}{mockResultsEnabled ? ' · résultats simulés visibles' : ''}
+          </div>
+        )}
+
         <div className="prediction-toolbar">
           <button type="button" onClick={scrollToRelevantDate}>🎯 Aller aux prochains matchs</button>
           {hiddenPastGroupsCount > 0 && <button type="button" onClick={() => setShowPastDays(prev => !prev)}>{showPastDays ? 'Masquer les journées passées' : `Afficher les journées passées (${hiddenPastGroupsCount})`}</button>}
@@ -323,17 +366,18 @@ function Predictions() {
             <div className="match-day-header"><div><span>📅 Journée</span><h2>{group.label}</h2></div><span className="match-count">{group.matches.length} match{group.matches.length > 1 ? 's' : ''}</span></div>
             <div className="match-list">
               {group.matches.map(match => {
+                const displayMatch = getDisplayMatch(match);
                 const scores = getScoresForMatch(match.id);
-                const isClosed = new Date(match.start_time) <= new Date();
-                const hasKnownTeams = Boolean(match.team1 && match.team2);
-                const disabled = isClosed || !hasKnownTeams || hasResult(match);
-                const statusConfig = getStatusConfig(match, scores);
+                const isClosed = new Date(match.start_time) <= currentNow;
+                const hasKnownTeams = Boolean(displayMatch.team1 && displayMatch.team2);
+                const disabled = isClosed || !hasKnownTeams || hasResult(displayMatch);
+                const statusConfig = getStatusConfig(displayMatch, scores);
                 const knockout = isKnockoutMatch(match.id);
-                const resultAvailable = hasResult(match);
+                const resultAvailable = hasResult(displayMatch);
                 return (
                   <article key={match.id} className={`match-row ${disabled ? 'match-row-disabled' : ''} ${resultAvailable ? 'match-row-result' : ''}`}>
-                    <div className="match-meta"><span className="match-label">{getMatchLabel(match)}</span><span className="match-time">{formatTimeBelge(match.start_time)}</span></div>
-                    <div className="match-main">{renderTeamBlock(match, 'team1', 'right')}<div className="score-zone">{renderScoreZone(match, scores, hasKnownTeams, disabled)}</div>{renderTeamBlock(match, 'team2')}</div>
+                    <div className="match-meta"><span className="match-label">{getMatchLabel(displayMatch)}</span><span className="match-time">{formatTimeBelge(displayMatch.start_time)}</span></div>
+                    <div className="match-main">{renderTeamBlock(displayMatch, 'team1', 'right')}<div className="score-zone">{renderScoreZone(displayMatch, match, scores, hasKnownTeams, disabled)}</div>{renderTeamBlock(displayMatch, 'team2')}</div>
                     <div className="match-status-zone">{knockout && <span className="match-number">M{match.id}</span>}{statusConfig && <div className={statusConfig.className} title={statusConfig.detail || ''}><span>{statusConfig.icon}</span>{statusConfig.label}</div>}</div>
                   </article>
                 );
@@ -356,6 +400,7 @@ function Predictions() {
         .prediction-summary div { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); border-radius: 14px; padding: 12px; backdrop-filter: blur(10px); box-shadow: 0 16px 38px rgba(0,0,0,.16); }
         .prediction-summary strong { display: block; font-size: 25px; color: #fde68a; line-height: 1; }
         .prediction-summary span { display: block; margin-top: 6px; color: rgba(255,255,255,.7); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+        .mock-mode-banner { margin: -4px 0 14px; padding: 10px 14px; border-radius: 14px; color: #713f12; background: #fef3c7; border: 1px solid rgba(251, 191, 36, .45); font-size: 12px; font-weight: 900; box-shadow: 0 12px 30px rgba(0,0,0,.12); }
         .prediction-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: rgba(255,255,255,.95); border-radius: 16px; padding: 10px 12px; margin-bottom: 16px; box-shadow: 0 18px 45px rgba(0,0,0,.19); }
         .prediction-toolbar button { border: 0; border-radius: 999px; padding: 8px 12px; background: ${GRADIENT}; color: white; font-size: 12px; font-weight: 900; cursor: pointer; box-shadow: 0 8px 18px rgba(15,118,110,.18); }
         .prediction-toolbar button + button { background: #e2e8f0; color: #334155; box-shadow: none; }
@@ -383,8 +428,6 @@ function Predictions() {
         .team-block-clickable:hover, .team-block-clickable:focus-visible { background: rgba(15, 118, 110, .08); box-shadow: inset 0 0 0 1px rgba(15, 118, 110, .12); transform: translateY(-1px); }
         .team-name { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${DARK}; font-size: 13px; font-weight: 800; }
         .team-placeholder { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; color: #334155; letter-spacing: -.02em; }
-        .team-info-hint { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; flex: 0 0 auto; border-radius: 999px; background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 950; opacity: .78; }
-        .team-block-clickable:hover .team-info-hint, .team-block-clickable:focus-visible .team-info-hint { opacity: 1; background: #bae6fd; }
         .flag-shell { width: 28px; height: 28px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center; background: #e2e8f0; border: 2px solid white; box-shadow: 0 5px 14px rgba(15,23,42,.16); overflow: hidden; color: #64748b; font-weight: 900; font-size: 9px; }
         .flag-shell img { width: 100%; height: 100%; object-fit: cover; }
         .football-placeholder-icon { font-size: 21px; line-height: 1; display: block; transform: translateY(1px); }
@@ -397,6 +440,7 @@ function Predictions() {
         .result-zone { display: grid; place-items: center; gap: 2px; min-width: 124px; }
         .real-score { padding: 4px 10px; border-radius: 11px; background: ${DARK}; color: white; font-size: 17px; line-height: 1; font-weight: 950; font-variant-numeric: tabular-nums; }
         .prediction-recap { color: #64748b; font-size: 10px; font-weight: 800; white-space: nowrap; }
+        .mock-result-note { color: #b45309; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
         .points-chip { padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 950; }
         .points-3 { background: #dcfce7; color: #047857; }
         .points-2 { background: #dbeafe; color: #1d4ed8; }
