@@ -3,9 +3,9 @@ import { teamsService } from '../services/api';
 import { getFlag } from '../utils/countryFlags';
 
 const resultConfig = {
-  W: { label: 'Victoire', short: 'V', className: 'result-win', icon: '✅' },
-  D: { label: 'Nul', short: 'N', className: 'result-draw', icon: '➖' },
-  L: { label: 'Défaite', short: 'D', className: 'result-loss', icon: '❌' }
+  W: { label: 'Victoire', short: 'V', className: 'result-win', icon: '✓' },
+  D: { label: 'Nul', short: 'N', className: 'result-draw', icon: '=' },
+  L: { label: 'Défaite', short: 'D', className: 'result-loss', icon: '×' }
 };
 
 function TeamInfoModal({ teamId, teamName, onClose }) {
@@ -67,14 +67,14 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
               <div className="team-modal-flag-shell">
                 <img src={getFlag(teamName)} alt={teamName} />
               </div>
-              <div>
-                <span className="team-modal-eyebrow">Forme récente</span>
+              <div className="team-modal-heading">
+                <span>Forme récente</span>
                 <h2>{teamName}</h2>
               </div>
             </div>
 
             <div className="team-ranking-card">
-              <span>Classement FIFA</span>
+              <span>FIFA</span>
               <strong>{info?.team?.fifaRanking ? `#${info.team.fifaRanking}` : '—'}</strong>
             </div>
           </div>
@@ -84,7 +84,7 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
           {loading && (
             <div className="team-modal-state">
               <div className="team-modal-ball">⚽</div>
-              <p>Chargement des infos...</p>
+              <p>Chargement...</p>
             </div>
           )}
 
@@ -97,16 +97,13 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
           {info && !loading && !error && (
             <>
               <div className="team-form-summary">
-                <div className="form-pill result-win"><strong>{formStats.wins}</strong><span>victoires</span></div>
-                <div className="form-pill result-draw"><strong>{formStats.draws}</strong><span>nuls</span></div>
-                <div className="form-pill result-loss"><strong>{formStats.losses}</strong><span>défaites</span></div>
+                <div className="form-pill result-win"><strong>{formStats.wins}</strong><span>Victoires</span></div>
+                <div className="form-pill result-draw"><strong>{formStats.draws}</strong><span>Nuls</span></div>
+                <div className="form-pill result-loss"><strong>{formStats.losses}</strong><span>Défaites</span></div>
               </div>
 
               <div className="team-section-title">
-                <div>
-                  <span>📊 Dynamique</span>
-                  <h3>5 derniers matchs</h3>
-                </div>
+                <span>📊 5 derniers matchs</span>
               </div>
 
               {info.lastMatches.length === 0 ? (
@@ -121,14 +118,11 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
                     return (
                       <div key={`${match.date}-${idx}`} className={`team-match-card ${config.className}`}>
                         <div className="team-match-result">
-                          <span>{config.short}</span>
+                          {config.short}
                         </div>
 
                         <div className="team-match-main">
-                          <div className="team-match-opponent">
-                            <span className="opponent-label">Adversaire</span>
-                            <strong>{match.opponent}</strong>
-                          </div>
+                          <strong>{match.opponent}</strong>
                           <div className="team-match-meta">
                             <span>{formatDate(match.date)}</span>
                             {match.competition && <span>{match.competition}</span>}
@@ -156,78 +150,79 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 22px;
+            padding: 18px;
             background:
-              radial-gradient(circle at top left, rgba(251, 191, 36, 0.24), transparent 34%),
-              rgba(2, 6, 23, 0.72);
+              radial-gradient(circle at top left, rgba(251, 191, 36, 0.20), transparent 34%),
+              rgba(2, 6, 23, 0.70);
             backdrop-filter: blur(8px);
           }
 
           .team-modal {
             position: relative;
-            width: min(620px, 100%);
-            max-height: min(84vh, 760px);
+            width: min(540px, 100%);
+            max-height: min(86vh, 680px);
             overflow: hidden;
-            border-radius: 26px;
-            background: rgba(255, 255, 255, 0.96);
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.97);
             border: 1px solid rgba(255, 255, 255, 0.62);
-            box-shadow: 0 35px 110px rgba(2, 6, 23, 0.42);
+            box-shadow: 0 28px 90px rgba(2, 6, 23, 0.42);
           }
 
           .team-modal-close {
             position: absolute;
-            top: 14px;
-            right: 14px;
+            top: 11px;
+            right: 11px;
             z-index: 2;
-            width: 34px;
-            height: 34px;
+            width: 30px;
+            height: 30px;
             border: 0;
             border-radius: 999px;
             display: grid;
             place-items: center;
             color: white;
-            background: rgba(255, 255, 255, 0.16);
+            background: rgba(255, 255, 255, 0.18);
             cursor: pointer;
             font-weight: 900;
+            font-size: 15px;
           }
 
           .team-modal-close:hover {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.28);
           }
 
           .team-modal-hero {
-            padding: 26px 26px 22px;
+            padding: 22px 24px 20px;
             color: white;
             background:
-              radial-gradient(circle at 12% 15%, rgba(251, 191, 36, 0.36), transparent 26%),
-              linear-gradient(135deg, #06281c 0%, #0f766e 54%, #b45309 142%);
+              radial-gradient(circle at 12% 15%, rgba(251, 191, 36, 0.32), transparent 26%),
+              linear-gradient(135deg, #06281c 0%, #0f766e 58%, #b45309 145%);
           }
 
           .team-modal-title-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 18px;
+            gap: 15px;
           }
 
           .team-modal-identity {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
             min-width: 0;
           }
 
           .team-modal-flag-shell {
-            width: 58px;
-            height: 58px;
+            width: 50px;
+            height: 50px;
             flex: 0 0 auto;
             display: grid;
             place-items: center;
             overflow: hidden;
             border-radius: 50%;
             background: white;
-            border: 3px solid rgba(255, 255, 255, 0.86);
-            box-shadow: 0 16px 38px rgba(2, 6, 23, 0.28);
+            border: 3px solid rgba(255, 255, 255, 0.88);
+            box-shadow: 0 13px 30px rgba(2, 6, 23, 0.28);
           }
 
           .team-modal-flag-shell img {
@@ -236,38 +231,42 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
             object-fit: cover;
           }
 
-          .team-modal-eyebrow {
+          .team-modal-heading {
+            min-width: 0;
+          }
+
+          .team-modal-heading span {
             display: inline-flex;
             margin-bottom: 5px;
-            padding: 4px 9px;
+            padding: 4px 8px;
             border-radius: 999px;
             color: #fde68a;
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.13);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             font-size: 10px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.07em;
           }
 
-          .team-modal-identity h2 {
+          .team-modal-heading h2 {
             margin: 0;
-            font-size: clamp(26px, 4vw, 38px);
+            max-width: 290px;
+            overflow: hidden;
+            font-size: clamp(25px, 4vw, 34px);
             line-height: 1;
             letter-spacing: -0.05em;
-            white-space: nowrap;
-            overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
           }
 
           .team-ranking-card {
-            min-width: 132px;
-            padding: 13px 15px;
-            border-radius: 18px;
+            min-width: 104px;
+            padding: 10px 12px;
+            border-radius: 16px;
             text-align: right;
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.17);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.13);
+            border: 1px solid rgba(255, 255, 255, 0.18);
           }
 
           .team-ranking-card span {
@@ -281,44 +280,44 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
 
           .team-ranking-card strong {
             display: block;
-            margin-top: 4px;
+            margin-top: 3px;
             color: #fde68a;
-            font-size: 32px;
+            font-size: 28px;
             line-height: 1;
             font-weight: 950;
           }
 
           .team-modal-body {
-            max-height: calc(84vh - 120px);
+            max-height: calc(86vh - 96px);
             overflow: auto;
-            padding: 18px;
+            padding: 14px 18px 16px;
             background:
-              radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 28%),
+              radial-gradient(circle at top right, rgba(15, 118, 110, 0.07), transparent 28%),
               #f8fafc;
           }
 
           .team-modal-state {
             display: grid;
             place-items: center;
-            padding: 44px 10px;
+            padding: 34px 10px;
             color: #64748b;
             font-weight: 800;
           }
 
           .team-modal-ball {
-            margin-bottom: 12px;
-            font-size: 42px;
+            margin-bottom: 10px;
+            font-size: 36px;
             animation: team-modal-bounce 1s infinite;
           }
 
           @keyframes team-modal-bounce {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
+            50% { transform: translateY(-7px); }
           }
 
           .team-modal-error {
-            padding: 14px;
-            border-radius: 16px;
+            padding: 12px;
+            border-radius: 14px;
             color: #b91c1c;
             background: #fee2e2;
             font-weight: 800;
@@ -327,142 +326,129 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
           .team-form-summary {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 18px;
+            gap: 8px;
+            margin-bottom: 13px;
           }
 
           .form-pill {
-            padding: 13px;
-            border-radius: 16px;
+            padding: 9px 8px;
+            border-radius: 14px;
             border: 1px solid rgba(15, 23, 42, 0.06);
             text-align: center;
           }
 
           .form-pill strong {
             display: block;
-            font-size: 24px;
+            font-size: 20px;
             line-height: 1;
             font-weight: 950;
           }
 
           .form-pill span {
             display: block;
-            margin-top: 4px;
-            font-size: 10px;
+            margin-top: 3px;
+            font-size: 9px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.05em;
           }
 
           .team-section-title {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
           }
 
           .team-section-title span {
             display: block;
             color: #0f766e;
-            font-size: 11px;
-            font-weight: 900;
+            font-size: 12px;
+            font-weight: 950;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-          }
-
-          .team-section-title h3 {
-            margin: 2px 0 0;
-            color: #0f172a;
-            font-size: 20px;
-            letter-spacing: -0.04em;
+            letter-spacing: 0.06em;
           }
 
           .team-match-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
           }
 
           .team-match-card {
             position: relative;
             display: grid;
-            grid-template-columns: 42px minmax(0, 1fr) auto;
-            gap: 12px;
+            grid-template-columns: 34px minmax(0, 1fr) auto;
+            gap: 10px;
             align-items: center;
-            padding: 13px;
+            min-height: 58px;
+            padding: 9px 12px;
             overflow: hidden;
-            border-radius: 18px;
+            border-radius: 16px;
             background: white;
             border: 1px solid rgba(15, 23, 42, 0.06);
-            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
           }
 
           .team-match-card::before {
             content: '';
             position: absolute;
             inset: 0 auto 0 0;
-            width: 5px;
+            width: 4px;
             background: currentColor;
           }
 
           .team-match-result {
-            width: 36px;
-            height: 36px;
+            width: 28px;
+            height: 28px;
             display: grid;
             place-items: center;
-            border-radius: 12px;
+            border-radius: 10px;
+            font-size: 13px;
             font-weight: 950;
-            background: rgba(15, 23, 42, 0.05);
+            background: rgba(255, 255, 255, 0.45);
           }
 
-          .team-match-opponent {
+          .team-match-main {
             min-width: 0;
           }
 
-          .opponent-label {
+          .team-match-main strong {
             display: block;
-            color: #94a3b8;
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-          }
-
-          .team-match-opponent strong {
-            display: block;
-            margin-top: 2px;
             overflow: hidden;
             color: #0f172a;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 900;
+            line-height: 1.15;
             text-overflow: ellipsis;
             white-space: nowrap;
           }
 
           .team-match-meta {
             display: flex;
-            gap: 7px;
+            gap: 6px;
             flex-wrap: wrap;
             margin-top: 5px;
             color: #64748b;
-            font-size: 11px;
-            font-weight: 700;
+            font-size: 10px;
+            font-weight: 800;
           }
 
           .team-match-meta span {
             padding: 3px 7px;
             border-radius: 999px;
-            background: #f1f5f9;
+            background: rgba(255, 255, 255, 0.62);
           }
 
           .team-match-score-block {
+            min-width: 72px;
             text-align: right;
           }
 
           .team-match-score-block strong {
             display: block;
             color: #0f172a;
-            font-size: 21px;
+            font-size: 20px;
             line-height: 1;
             font-weight: 950;
             font-variant-numeric: tabular-nums;
@@ -470,13 +456,15 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
 
           .team-match-score-block span {
             display: inline-flex;
-            margin-top: 6px;
-            padding: 4px 8px;
+            align-items: center;
+            justify-content: center;
+            min-width: 58px;
+            margin-top: 5px;
+            padding: 3px 8px;
             border-radius: 999px;
             font-size: 10px;
             font-weight: 900;
-            background: currentColor;
-            color: white;
+            background: rgba(255, 255, 255, 0.74);
           }
 
           .result-win {
@@ -495,8 +483,8 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
           }
 
           .empty-form-card {
-            padding: 18px;
-            border-radius: 18px;
+            padding: 16px;
+            border-radius: 16px;
             color: #64748b;
             background: white;
             border: 1px dashed rgba(100, 116, 139, 0.4);
@@ -509,13 +497,14 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
               padding: 10px;
             }
 
-            .team-modal-title-row,
-            .team-modal-identity {
-              align-items: flex-start;
+            .team-modal-title-row {
+              align-items: stretch;
+              flex-direction: column;
+              gap: 12px;
             }
 
-            .team-modal-title-row {
-              flex-direction: column;
+            .team-modal-heading h2 {
+              max-width: 220px;
             }
 
             .team-ranking-card {
@@ -524,16 +513,17 @@ function TeamInfoModal({ teamId, teamName, onClose }) {
             }
 
             .team-form-summary {
-              grid-template-columns: 1fr;
+              grid-template-columns: repeat(3, 1fr);
             }
 
             .team-match-card {
-              grid-template-columns: 34px minmax(0, 1fr);
+              grid-template-columns: 30px minmax(0, 1fr) auto;
+              gap: 8px;
+              padding: 8px 10px;
             }
 
             .team-match-score-block {
-              grid-column: 2;
-              text-align: left;
+              min-width: 58px;
             }
           }
         `}</style>
