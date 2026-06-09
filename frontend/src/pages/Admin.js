@@ -19,7 +19,9 @@ function Admin() {
     items.forEach(match => {
       nextInputs[match.id] = {
         team1: match.team1_goals !== null && match.team1_goals !== undefined ? String(match.team1_goals) : '',
-        team2: match.team2_goals !== null && match.team2_goals !== undefined ? String(match.team2_goals) : ''
+        team2: match.team2_goals !== null && match.team2_goals !== undefined ? String(match.team2_goals) : '',
+        penalty1: match.team1_penalty_goals !== null && match.team1_penalty_goals !== undefined ? String(match.team1_penalty_goals) : '',
+        penalty2: match.team2_penalty_goals !== null && match.team2_penalty_goals !== undefined ? String(match.team2_penalty_goals) : ''
       };
     });
     return nextInputs;
@@ -37,13 +39,13 @@ function Admin() {
     }
   };
 
-  const updateResultInput = (matchId, team, value) => {
+  const updateResultInput = (matchId, field, value) => {
     const cleanedValue = String(value).replace(/[^0-9]/g, '').slice(0, 2);
     setResultInputs(prev => ({
       ...prev,
       [matchId]: {
-        ...(prev[matchId] || { team1: '', team2: '' }),
-        [team]: cleanedValue
+        ...(prev[matchId] || { team1: '', team2: '', penalty1: '', penalty2: '' }),
+        [field]: cleanedValue
       }
     }));
   };
@@ -53,17 +55,56 @@ function Admin() {
     return score !== '' && Number.isInteger(n) && n >= 0 && n <= 20;
   };
 
-  const handleSaveResult = async (matchId) => {
-    const scores = resultInputs[matchId] || { team1: '', team2: '' };
+  const isValidPenaltyInput = (score) => {
+    const n = Number(score);
+    return score !== '' && Number.isInteger(n) && n >= 0 && n <= 30;
+  };
+
+  const isKnockoutMatch = (match) => Number(match.id) >= 73;
+
+  const needsPenaltyShootout = (match, scores) => (
+    isKnockoutMatch(match)
+    && isValidResultInput(scores.team1)
+    && isValidResultInput(scores.team2)
+    && Number(scores.team1) === Number(scores.team2)
+  );
+
+  const hasValidPenaltyShootout = (scores) => (
+    isValidPenaltyInput(scores.penalty1)
+    && isValidPenaltyInput(scores.penalty2)
+    && Number(scores.penalty1) !== Number(scores.penalty2)
+  );
+
+  const getResultChanged = (match, scores) => (
+    String(match.team1_goals ?? '') !== scores.team1
+    || String(match.team2_goals ?? '') !== scores.team2
+    || String(match.team1_penalty_goals ?? '') !== scores.penalty1
+    || String(match.team2_penalty_goals ?? '') !== scores.penalty2
+  );
+
+  const handleSaveResult = async (match) => {
+    const scores = resultInputs[match.id] || { team1: '', team2: '', penalty1: '', penalty2: '' };
 
     if (!isValidResultInput(scores.team1) || !isValidResultInput(scores.team2)) {
       alert('Encode un score valide entre 0 et 20 pour les deux équipes.');
       return;
     }
 
+    const needsPenalties = needsPenaltyShootout(match, scores);
+    if (needsPenalties && !hasValidPenaltyShootout(scores)) {
+      alert('Encode un score de tirs au but valide. Les tirs au but ne peuvent pas être à égalité.');
+      return;
+    }
+
     try {
-      setSavingMatchId(matchId);
-      await resultsService.create(matchId, Number(scores.team1), Number(scores.team2));
+      setSavingMatchId(match.id);
+      await resultsService.create({
+        match_id: match.id,
+        team1_goals: Number(scores.team1),
+        team2_goals: Number(scores.team2),
+        team1_penalty_goals: needsPenalties ? Number(scores.penalty1) : null,
+        team2_penalty_goals: needsPenalties ? Number(scores.penalty2) : null
+      });
       await loadMatches();
     } catch (error) {
       alert(error.response?.data?.error || 'Erreur lors de la sauvegarde');
@@ -93,7 +134,9 @@ function Admin() {
       ...prev,
       [match.id]: {
         team1: match.team1_goals !== null && match.team1_goals !== undefined ? String(match.team1_goals) : '',
-        team2: match.team2_goals !== null && match.team2_goals !== undefined ? String(match.team2_goals) : ''
+        team2: match.team2_goals !== null && match.team2_goals !== undefined ? String(match.team2_goals) : '',
+        penalty1: match.team1_penalty_goals !== null && match.team1_penalty_goals !== undefined ? String(match.team1_penalty_goals) : '',
+        penalty2: match.team2_penalty_goals !== null && match.team2_penalty_goals !== undefined ? String(match.team2_penalty_goals) : ''
       }
     }));
   };
@@ -126,7 +169,7 @@ function Admin() {
 
   const getGroupLabel = (match) => match.groupe1 ? `Groupe ${match.groupe1}` : 'Match';
   const getTimeLabel = (match) => match.start_time?.substring(0, 16).replace('T', ' ') || '--';
-  const getStatusLabel = (match, hasResult) => hasResult ? 'Encodé' : match.status;
+  const getStatusLabel = (match, hasResult) => hasResult ? 'Encodé' : 'À jouer';
 
   if (loading) return <div style={{ textAlign: 'center', padding: '20px' }}>Chargement...</div>;
 
@@ -195,18 +238,26 @@ function Admin() {
             <span>Équipes</span>
             <span>Statut</span>
             <span>Score</span>
+            <span>TAB</span>
             <span>Action</span>
           </div>
 
           {matches.map(match => {
-            const scores = resultInputs[match.id] || { team1: '', team2: '' };
+            const scores = resultInputs[match.id] || { team1: '', team2: '', penalty1: '', penalty2: '' };
             const hasResult = match.team1_goals !== null && match.team1_goals !== undefined;
             const isSaving = savingMatchId === match.id;
-            const scoreChanged = String(match.team1_goals ?? '') !== scores.team1 || String(match.team2_goals ?? '') !== scores.team2;
+            const scoreChanged = getResultChanged(match, scores);
             const hasKnownTeams = Boolean(match.team1 && match.team2);
+            const showPenalties = needsPenaltyShootout(match, scores) || (hasResult && match.team1_penalty_goals !== null && match.team1_penalty_goals !== undefined);
+            const saveDisabled = !hasKnownTeams
+              || isSaving
+              || !isValidResultInput(scores.team1)
+              || !isValidResultInput(scores.team2)
+              || (showPenalties && !hasValidPenaltyShootout(scores))
+              || (hasResult && !scoreChanged);
 
             return (
-              <div key={match.id} className={`result-row ${hasResult ? 'finished' : ''}`}>
+              <div key={match.id} className={`result-row ${hasResult ? 'finished' : ''} ${showPenalties ? 'has-penalties' : ''}`}>
                 <div className="group-cell">{getGroupLabel(match)}</div>
                 <div className="time-cell">{getTimeLabel(match)}</div>
                 <div className="teams-cell" title={`${match.team1 || 'À déterminer'} vs ${match.team2 || 'À déterminer'}`}>
@@ -238,12 +289,40 @@ function Admin() {
                   />
                 </div>
 
+                <div className="penalty-editor">
+                  {showPenalties ? (
+                    <>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength="2"
+                        value={scores.penalty1}
+                        disabled={!hasKnownTeams || isSaving}
+                        aria-label={`Tirs au but ${match.team1 || 'équipe 1'}`}
+                        onChange={(event) => updateResultInput(match.id, 'penalty1', event.target.value)}
+                      />
+                      <span>-</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength="2"
+                        value={scores.penalty2}
+                        disabled={!hasKnownTeams || isSaving}
+                        aria-label={`Tirs au but ${match.team2 || 'équipe 2'}`}
+                        onChange={(event) => updateResultInput(match.id, 'penalty2', event.target.value)}
+                      />
+                    </>
+                  ) : (
+                    <span className="no-penalties">—</span>
+                  )}
+                </div>
+
                 <div className="result-actions">
                   <button
                     type="button"
                     className="button primary small"
-                    disabled={!hasKnownTeams || isSaving || !isValidResultInput(scores.team1) || !isValidResultInput(scores.team2) || (hasResult && !scoreChanged)}
-                    onClick={() => handleSaveResult(match.id)}
+                    disabled={saveDisabled}
+                    onClick={() => handleSaveResult(match)}
                   >
                     {isSaving ? '...' : hasResult ? 'Modifier' : 'Sauver'}
                   </button>
@@ -279,7 +358,7 @@ function Admin() {
 
         .admin-hero,
         .admin-card {
-          width: min(1320px, 100%);
+          width: min(1400px, 100%);
           margin: 0 auto 14px;
         }
 
@@ -458,13 +537,13 @@ function Admin() {
         }
 
         .results-table {
-          min-width: 1080px;
+          min-width: 1200px;
         }
 
         .results-header,
         .result-row {
           display: grid;
-          grid-template-columns: 95px 135px minmax(330px, 1fr) 92px 122px 230px;
+          grid-template-columns: 95px 135px minmax(300px, 1fr) 82px 112px 112px 230px;
           gap: 10px;
           align-items: center;
         }
@@ -493,6 +572,11 @@ function Admin() {
         .result-row.finished {
           background: #ecfdf5;
           border-color: #bbf7d0;
+        }
+
+        .result-row.has-penalties {
+          background: #fff7ed;
+          border-color: #fed7aa;
         }
 
         .group-cell,
@@ -553,14 +637,16 @@ function Admin() {
           color: #047857;
         }
 
-        .result-editor {
+        .result-editor,
+        .penalty-editor {
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 6px;
         }
 
-        .result-editor input {
+        .result-editor input,
+        .penalty-editor input {
           width: 43px;
           height: 34px;
           border: 1.5px solid #cbd5e1;
@@ -574,18 +660,30 @@ function Admin() {
           box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
         }
 
-        .result-editor input:focus {
+        .penalty-editor input {
+          border-color: #fdba74;
+          background: #fffbeb;
+        }
+
+        .result-editor input:focus,
+        .penalty-editor input:focus {
           border-color: #d97706;
         }
 
-        .result-editor input:disabled {
+        .result-editor input:disabled,
+        .penalty-editor input:disabled {
           background: #f1f5f9;
           color: #94a3b8;
         }
 
-        .result-editor span {
+        .result-editor span,
+        .penalty-editor span {
           color: #94a3b8;
           font-weight: 950;
+        }
+
+        .no-penalties {
+          color: #cbd5e1 !important;
         }
 
         @media (max-width: 760px) {
