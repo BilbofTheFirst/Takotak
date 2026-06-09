@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { matchesService, predictionsService } from '../services/api';
+import TeamInfoModal from '../components/TeamInfoModal';
 import { getFlag } from '../utils/countryFlags';
 
 const PRIMARY = '#0f766e';
@@ -49,6 +50,7 @@ function Predictions() {
   const [tempScores, setTempScores] = useState({});
   const [saveStatus, setSaveStatus] = useState({});
   const [showPastDays, setShowPastDays] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState(null);
   const dateRefs = useRef({});
   const hasAutoScrolled = useRef(false);
 
@@ -173,17 +175,38 @@ function Predictions() {
     savePrediction(matchId, getScoresForMatch(matchId));
   };
 
+  const openTeamInfo = (event, teamName) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setSelectedTeam({ name: teamName });
+  };
+
   const renderTeamBlock = (match, position, align) => {
     const teamName = position === 'team1' ? match.team1 : match.team2;
     const label = getTeamLabel(match, position);
     const flag = teamName ? getFlag(teamName) : null;
     const knockoutPlaceholder = !teamName && isKnockoutMatch(match.id);
+    const teamInfoButton = teamName ? (
+      <button
+        type="button"
+        className="team-info-mini"
+        onClick={(event) => openTeamInfo(event, teamName)}
+        title={`Voir la forme récente de ${teamName}`}
+        aria-label={`Voir les 5 derniers matchs de ${teamName}`}
+      >
+        📊
+      </button>
+    ) : null;
 
     return (
       <div className={`team-block ${align === 'right' ? 'team-block-right' : ''}`}>
+        {align === 'right' && teamInfoButton}
         {align === 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
-        <span className="flag-shell">{flag ? <img src={flag} alt={teamName} /> : <span>{knockoutPlaceholder ? '⚽' : '?'}</span>}</span>
+        <span className="flag-shell">
+          {flag ? <img src={flag} alt={teamName} /> : <span className={knockoutPlaceholder ? 'football-placeholder-icon' : ''}>{knockoutPlaceholder ? '⚽' : '?'}</span>}
+        </span>
         {align !== 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
+        {align !== 'right' && teamInfoButton}
       </div>
     );
   };
@@ -315,6 +338,8 @@ function Predictions() {
         ))}
       </div>
 
+      {selectedTeam && <TeamInfoModal teamId={selectedTeam.name} teamName={selectedTeam.name} onClose={() => setSelectedTeam(null)} />}
+
       <style>{`
         .predictions-page { min-height: 100vh; background: radial-gradient(circle at top left, rgba(217,119,6,.15), transparent 32%), radial-gradient(circle at top right, rgba(15,118,110,.18), transparent 32%), linear-gradient(135deg, #071b16 0%, #0f172a 45%, #111827 100%); padding: 24px 18px 42px; color: ${DARK}; }
         .predictions-container { width: min(1220px, 100%); margin: 0 auto; scroll-margin-top: 20px; }
@@ -353,6 +378,9 @@ function Predictions() {
         .team-placeholder { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; color: #334155; letter-spacing: -.02em; }
         .flag-shell { width: 28px; height: 28px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center; background: #e2e8f0; border: 2px solid white; box-shadow: 0 5px 14px rgba(15,23,42,.16); overflow: hidden; color: #64748b; font-weight: 900; font-size: 9px; }
         .flag-shell img { width: 100%; height: 100%; object-fit: cover; }
+        .football-placeholder-icon { font-size: 21px; line-height: 1; display: block; transform: translateY(1px); }
+        .team-info-mini { width: 24px; height: 24px; border: 0; border-radius: 999px; display: inline-grid; place-items: center; background: #e0f2fe; color: #0369a1; cursor: pointer; font-size: 12px; box-shadow: 0 5px 12px rgba(3,105,161,.12); transition: transform .15s ease, background .15s ease; }
+        .team-info-mini:hover { transform: translateY(-1px); background: #bae6fd; }
         .score-zone { min-width: 124px; display: flex; align-items: center; justify-content: center; gap: 6px; }
         .score-zone input { width: 42px; height: 34px; border: 1.5px solid #d1d5db; border-radius: 11px; background: white; color: ${DARK}; text-align: center; font-size: 15px; font-weight: 900; outline: none; box-shadow: 0 6px 15px rgba(15,23,42,.07); transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease; }
         .score-zone input:focus { border-color: ${SECONDARY}; transform: translateY(-1px); box-shadow: 0 9px 18px rgba(217,119,6,.16); }
