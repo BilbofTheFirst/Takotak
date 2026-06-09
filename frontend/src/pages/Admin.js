@@ -124,6 +124,10 @@ function Admin() {
     }
   };
 
+  const getGroupLabel = (match) => match.groupe1 ? `Groupe ${match.groupe1}` : 'Match';
+  const getTimeLabel = (match) => match.start_time?.substring(0, 16).replace('T', ' ') || '--';
+  const getStatusLabel = (match, hasResult) => hasResult ? 'Encodé' : match.status;
+
   if (loading) return <div style={{ textAlign: 'center', padding: '20px' }}>Chargement...</div>;
 
   return (
@@ -176,15 +180,24 @@ function Admin() {
         </p>
       </section>
 
-      <section className="admin-card">
-        <div className="admin-card-title">
+      <section className="admin-card results-card">
+        <div className="admin-card-title compact-title">
           <div>
             <span>🏁 Résultats officiels</span>
-            <h2>Encodage des matchs</h2>
+            <h2>Encodage rapide</h2>
           </div>
         </div>
 
-        <div className="match-admin-list">
+        <div className="results-table">
+          <div className="results-header">
+            <span>Groupe</span>
+            <span>Heure</span>
+            <span>Équipes</span>
+            <span>Statut</span>
+            <span>Score</span>
+            <span>Action</span>
+          </div>
+
           {matches.map(match => {
             const scores = resultInputs[match.id] || { team1: '', team2: '' };
             const hasResult = match.team1_goals !== null && match.team1_goals !== undefined;
@@ -193,15 +206,15 @@ function Admin() {
             const hasKnownTeams = Boolean(match.team1 && match.team2);
 
             return (
-              <div key={match.id} className={`match-admin-row ${hasResult ? 'finished' : ''}`}>
-                <div className="match-admin-info">
-                  <div className="match-admin-labels">
-                    <span>{match.groupe1 ? `Groupe ${match.groupe1}` : 'Match'}</span>
-                    <span>{match.start_time?.substring(0, 16).replace('T', ' ')}</span>
-                  </div>
-                  <h3>{match.team1 || 'À déterminer'} <em>vs</em> {match.team2 || 'À déterminer'}</h3>
-                  <p>Statut : <strong>{hasResult ? 'résultat encodé' : match.status}</strong></p>
+              <div key={match.id} className={`result-row ${hasResult ? 'finished' : ''}`}>
+                <div className="group-cell">{getGroupLabel(match)}</div>
+                <div className="time-cell">{getTimeLabel(match)}</div>
+                <div className="teams-cell" title={`${match.team1 || 'À déterminer'} vs ${match.team2 || 'À déterminer'}`}>
+                  <strong>{match.team1 || 'À déterminer'}</strong>
+                  <span>vs</span>
+                  <strong>{match.team2 || 'À déterminer'}</strong>
                 </div>
+                <div className={`status-cell ${hasResult ? 'done' : ''}`}>{getStatusLabel(match, hasResult)}</div>
 
                 <div className="result-editor">
                   <input
@@ -228,21 +241,21 @@ function Admin() {
                 <div className="result-actions">
                   <button
                     type="button"
-                    className="button primary"
+                    className="button primary small"
                     disabled={!hasKnownTeams || isSaving || !isValidResultInput(scores.team1) || !isValidResultInput(scores.team2) || (hasResult && !scoreChanged)}
                     onClick={() => handleSaveResult(match.id)}
                   >
-                    {isSaving ? 'Sauvegarde...' : hasResult ? 'Modifier' : 'Sauver'}
+                    {isSaving ? '...' : hasResult ? 'Modifier' : 'Sauver'}
                   </button>
 
                   {hasResult && scoreChanged && (
-                    <button type="button" className="button secondary" disabled={isSaving} onClick={() => resetResultInput(match)}>
+                    <button type="button" className="button secondary small" disabled={isSaving} onClick={() => resetResultInput(match)}>
                       Annuler
                     </button>
                   )}
 
                   {hasResult && (
-                    <button type="button" className="button danger" disabled={isSaving} onClick={() => handleClearResult(match.id)}>
+                    <button type="button" className="button danger small" disabled={isSaving} onClick={() => handleClearResult(match.id)}>
                       Effacer
                     </button>
                   )}
@@ -256,7 +269,7 @@ function Admin() {
       <style>{`
         .admin-page {
           min-height: 100vh;
-          padding: 28px 18px 42px;
+          padding: 22px 14px 36px;
           color: #0f172a;
           background:
             radial-gradient(circle at top left, rgba(251, 191, 36, 0.16), transparent 34%),
@@ -266,8 +279,8 @@ function Admin() {
 
         .admin-hero,
         .admin-card {
-          width: min(1100px, 100%);
-          margin: 0 auto 18px;
+          width: min(1320px, 100%);
+          margin: 0 auto 14px;
         }
 
         .admin-hero {
@@ -285,8 +298,8 @@ function Admin() {
         }
 
         .admin-hero h1 {
-          margin: 8px 0 6px;
-          font-size: 38px;
+          margin: 7px 0 5px;
+          font-size: 34px;
           letter-spacing: -0.05em;
         }
 
@@ -296,9 +309,9 @@ function Admin() {
         }
 
         .admin-card {
-          padding: 18px;
-          border-radius: 20px;
-          background: rgba(255, 255, 255, 0.95);
+          padding: 15px;
+          border-radius: 18px;
+          background: rgba(255, 255, 255, 0.96);
           border: 1px solid rgba(255, 255, 255, 0.58);
           box-shadow: 0 22px 60px rgba(0, 0, 0, 0.22);
         }
@@ -308,7 +321,11 @@ function Admin() {
           align-items: center;
           justify-content: space-between;
           gap: 14px;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
+        }
+
+        .compact-title {
+          margin-bottom: 10px;
         }
 
         .admin-card-title span {
@@ -316,8 +333,8 @@ function Admin() {
         }
 
         .admin-card-title h2 {
-          margin: 3px 0 0;
-          font-size: 24px;
+          margin: 2px 0 0;
+          font-size: 22px;
           letter-spacing: -0.04em;
         }
 
@@ -385,12 +402,14 @@ function Admin() {
         .admin-actions,
         .result-actions {
           display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
+          flex-wrap: nowrap;
+          gap: 6px;
+          align-items: center;
         }
 
         .admin-actions {
           margin-top: 13px;
+          flex-wrap: wrap;
         }
 
         .button {
@@ -399,6 +418,11 @@ function Admin() {
           padding: 9px 14px;
           cursor: pointer;
           font-weight: 900;
+        }
+
+        .button.small {
+          padding: 7px 10px;
+          font-size: 12px;
         }
 
         .button:disabled {
@@ -429,82 +453,122 @@ function Admin() {
           font-weight: 700;
         }
 
-        .match-admin-list {
-          display: grid;
-          gap: 10px;
+        .results-card {
+          overflow-x: auto;
         }
 
-        .match-admin-row {
+        .results-table {
+          min-width: 1080px;
+        }
+
+        .results-header,
+        .result-row {
           display: grid;
-          grid-template-columns: minmax(280px, 1fr) 130px auto;
+          grid-template-columns: 95px 135px minmax(330px, 1fr) 92px 122px 230px;
+          gap: 10px;
           align-items: center;
-          gap: 14px;
-          padding: 12px;
-          border-radius: 16px;
+        }
+
+        .results-header {
+          padding: 0 10px 7px;
+          color: #64748b;
+          font-size: 10px;
+          font-weight: 950;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+
+        .result-row {
+          min-height: 46px;
+          padding: 7px 10px;
+          border-radius: 12px;
           background: #f8fafc;
           border: 1px solid #e2e8f0;
         }
 
-        .match-admin-row.finished {
+        .result-row + .result-row {
+          margin-top: 6px;
+        }
+
+        .result-row.finished {
           background: #ecfdf5;
           border-color: #bbf7d0;
         }
 
-        .match-admin-info {
-          min-width: 0;
-        }
-
-        .match-admin-labels {
-          display: flex;
-          gap: 7px;
-          flex-wrap: wrap;
-          margin-bottom: 5px;
-        }
-
-        .match-admin-labels span {
-          padding: 3px 7px;
-          border-radius: 999px;
-          background: #e2e8f0;
-          color: #475569;
-          font-size: 10px;
+        .group-cell,
+        .time-cell,
+        .status-cell {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-size: 12px;
           font-weight: 900;
+        }
+
+        .group-cell {
+          color: #0f766e;
           text-transform: uppercase;
         }
 
-        .match-admin-row h3 {
-          margin: 0;
-          font-size: 16px;
+        .time-cell {
+          color: #475569;
+          font-variant-numeric: tabular-nums;
         }
 
-        .match-admin-row h3 em {
+        .teams-cell {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          min-width: 0;
+          overflow: hidden;
+          color: #0f172a;
+          font-size: 14px;
+          font-weight: 900;
+          white-space: nowrap;
+        }
+
+        .teams-cell strong {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .teams-cell span {
+          flex: 0 0 auto;
           color: #94a3b8;
-          font-style: normal;
-          font-weight: 800;
+          font-size: 12px;
+          font-weight: 900;
         }
 
-        .match-admin-row p {
-          margin: 4px 0 0;
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 700;
+        .status-cell {
+          justify-self: start;
+          padding: 4px 8px;
+          border-radius: 999px;
+          background: #e2e8f0;
+          color: #475569;
+        }
+
+        .status-cell.done {
+          background: #bbf7d0;
+          color: #047857;
         }
 
         .result-editor {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 7px;
+          gap: 6px;
         }
 
         .result-editor input {
-          width: 48px;
-          height: 38px;
+          width: 43px;
+          height: 34px;
           border: 1.5px solid #cbd5e1;
-          border-radius: 12px;
+          border-radius: 10px;
           text-align: center;
           color: #0f172a;
           background: white;
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 950;
           outline: none;
           box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
@@ -522,17 +586,6 @@ function Admin() {
         .result-editor span {
           color: #94a3b8;
           font-weight: 950;
-        }
-
-        @media (max-width: 860px) {
-          .match-admin-row {
-            grid-template-columns: 1fr;
-            align-items: flex-start;
-          }
-
-          .result-editor {
-            justify-content: flex-start;
-          }
         }
 
         @media (max-width: 760px) {
