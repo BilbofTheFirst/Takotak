@@ -4,10 +4,31 @@ const { authenticateToken, authenticateAdmin } = require('../middleware/auth');
 const { calculatePointsDetailed } = require('../utils/scoring');
 
 const router = express.Router();
+let resultExtraColumnsReady = false;
 
 const isValidScore = (value) => {
   const n = Number(value);
   return Number.isInteger(n) && n >= 0 && n <= 20;
+};
+
+const isValidPenaltyScore = (value) => {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 && n <= 30;
+};
+
+const isKnockoutMatch = (matchId) => Number(matchId) >= 73;
+
+const ensureResultExtraColumns = async (clientOrPool = pool) => {
+  if (resultExtraColumnsReady) return;
+
+  await clientOrPool.query(`
+    ALTER TABLE results
+      ADD COLUMN IF NOT EXISTS team1_penalty_goals integer,
+      ADD COLUMN IF NOT EXISTS team2_penalty_goals integer,
+      ADD COLUMN IF NOT EXISTS winner_team_id integer
+  `);
+
+  resultExtraColumnsReady = true;
 };
 
 // Create/update result and calculate points
@@ -15,23 +36,84 @@ router.post('/', authenticateAdmin, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await ensureResultExtraColumns(client);
 
-    const { match_id, team1_goals, team2_goals } = req.body;
+    const {
+      match_id,
+      team1_goals,
+      team2_goals,
+      team1_penalty_goals,
+      team2_penalty_goals
+    } = req.body;
 
     if (!match_id || !isValidScore(team1_goals) || !isValidScore(team2_goals)) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Valid match and goals are required' });
     }
 
+    const matchResult = await client.query(
+      'SELECT id, team1_id, team2_id FROM matches WHERE id = $1',
+      [match_id]
+    );
+
+    if (matchResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Match not found' });
+    }
+
+    const match = matchResult.rows[0];
+    const isDraw = Number(team1_goals) === Number(team2_goals);
+    const needsPenalties = isKnockoutMatch(match_id) && isDraw;
+
+    let normalizedPenalty1 = null;
+    let normalizedPenalty2 = null;
+    let winnerTeamId = null;
+
+    if (needsPenalties) {
+      if (!isValidPenaltyScore(team1_penalty_goals) || !isValidPenaltyScore(team2_penalty_goals)) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Penalty score required for a drawn knockout match' });
+      }
+
+      normalizedPenalty1 = Number(team1_penalty_goals);
+      normalizedPenalty2 = Number(team2_penalty_goals);
+
+      if (normalizedPenalty1 === normalizedPenalty2) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Penalty shootout cannot be tied' });
+      }
+
+      winnerTeamId = normalizedPenalty1 > normalizedPenalty2 ? match.team1_id : match.team2_id;
+    } else if (Number(team1_goals) !== Number(team2_goals)) {
+      winnerTeamId = Number(team1_goals) > Number(team2_goals) ? match.team1_id : match.team2_id;
+    }
+
     const result = await client.query(
-      `INSERT INTO results (match_id, team1_goals, team2_goals)
-       VALUES ($1, $2, $3)
+      `INSERT INTO results (
+         match_id,
+         team1_goals,
+         team2_goals,
+         team1_penalty_goals,
+         team2_penalty_goals,
+         winner_team_id
+       )
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (match_id)
        DO UPDATE SET
          team1_goals = EXCLUDED.team1_goals,
-         team2_goals = EXCLUDED.team2_goals
+         team2_goals = EXCLUDED.team2_goals,
+         team1_penalty_goals = EXCLUDED.team1_penalty_goals,
+         team2_penalty_goals = EXCLUDED.team2_penalty_goals,
+         winner_team_id = EXCLUDED.winner_team_id
        RETURNING *`,
-      [match_id, Number(team1_goals), Number(team2_goals)]
+      [
+        match_id,
+        Number(team1_goals),
+        Number(team2_goals),
+        normalizedPenalty1,
+        normalizedPenalty2,
+        winnerTeamId
+      ]
     );
 
     await client.query(
@@ -82,6 +164,7 @@ router.delete('/:matchId', authenticateAdmin, async (req, res) => {
     }
 
     await client.query('BEGIN');
+    await ensureResultExtraColumns(client);
 
     const deletedResult = await client.query(
       'DELETE FROM results WHERE match_id = $1 RETURNING *',
