@@ -6,7 +6,7 @@ const router = express.Router();
 
 const isValidScore = (value) => {
   const n = Number(value);
-  return Number.isInteger(n) && n >= 0 && n <= 20;
+  return Number.isInteger(n) && n >= 0 && n <= 99;
 };
 
 // Create/Update prediction
@@ -20,7 +20,7 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     if (!isValidScore(team1_goals) || !isValidScore(team2_goals)) {
-      return res.status(400).json({ error: 'Goals must be integers between 0 and 20' });
+      return res.status(400).json({ error: 'Goals must be integers between 0 and 99' });
     }
 
     const match = await pool.query('SELECT * FROM matches WHERE id = $1', [match_id]);
@@ -46,8 +46,7 @@ router.post('/', authenticateToken, async (req, res) => {
        ON CONFLICT (user_id, match_id)
        DO UPDATE SET
          team1_goals = EXCLUDED.team1_goals,
-         team2_goals = EXCLUDED.team2_goals,
-         updated_at = NOW()
+         team2_goals = EXCLUDED.team2_goals
        RETURNING *`,
       [user_id, match_id, Number(team1_goals), Number(team2_goals)]
     );
