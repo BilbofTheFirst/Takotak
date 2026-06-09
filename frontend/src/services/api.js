@@ -9,7 +9,6 @@ const api = axios.create({
   }
 });
 
-// Add JWT token to requests
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -22,7 +21,6 @@ api.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401 || error.response?.status === 403) {
-      // Keep it soft: do not auto-redirect from public pages such as rankings.
       console.warn('Authentication/authorization error', error.response?.data);
     }
     return Promise.reject(error);
@@ -48,8 +46,12 @@ export const predictionsService = {
 };
 
 export const resultsService = {
-  create: (match_id, team1_goals, team2_goals) =>
-    api.post('/results', { match_id, team1_goals, team2_goals }),
+  create: (payloadOrMatchId, team1_goals, team2_goals) => {
+    const payload = typeof payloadOrMatchId === 'object'
+      ? payloadOrMatchId
+      : { match_id: payloadOrMatchId, team1_goals, team2_goals };
+    return api.post('/results', payload);
+  },
   delete: (match_id) => api.delete(`/results/${match_id}`),
   getLeaderboard: () => api.get('/results/leaderboard'),
   getUserStats: () => api.get('/results/user/stats')
