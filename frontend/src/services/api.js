@@ -50,6 +50,7 @@ export const predictionsService = {
 export const resultsService = {
   create: (match_id, team1_goals, team2_goals) =>
     api.post('/results', { match_id, team1_goals, team2_goals }),
+  delete: (match_id) => api.delete(`/results/${match_id}`),
   getLeaderboard: () => api.get('/results/leaderboard'),
   getUserStats: () => api.get('/results/user/stats')
 };
