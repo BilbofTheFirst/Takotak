@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken, authenticateAdmin } = require('../middleware/auth');
 const { calculatePointsDetailed } = require('../utils/scoring');
+const { propagateKnockoutTeams } = require('../utils/knockoutPropagation');
 
 const router = express.Router();
 let resultExtraColumnsReady = false;
@@ -138,6 +139,8 @@ router.post('/', authenticateAdmin, async (req, res) => {
       );
     }
 
+    await propagateKnockoutTeams(client);
+
     await client.query('COMMIT');
     res.json({
       message: 'Result saved and points calculated',
@@ -173,6 +176,7 @@ router.delete('/:matchId', authenticateAdmin, async (req, res) => {
 
     await client.query('DELETE FROM user_scores WHERE match_id = $1', [matchId]);
     await client.query('UPDATE matches SET status = $1 WHERE id = $2', ['scheduled', matchId]);
+    await propagateKnockoutTeams(client);
 
     await client.query('COMMIT');
 
