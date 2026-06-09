@@ -6,7 +6,7 @@ const PRIMARY = '#0f766e';
 const SECONDARY = '#d97706';
 const DARK = '#0f172a';
 const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
-const AUTOSAVE_DELAY_MS = 700;
+const AUTOSAVE_DELAY_MS = 900;
 
 const KNOCKOUT_MATCHES = {
   73: { round: '16e de finale', team1: '2A', team2: '2B' },
@@ -66,9 +66,9 @@ function Predictions() {
 
   const getDateKey = (timestamp) => timestamp ? timestamp.substring(0, 10) : 'unknown';
   const formatTimeBelge = (timestamp) => timestamp ? timestamp.substring(11, 16) : '--:--';
-  const normalizeScore = (value) => Math.max(0, Math.min(20, Number.parseInt(value, 10) || 0));
   const isKnockoutMatch = (matchId) => Boolean(KNOCKOUT_MATCHES[matchId]);
   const hasResult = (match) => match.team1_goals !== null && match.team1_goals !== undefined && match.team2_goals !== null && match.team2_goals !== undefined;
+  const isValidScoreValue = (value) => /^\d{1,2}$/.test(String(value)) && Number(value) >= 0 && Number(value) <= 99;
 
   const loadData = useCallback(async () => {
     try {
@@ -90,8 +90,8 @@ function Predictions() {
         };
         predMap[p.match_id] = prediction;
         tempMap[p.match_id] = {
-          team1: prediction.team1_goals,
-          team2: prediction.team2_goals
+          team1: String(prediction.team1_goals),
+          team2: String(prediction.team2_goals)
         };
       });
 
@@ -126,14 +126,14 @@ function Predictions() {
   const getScoresForMatch = (matchId) => {
     const pred = predictions[matchId];
     return tempScores[matchId] || {
-      team1: pred?.team1_goals ?? 0,
-      team2: pred?.team2_goals ?? 0
+      team1: pred ? String(pred.team1_goals) : '0',
+      team2: pred ? String(pred.team2_goals) : '0'
     };
   };
 
   const isPredictionSaved = (matchId, scores) => {
     const pred = predictions[matchId];
-    return !!pred && Number(pred.team1_goals) === Number(scores.team1) && Number(pred.team2_goals) === Number(scores.team2);
+    return !!pred && String(pred.team1_goals) === String(scores.team1) && String(pred.team2_goals) === String(scores.team2);
   };
 
   const calculatePredictionPoints = (match, prediction) => {
@@ -158,10 +158,15 @@ function Predictions() {
   };
 
   const savePrediction = useCallback(async (matchId, scores) => {
+    if (!isValidScoreValue(scores.team1) || !isValidScoreValue(scores.team2)) {
+      setSaveStatus(prev => ({ ...prev, [matchId]: 'invalid' }));
+      return;
+    }
+
     setSaveStatus(prev => ({ ...prev, [matchId]: 'saving' }));
 
     try {
-      const response = await predictionsService.create(matchId, scores.team1, scores.team2);
+      const response = await predictionsService.create(matchId, Number(scores.team1), Number(scores.team2));
       const saved = {
         ...response.data,
         team1_goals: Number(response.data.team1_goals),
@@ -169,7 +174,7 @@ function Predictions() {
       };
 
       setPredictions(prev => ({ ...prev, [matchId]: saved }));
-      setTempScores(prev => ({ ...prev, [matchId]: { team1: saved.team1_goals, team2: saved.team2_goals } }));
+      setTempScores(prev => ({ ...prev, [matchId]: { team1: String(saved.team1_goals), team2: String(saved.team2_goals) } }));
       setSaveStatus(prev => ({ ...prev, [matchId]: 'saved' }));
     } catch (error) {
       console.error('Save prediction error:', error);
@@ -179,6 +184,12 @@ function Predictions() {
 
   const scheduleAutosave = useCallback((matchId, nextScores) => {
     if (saveTimers.current[matchId]) clearTimeout(saveTimers.current[matchId]);
+
+    if (!isValidScoreValue(nextScores.team1) || !isValidScoreValue(nextScores.team2)) {
+      setSaveStatus(prev => ({ ...prev, [matchId]: 'editing' }));
+      return;
+    }
+
     setSaveStatus(prev => ({ ...prev, [matchId]: 'dirty' }));
     saveTimers.current[matchId] = setTimeout(() => savePrediction(matchId, nextScores), AUTOSAVE_DELAY_MS);
   }, [savePrediction]);
@@ -189,9 +200,10 @@ function Predictions() {
     const hasKnownTeams = Boolean(match.team1 && match.team2);
     if (isClosed || !hasKnownTeams || hasResult(match)) return;
 
+    const cleanedValue = String(value).replace(/\D/g, '').slice(0, 2);
     const nextScores = {
       ...getScoresForMatch(matchId),
-      [team]: normalizeScore(value)
+      [team]: cleanedValue
     };
 
     setTempScores(prev => ({ ...prev, [matchId]: nextScores }));
@@ -262,6 +274,8 @@ function Predictions() {
     if (isClosed) return { label: 'Fermé', icon: '🔒', className: 'prediction-status locked' };
     if (status === 'saving') return { label: 'Enregistrement...', icon: '⏳', className: 'prediction-status saving' };
     if (status === 'dirty') return { label: 'Modifié...', icon: '✍️', className: 'prediction-status dirty' };
+    if (status === 'editing') return { label: 'Saisie...', icon: '⌨️', className: 'prediction-status dirty' };
+    if (status === 'invalid') return { label: 'Score incomplet', icon: '⚠️', className: 'prediction-status error' };
     if (status && status !== 'saved') return { label: 'Erreur', icon: '⚠️', className: 'prediction-status error', detail: status };
     if (isSaved) return { label: 'Enregistré', icon: '✅', className: 'prediction-status saved' };
     return { label: 'À pronostiquer', icon: '🎯', className: 'prediction-status todo' };
@@ -306,9 +320,9 @@ function Predictions() {
 
     return (
       <>
-        <input type="number" min="0" max="20" value={scores.team1} onChange={(e) => handleScoreChange(match, 'team1', e.target.value)} disabled={disabled} aria-label={`Score ${match.team1}`} />
+        <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength="2" value={scores.team1} onChange={(e) => handleScoreChange(match, 'team1', e.target.value)} disabled={disabled} aria-label={`Score ${match.team1}`} />
         <span className="score-separator">-</span>
-        <input type="number" min="0" max="20" value={scores.team2} onChange={(e) => handleScoreChange(match, 'team2', e.target.value)} disabled={disabled} aria-label={`Score ${match.team2}`} />
+        <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength="2" value={scores.team2} onChange={(e) => handleScoreChange(match, 'team2', e.target.value)} disabled={disabled} aria-label={`Score ${match.team2}`} />
       </>
     );
   };
@@ -371,7 +385,6 @@ function Predictions() {
                   <article key={match.id} className={`match-row ${disabled ? 'match-row-disabled' : ''} ${resultAvailable ? 'match-row-result' : ''}`}>
                     <div className="match-meta">
                       <span className="match-label">{getMatchLabel(match)}</span>
-                      {knockout && <span className="match-number">M{match.id}</span>}
                       <span className="match-time">{formatTimeBelge(match.start_time)}</span>
                     </div>
 
@@ -382,6 +395,7 @@ function Predictions() {
                     </div>
 
                     <div className="match-status-zone">
+                      {knockout && <span className="match-number">M{match.id}</span>}
                       {statusConfig && (
                         <div className={statusConfig.className} title={statusConfig.detail || ''}>
                           <span>{statusConfig.icon}</span>{statusConfig.label}
@@ -418,15 +432,15 @@ function Predictions() {
         .match-day-header h2 { margin: 2px 0 0; font-size: 16px; text-transform: capitalize; }
         .match-count { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.18); }
         .match-list { padding: 6px; }
-        .match-row { display: grid; grid-template-columns: 230px minmax(430px,1fr) 135px; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; transition: background .16s ease, box-shadow .16s ease; }
+        .match-row { display: grid; grid-template-columns: 190px minmax(430px,1fr) 185px; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; transition: background .16s ease, box-shadow .16s ease; }
         .match-row + .match-row { margin-top: 3px; }
         .match-row:hover { background: #f8fafc; box-shadow: inset 0 0 0 1px #e2e8f0; }
         .match-row-disabled { opacity: .76; }
         .match-row-result { background: linear-gradient(90deg, rgba(236,253,245,.75), rgba(255,255,255,.95)); }
-        .match-meta { display: flex; align-items: center; gap: 7px; min-width: 0; }
-        .match-label { max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 8px; border-radius: 999px; background: #ecfdf5; color: #047857; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .035em; }
-        .match-number { padding: 4px 6px; border-radius: 8px; background: #fff7ed; color: #c2410c; font-size: 10px; font-weight: 900; }
-        .match-time { font-variant-numeric: tabular-nums; color: ${DARK}; font-size: 14px; font-weight: 900; }
+        .match-meta { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .match-label { min-width: 112px; max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 8px; border-radius: 999px; background: #ecfdf5; color: #047857; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .035em; text-align: center; }
+        .match-number { padding: 4px 7px; border-radius: 8px; background: #fff7ed; color: #c2410c; font-size: 10px; font-weight: 900; }
+        .match-time { font-variant-numeric: tabular-nums; color: ${DARK}; font-size: 14px; font-weight: 900; min-width: 45px; }
         .match-main { display: grid; grid-template-columns: minmax(165px,1fr) 124px minmax(165px,1fr); align-items: center; gap: 12px; }
         .team-block { display: flex; align-items: center; gap: 8px; min-width: 0; }
         .team-block-right { justify-content: flex-end; text-align: right; }
@@ -435,11 +449,9 @@ function Predictions() {
         .flag-shell { width: 28px; height: 28px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center; background: #e2e8f0; border: 2px solid white; box-shadow: 0 5px 14px rgba(15,23,42,.16); overflow: hidden; color: #64748b; font-weight: 900; font-size: 9px; }
         .flag-shell img { width: 100%; height: 100%; object-fit: cover; }
         .score-zone { min-width: 124px; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .score-zone input { width: 38px; height: 34px; border: 1.5px solid #d1d5db; border-radius: 11px; background: white; color: ${DARK}; text-align: center; font-size: 15px; font-weight: 900; outline: none; box-shadow: 0 6px 15px rgba(15,23,42,.07); transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease; }
+        .score-zone input { width: 42px; height: 34px; border: 1.5px solid #d1d5db; border-radius: 11px; background: white; color: ${DARK}; text-align: center; font-size: 15px; font-weight: 900; outline: none; box-shadow: 0 6px 15px rgba(15,23,42,.07); transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease; }
         .score-zone input:focus { border-color: ${SECONDARY}; transform: translateY(-1px); box-shadow: 0 9px 18px rgba(217,119,6,.16); }
         .score-zone input:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
-        .score-zone input::-webkit-outer-spin-button, .score-zone input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .score-zone input[type=number] { -moz-appearance: textfield; }
         .score-separator { color: #94a3b8; font-size: 16px; font-weight: 900; }
         .unknown-match-note { width: 100%; padding: 8px 9px; border-radius: 11px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: 800; text-align: center; white-space: nowrap; }
         .result-zone { display: grid; place-items: center; gap: 2px; min-width: 124px; }
@@ -450,7 +462,7 @@ function Predictions() {
         .points-2 { background: #dbeafe; color: #1d4ed8; }
         .points-1 { background: #fef3c7; color: #92400e; }
         .points-0 { background: #fee2e2; color: #b91c1c; }
-        .match-status-zone { display: flex; justify-content: flex-end; }
+        .match-status-zone { display: flex; justify-content: flex-end; align-items: center; gap: 8px; min-width: 0; }
         .prediction-status { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 112px; padding: 6px 9px; border-radius: 999px; font-size: 11px; font-weight: 900; white-space: nowrap; }
         .prediction-status.saved { background: #dcfce7; color: #047857; }
         .prediction-status.saving, .prediction-status.dirty { background: #fef3c7; color: #92400e; }
