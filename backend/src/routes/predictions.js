@@ -11,6 +11,8 @@ const isValidScore = (value) => {
 
 // Create/Update prediction
 router.post('/', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+
   try {
     const { match_id, team1_goals, team2_goals } = req.body;
     const user_id = req.user.id;
@@ -23,7 +25,7 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Goals must be integers between 0 and 99' });
     }
 
-    const match = await pool.query('SELECT * FROM matches WHERE id = $1', [match_id]);
+    const match = await client.query('SELECT * FROM matches WHERE id = $1', [match_id]);
     if (match.rows.length === 0) {
       return res.status(404).json({ error: 'Match not found' });
     }
@@ -40,21 +42,43 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Match already started' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO predictions (user_id, match_id, team1_goals, team2_goals)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (user_id, match_id)
-       DO UPDATE SET
-         team1_goals = EXCLUDED.team1_goals,
-         team2_goals = EXCLUDED.team2_goals
+    await client.query('BEGIN');
+
+    const updateResult = await client.query(
+      `UPDATE predictions
+       SET team1_goals = $3,
+           team2_goals = $4
+       WHERE user_id = $1
+         AND match_id = $2
        RETURNING *`,
       [user_id, match_id, Number(team1_goals), Number(team2_goals)]
     );
 
-    res.json(result.rows[0]);
+    let prediction;
+
+    if (updateResult.rows.length > 0) {
+      prediction = updateResult.rows[0];
+    } else {
+      const insertResult = await client.query(
+        `INSERT INTO predictions (user_id, match_id, team1_goals, team2_goals)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [user_id, match_id, Number(team1_goals), Number(team2_goals)]
+      );
+      prediction = insertResult.rows[0];
+    }
+
+    await client.query('COMMIT');
+    res.json(prediction);
   } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('Create prediction error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({
+      error: 'Prediction save failed',
+      detail: process.env.NODE_ENV === 'production' ? undefined : error.message
+    });
+  } finally {
+    client.release();
   }
 });
 
