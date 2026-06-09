@@ -36,15 +36,6 @@ const KNOCKOUT = {
   104: { round: 'Finale', team1: 'V101', team2: 'V102' }
 };
 
-const ROUND_ROWS = {
-  73: 1, 74: 3, 75: 5, 76: 7, 77: 9, 78: 11, 79: 13, 80: 15, 81: 17, 82: 19, 83: 21, 84: 23, 85: 25, 86: 27, 87: 29, 88: 31,
-  89: 6, 90: 2, 91: 8, 92: 14, 93: 22, 94: 18, 95: 28, 96: 26,
-  97: 4, 98: 20, 99: 11, 100: 27,
-  101: 12, 102: 24,
-  104: 18,
-  103: 26
-};
-
 function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, matchSchedule = [] }) {
   const qualifiedThirds = useMemo(() => allThirdPlaces.slice(0, 8), [allThirdPlaces]);
   const scheduleById = useMemo(() => new Map(matchSchedule.map(match => [Number(match.id), match])), [matchSchedule]);
@@ -80,6 +71,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
 
   const matches = useMemo(() => {
     const map = {};
+
     Object.entries(KNOCKOUT).forEach(([id, config]) => {
       map[id] = { id: Number(id), ...config, team1Name: getPlacement(config.team1), team2Name: getPlacement(config.team2) };
     });
@@ -99,19 +91,18 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     Object.keys(map).map(Number).sort((a, b) => a - b).forEach(id => {
       map[id].team1Name = resolveToken(map[id].team1);
       map[id].team2Name = resolveToken(map[id].team2);
-      const schedule = scheduleById.get(id);
-      map[id].start_time = schedule?.start_time || null;
+      map[id].start_time = scheduleById.get(id)?.start_time || null;
     });
 
     return map;
   }, [getPlacement, getWinner, getLoser, scheduleById]);
 
   const rounds = [
-    { title: '16es', ids: Array.from({ length: 16 }, (_, index) => 73 + index), col: 1 },
-    { title: '8es', ids: Array.from({ length: 8 }, (_, index) => 89 + index), col: 2 },
-    { title: 'Quarts', ids: [97, 98, 99, 100], col: 3 },
-    { title: 'Demies', ids: [101, 102], col: 4 },
-    { title: 'Finale', ids: [104, 103], col: 5 }
+    { title: '16es de finale', ids: Array.from({ length: 16 }, (_, index) => 73 + index) },
+    { title: '8es de finale', ids: Array.from({ length: 8 }, (_, index) => 89 + index) },
+    { title: 'Quarts', ids: [97, 98, 99, 100] },
+    { title: 'Demies', ids: [101, 102] },
+    { title: 'Finales', ids: [104, 103] }
   ];
 
   const renderFlag = (team) => {
@@ -138,7 +129,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     );
 
     return (
-      <article className={`bracket-match ${match.id === 103 ? 'third-place-match' : ''}`} style={{ gridColumn: match.column, gridRow: ROUND_ROWS[match.id] }}>
+      <article className={`bracket-match ${match.id === 103 ? 'third-place-match' : ''}`}>
         <header>
           <div><span>{match.round}</span>{match.start_time && <em>{formatDateTime(match.start_time)}</em>}</div>
           <strong>M{match.id}</strong>
@@ -154,15 +145,27 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
       <div className="simulation-section-title"><span>🏆 Phase éliminatoire</span><h2>Tableau final simulé</h2></div>
       <div className="bracket-scroll">
         <div className="bracket-board">
-          {rounds.map(round => <h3 key={round.title} className="round-title" style={{ gridColumn: round.col }}>{round.title}</h3>)}
-          {rounds.flatMap(round => round.ids.map(id => <MatchCard key={id} match={{ ...matches[id], column: round.col }} />))}
+          {rounds.map(round => (
+            <section key={round.title} className="bracket-round">
+              <h3>{round.title}</h3>
+              <div className="bracket-round-list">
+                {round.ids.map(id => <MatchCard key={id} match={matches[id]} />)}
+              </div>
+            </section>
+          ))}
         </div>
       </div>
       <style>{`
         .knockout-section { margin-top: 30px; }
-        .bracket-scroll { overflow-x: auto; border-radius: 22px; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 18px 55px rgba(0,0,0,.2); padding: 18px; }
-        .bracket-board { min-width: 1380px; display: grid; grid-template-columns: 300px 270px 245px 230px 230px; grid-template-rows: 44px repeat(32, 36px); gap: 7px 18px; align-items: center; }
-        .round-title { margin: 0; padding: 10px 12px; border-radius: 14px; color: white; background: linear-gradient(135deg, #0f766e, #d97706); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; text-align: center; align-self: start; }
+        .bracket-scroll { overflow-x: auto; border-radius: 22px; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 18px 55px rgba(0,0,0,.2); padding: 16px; }
+        .bracket-board { min-width: 1320px; display: grid; grid-template-columns: 320px 280px 255px 240px 240px; gap: 14px; align-items: start; }
+        .bracket-round { min-width: 0; }
+        .bracket-round h3 { margin: 0 0 10px; padding: 10px 12px; border-radius: 14px; color: white; background: linear-gradient(135deg, #0f766e, #d97706); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; text-align: center; }
+        .bracket-round-list { display: grid; gap: 9px; }
+        .bracket-round:nth-child(2) .bracket-round-list { padding-top: 28px; gap: 18px; }
+        .bracket-round:nth-child(3) .bracket-round-list { padding-top: 72px; gap: 42px; }
+        .bracket-round:nth-child(4) .bracket-round-list { padding-top: 172px; gap: 120px; }
+        .bracket-round:nth-child(5) .bracket-round-list { padding-top: 250px; gap: 90px; }
         .bracket-match { overflow: hidden; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; box-shadow: 0 10px 24px rgba(15,23,42,.08); }
         .bracket-match header { display: flex; justify-content: space-between; align-items: center; padding: 7px 9px; background: #ecfdf5; color: #047857; font-size: 10px; font-weight: 950; text-transform: uppercase; }
         .bracket-match header div { display: flex; flex-direction: column; gap: 1px; }
