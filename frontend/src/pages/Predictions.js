@@ -181,32 +181,37 @@ function Predictions() {
     setSelectedTeam({ name: teamName });
   };
 
+  const handleTeamKeyDown = (event, teamName) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      openTeamInfo(event, teamName);
+    }
+  };
+
   const renderTeamBlock = (match, position, align) => {
     const teamName = position === 'team1' ? match.team1 : match.team2;
     const label = getTeamLabel(match, position);
     const flag = teamName ? getFlag(teamName) : null;
     const knockoutPlaceholder = !teamName && isKnockoutMatch(match.id);
-    const teamInfoButton = teamName ? (
-      <button
-        type="button"
-        className="team-info-mini"
-        onClick={(event) => openTeamInfo(event, teamName)}
-        title={`Voir la forme récente de ${teamName}`}
-        aria-label={`Voir les 5 derniers matchs de ${teamName}`}
-      >
-        📊
-      </button>
-    ) : null;
+    const isClickable = Boolean(teamName);
+    const infoHint = isClickable ? <span className="team-info-hint" aria-hidden="true">ⓘ</span> : null;
 
     return (
-      <div className={`team-block ${align === 'right' ? 'team-block-right' : ''}`}>
-        {align === 'right' && teamInfoButton}
+      <div
+        className={`team-block ${align === 'right' ? 'team-block-right' : ''} ${isClickable ? 'team-block-clickable' : ''}`}
+        onClick={isClickable ? (event) => openTeamInfo(event, teamName) : undefined}
+        onKeyDown={isClickable ? (event) => handleTeamKeyDown(event, teamName) : undefined}
+        role={isClickable ? 'button' : undefined}
+        tabIndex={isClickable ? 0 : undefined}
+        title={isClickable ? `Voir les 5 derniers matchs de ${teamName}` : undefined}
+        aria-label={isClickable ? `Voir les 5 derniers matchs de ${teamName}` : undefined}
+      >
+        {align === 'right' && infoHint}
         {align === 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
         <span className="flag-shell">
           {flag ? <img src={flag} alt={teamName} /> : <span className={knockoutPlaceholder ? 'football-placeholder-icon' : ''}>{knockoutPlaceholder ? '⚽' : '?'}</span>}
         </span>
         {align !== 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
-        {align !== 'right' && teamInfoButton}
+        {align !== 'right' && infoHint}
       </div>
     );
   };
@@ -372,15 +377,17 @@ function Predictions() {
         .match-number { padding: 4px 7px; border-radius: 8px; background: #fff7ed; color: #c2410c; font-size: 10px; font-weight: 900; }
         .match-time { font-variant-numeric: tabular-nums; color: ${DARK}; font-size: 14px; font-weight: 900; min-width: 45px; }
         .match-main { display: grid; grid-template-columns: minmax(165px,1fr) 124px minmax(165px,1fr); align-items: center; gap: 12px; }
-        .team-block { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .team-block { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 3px 7px; border-radius: 999px; transition: background .15s ease, box-shadow .15s ease, transform .15s ease; outline: none; }
         .team-block-right { justify-content: flex-end; text-align: right; }
+        .team-block-clickable { cursor: pointer; }
+        .team-block-clickable:hover, .team-block-clickable:focus-visible { background: rgba(15, 118, 110, .08); box-shadow: inset 0 0 0 1px rgba(15, 118, 110, .12); transform: translateY(-1px); }
         .team-name { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${DARK}; font-size: 13px; font-weight: 800; }
         .team-placeholder { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; color: #334155; letter-spacing: -.02em; }
+        .team-info-hint { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; flex: 0 0 auto; border-radius: 999px; background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 950; opacity: .78; }
+        .team-block-clickable:hover .team-info-hint, .team-block-clickable:focus-visible .team-info-hint { opacity: 1; background: #bae6fd; }
         .flag-shell { width: 28px; height: 28px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center; background: #e2e8f0; border: 2px solid white; box-shadow: 0 5px 14px rgba(15,23,42,.16); overflow: hidden; color: #64748b; font-weight: 900; font-size: 9px; }
         .flag-shell img { width: 100%; height: 100%; object-fit: cover; }
         .football-placeholder-icon { font-size: 21px; line-height: 1; display: block; transform: translateY(1px); }
-        .team-info-mini { width: 24px; height: 24px; border: 0; border-radius: 999px; display: inline-grid; place-items: center; background: #e0f2fe; color: #0369a1; cursor: pointer; font-size: 12px; box-shadow: 0 5px 12px rgba(3,105,161,.12); transition: transform .15s ease, background .15s ease; }
-        .team-info-mini:hover { transform: translateY(-1px); background: #bae6fd; }
         .score-zone { min-width: 124px; display: flex; align-items: center; justify-content: center; gap: 6px; }
         .score-zone input { width: 42px; height: 34px; border: 1.5px solid #d1d5db; border-radius: 11px; background: white; color: ${DARK}; text-align: center; font-size: 15px; font-weight: 900; outline: none; box-shadow: 0 6px 15px rgba(15,23,42,.07); transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease; }
         .score-zone input:focus { border-color: ${SECONDARY}; transform: translateY(-1px); box-shadow: 0 9px 18px rgba(217,119,6,.16); }
