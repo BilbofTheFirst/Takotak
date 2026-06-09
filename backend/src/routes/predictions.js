@@ -75,7 +75,8 @@ router.post('/', authenticateToken, async (req, res) => {
     console.error('Create prediction error:', error);
     res.status(500).json({
       error: 'Prediction save failed',
-      detail: process.env.NODE_ENV === 'production' ? undefined : error.message
+      detail: error.message,
+      code: error.code
     });
   } finally {
     client.release();
@@ -105,7 +106,7 @@ router.get('/', authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Get predictions error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error', detail: error.message, code: error.code });
   }
 });
 
