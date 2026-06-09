@@ -250,6 +250,15 @@ a {
   display: none !important;
 }
 
+.predictions-page .prediction-status.points-0 span:first-child {
+  font-size: 0 !important;
+}
+
+.predictions-page .prediction-status.points-0 span:first-child::after {
+  content: '💩';
+  font-size: 13px;
+}
+
 @media (max-width: 900px) {
   .top-nav {
     align-items: flex-start;
