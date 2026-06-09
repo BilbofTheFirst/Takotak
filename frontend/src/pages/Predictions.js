@@ -182,7 +182,7 @@ function Predictions() {
     return (
       <div className={`team-block ${align === 'right' ? 'team-block-right' : ''}`}>
         {align === 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
-        <span className="flag-shell">{flag ? <img src={flag} alt={teamName} /> : <span>{knockoutPlaceholder ? 'KO' : '?'}</span>}</span>
+        <span className="flag-shell">{flag ? <img src={flag} alt={teamName} /> : <span>{knockoutPlaceholder ? '⚽' : '?'}</span>}</span>
         {align !== 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
       </div>
     );
