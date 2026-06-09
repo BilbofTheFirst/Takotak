@@ -7,18 +7,29 @@
     <script>
       (function () {
         var params = new URLSearchParams(window.location.search);
-        var requestedMockDate = params.get('mockDate') || params.get('mockNow');
+        var requestedMockDate = params.get('mockDate');
+        var requestedMockNow = params.get('mockNow');
+        var requestedMockTime = params.get('mockTime') || '12:00:00';
         var storageKey = 'TAKOTAK_MOCK_NOW';
 
-        if (requestedMockDate === 'clear') {
+        if (requestedMockDate === 'clear' || requestedMockNow === 'clear') {
           sessionStorage.removeItem(storageKey);
           return;
         }
 
-        if (requestedMockDate) {
-          var normalizedMockDate = requestedMockDate.indexOf('T') >= 0
+        var normalizedMockDate = null;
+
+        if (requestedMockNow) {
+          normalizedMockDate = requestedMockNow;
+        } else if (requestedMockDate) {
+          var hasExplicitTime = requestedMockDate.indexOf('T') >= 0;
+          var hasTimezone = /([+-]\d{2}:?\d{2}|Z)$/i.test(requestedMockTime);
+          normalizedMockDate = hasExplicitTime
             ? requestedMockDate
-            : requestedMockDate + 'T12:00:00+02:00';
+            : requestedMockDate + 'T' + requestedMockTime + (hasTimezone ? '' : '+02:00');
+        }
+
+        if (normalizedMockDate) {
           var parsedMockDate = new Date(normalizedMockDate);
 
           if (!Number.isNaN(parsedMockDate.getTime())) {
@@ -26,39 +37,11 @@
           }
         }
 
-        var mockDateValue = sessionStorage.getItem(storageKey);
-        if (!mockDateValue) {
-          return;
+        window.__TAKOTAK_MOCK_NOW__ = sessionStorage.getItem(storageKey);
+
+        if (window.__TAKOTAK_MOCK_NOW__) {
+          console.warn('[TakoTak] Date simulée active :', window.__TAKOTAK_MOCK_NOW__);
         }
-
-        var RealDate = Date;
-        var mockTime = new RealDate(mockDateValue).getTime();
-
-        if (Number.isNaN(mockTime)) {
-          sessionStorage.removeItem(storageKey);
-          return;
-        }
-
-        function MockDate() {
-          if (this instanceof MockDate) {
-            return arguments.length === 0
-              ? new RealDate(mockTime)
-              : new RealDate(...arguments);
-          }
-
-          return arguments.length === 0
-            ? new RealDate(mockTime).toString()
-            : RealDate.apply(this, arguments);
-        }
-
-        MockDate.now = function () { return mockTime; };
-        MockDate.parse = RealDate.parse;
-        MockDate.UTC = RealDate.UTC;
-        MockDate.prototype = RealDate.prototype;
-
-        window.Date = MockDate;
-        window.__TAKOTAK_MOCK_NOW__ = new RealDate(mockTime).toISOString();
-        console.warn('[TakoTak] Date simulée active :', window.__TAKOTAK_MOCK_NOW__);
       })();
     </script>
   </head>
