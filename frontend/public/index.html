@@ -3,7 +3,64 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TakoTak - Pronostiques Coupe du Monde</title>
+    <title>TakoTak - Pronostics Coupe du Monde</title>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var requestedMockDate = params.get('mockDate') || params.get('mockNow');
+        var storageKey = 'TAKOTAK_MOCK_NOW';
+
+        if (requestedMockDate === 'clear') {
+          sessionStorage.removeItem(storageKey);
+          return;
+        }
+
+        if (requestedMockDate) {
+          var normalizedMockDate = requestedMockDate.indexOf('T') >= 0
+            ? requestedMockDate
+            : requestedMockDate + 'T12:00:00+02:00';
+          var parsedMockDate = new Date(normalizedMockDate);
+
+          if (!Number.isNaN(parsedMockDate.getTime())) {
+            sessionStorage.setItem(storageKey, parsedMockDate.toISOString());
+          }
+        }
+
+        var mockDateValue = sessionStorage.getItem(storageKey);
+        if (!mockDateValue) {
+          return;
+        }
+
+        var RealDate = Date;
+        var mockTime = new RealDate(mockDateValue).getTime();
+
+        if (Number.isNaN(mockTime)) {
+          sessionStorage.removeItem(storageKey);
+          return;
+        }
+
+        function MockDate() {
+          if (this instanceof MockDate) {
+            return arguments.length === 0
+              ? new RealDate(mockTime)
+              : new RealDate(...arguments);
+          }
+
+          return arguments.length === 0
+            ? new RealDate(mockTime).toString()
+            : RealDate.apply(this, arguments);
+        }
+
+        MockDate.now = function () { return mockTime; };
+        MockDate.parse = RealDate.parse;
+        MockDate.UTC = RealDate.UTC;
+        MockDate.prototype = RealDate.prototype;
+
+        window.Date = MockDate;
+        window.__TAKOTAK_MOCK_NOW__ = new RealDate(mockTime).toISOString();
+        console.warn('[TakoTak] Date simulée active :', window.__TAKOTAK_MOCK_NOW__);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
