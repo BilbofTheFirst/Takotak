@@ -4,6 +4,18 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Match dates in the database are stored as the Belgian schedule wall time.
+// Convert them explicitly as Europe/Brussels for lock/can_predict checks,
+// and return a formatted local schedule string to the frontend.
+const MATCH_TIME_SELECT = `to_char(m.start_time, 'YYYY-MM-DD"T"HH24:MI:SS') as start_time`;
+const MATCH_HAS_STARTED_SQL = `(m.start_time AT TIME ZONE 'Europe/Brussels') <= NOW()`;
+const MATCH_CAN_PREDICT_SQL = `
+  m.team1_id IS NOT NULL
+  AND m.team2_id IS NOT NULL
+  AND (m.start_time AT TIME ZONE 'Europe/Brussels') > NOW()
+  AND COALESCE(m.status, 'scheduled') <> 'finished'
+`;
+
 // Get all matches with team details
 router.get('/', authenticateToken, async (req, res) => {
   try {
@@ -16,22 +28,19 @@ router.get('/', authenticateToken, async (req, res) => {
         t1.groupe as groupe1,
         t2.name as team2,
         t2.groupe as groupe2,
-        m.start_time,
+        ${MATCH_TIME_SELECT},
         m.description,
         m.status,
         m.created_at,
         r.team1_goals,
         r.team2_goals,
         CASE
-          WHEN m.team1_id IS NOT NULL
-           AND m.team2_id IS NOT NULL
-           AND m.start_time > NOW()
-           AND COALESCE(m.status, 'scheduled') <> 'finished'
+          WHEN ${MATCH_CAN_PREDICT_SQL}
           THEN true
           ELSE false
         END AS can_predict,
         CASE
-          WHEN m.start_time <= NOW()
+          WHEN ${MATCH_HAS_STARTED_SQL}
             OR COALESCE(m.status, 'scheduled') = 'finished'
           THEN true
           ELSE false
@@ -62,10 +71,16 @@ router.get('/:id', authenticateToken, async (req, res) => {
         t1.groupe as groupe1,
         t2.name as team2,
         t2.groupe as groupe2,
-        m.start_time,
+        ${MATCH_TIME_SELECT},
         m.description,
         m.status,
-        m.created_at
+        m.created_at,
+        CASE
+          WHEN ${MATCH_HAS_STARTED_SQL}
+            OR COALESCE(m.status, 'scheduled') = 'finished'
+          THEN true
+          ELSE false
+        END AS is_locked
       FROM matches m
       LEFT JOIN teams t1 ON m.team1_id = t1.id
       LEFT JOIN teams t2 ON m.team2_id = t2.id
