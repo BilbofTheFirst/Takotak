@@ -1,9 +1,16 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { matchesService, predictionsService } from '../services/api';
 import { getFlag } from '../utils/countryFlags';
 import TournamentBracket from '../components/TournamentBracket';
 import TeamInfoModal from '../components/TeamInfoModal';
-import TeamInfoButton from '../components/TeamInfoButton';
+
+const GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+const PRIMARY = '#0f766e';
+const SECONDARY = '#d97706';
+const DARK = '#0f172a';
+const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
+
+const defaultScore = { team1_goals: 0, team2_goals: 0 };
 
 function Simulation() {
   const [matches, setMatches] = useState([]);
@@ -14,16 +21,10 @@ function Simulation() {
   const [saveMessage, setSaveMessage] = useState('');
   const [selectedTeam, setSelectedTeam] = useState(null);
 
-  const PRIMARY = '#2563eb';
-  const SECONDARY = '#ec4899';
-  const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
-
-  // Charger les simulations depuis localStorage
   useEffect(() => {
     loadData();
   }, []);
 
-  // Sauvegarder automatiquement dans localStorage
   useEffect(() => {
     if (Object.keys(simulations).length > 0) {
       localStorage.setItem('takotak_simulations', JSON.stringify(simulations));
@@ -38,32 +39,33 @@ function Simulation() {
         predictionsService.getAll()
       ]);
 
-      const groupMatches = matchesRes.data.filter(m => m.id <= 72);
+      const groupMatches = matchesRes.data
+        .filter(match => Number(match.id) <= 72)
+        .sort((a, b) => Number(a.id) - Number(b.id));
       setMatches(groupMatches);
 
       const predMap = {};
-      const simMap = {};
-      predictionsRes.data.forEach(p => {
-        predMap[p.match_id] = p;
+      predictionsRes.data.forEach(prediction => {
+        predMap[prediction.match_id] = {
+          ...prediction,
+          team1_goals: Number(prediction.team1_goals),
+          team2_goals: Number(prediction.team2_goals)
+        };
       });
       setPredictions(predMap);
 
-      // Charger les simulations depuis localStorage
       const savedSims = localStorage.getItem('takotak_simulations');
       const savedKoSims = localStorage.getItem('takotak_ko_simulations');
+      const initialSims = savedSims ? JSON.parse(savedSims) : {};
 
-      if (savedSims) {
-        setSimulations(JSON.parse(savedSims));
-      } else {
-        groupMatches.forEach(match => {
-          simMap[match.id] = { team1_goals: 0, team2_goals: 0 };
-        });
-        setSimulations(simMap);
-      }
+      groupMatches.forEach(match => {
+        if (!initialSims[match.id]) {
+          initialSims[match.id] = { ...defaultScore };
+        }
+      });
 
-      if (savedKoSims) {
-        setKoSimulations(JSON.parse(savedKoSims));
-      }
+      setSimulations(initialSims);
+      if (savedKoSims) setKoSimulations(JSON.parse(savedKoSims));
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -71,12 +73,14 @@ function Simulation() {
     }
   };
 
+  const normalizeScore = (value) => Math.max(0, Math.min(20, parseInt(value, 10) || 0));
+
   const handleSimulationChange = (matchId, field, value) => {
     setSimulations(prev => ({
       ...prev,
       [matchId]: {
-        ...prev[matchId],
-        [field]: Math.max(0, Math.min(20, parseInt(value) || 0))
+        ...(prev[matchId] || defaultScore),
+        [field]: normalizeScore(value)
       }
     }));
   };
@@ -85,44 +89,41 @@ function Simulation() {
     setKoSimulations(prev => ({
       ...prev,
       [matchId]: {
-        ...prev[matchId] || { team1_goals: 0, team2_goals: 0 },
-        [field]: Math.max(0, Math.min(20, parseInt(value) || 0))
+        ...(prev[matchId] || defaultScore),
+        [field]: normalizeScore(value)
       }
     }));
   };
 
   const calculatePoints = (prediction, result) => {
-    const { team1_goals: pred1, team2_goals: pred2 } = prediction;
-    const { team1_goals: res1, team2_goals: res2 } = result;
+    if (!prediction) return null;
+
+    const pred1 = Number(prediction.team1_goals);
+    const pred2 = Number(prediction.team2_goals);
+    const res1 = Number(result.team1_goals);
+    const res2 = Number(result.team2_goals);
 
     if (pred1 === res1 && pred2 === res2) return 3;
     if ((pred1 - pred2) === (res1 - res2)) return 2;
 
     const predTendency = pred1 > pred2 ? 'team1' : pred1 < pred2 ? 'team2' : 'draw';
     const resTendency = res1 > res2 ? 'team1' : res1 < res2 ? 'team2' : 'draw';
-    if (predTendency === resTendency) return 1;
-
-    return 0;
+    return predTendency === resTendency ? 1 : 0;
   };
 
-  const getTeamsInGroup = (groupLetter) => {
-    const groupIndex = groupLetter.charCodeAt(0) - 65;
-    const startId = groupIndex * 6 + 1;
-    const groupMatches = matches.filter(m => m.id >= startId && m.id < startId + 6);
+  const getGroupMatches = (groupLetter) => matches.filter(match => match.groupe1 === groupLetter || match.groupe2 === groupLetter);
 
+  const getTeamsInGroup = (groupLetter) => {
     const teams = new Set();
-    groupMatches.forEach(m => {
-      teams.add(m.team1);
-      teams.add(m.team2);
+    getGroupMatches(groupLetter).forEach(match => {
+      if (match.team1) teams.add(match.team1);
+      if (match.team2) teams.add(match.team2);
     });
     return Array.from(teams);
   };
 
   const calculateGroupStats = (groupLetter) => {
-    const groupIndex = groupLetter.charCodeAt(0) - 65;
-    const startId = groupIndex * 6 + 1;
-    const groupMatches = matches.filter(m => m.id >= startId && m.id < startId + 6);
-
+    const groupMatches = getGroupMatches(groupLetter);
     const teams = getTeamsInGroup(groupLetter);
     const stats = {};
 
@@ -139,30 +140,32 @@ function Simulation() {
     });
 
     groupMatches.forEach(match => {
-      const sim = simulations[match.id] || { team1_goals: 0, team2_goals: 0 };
-      const g1 = parseInt(sim.team1_goals) || 0;
-      const g2 = parseInt(sim.team2_goals) || 0;
+      if (!stats[match.team1] || !stats[match.team2]) return;
 
-      stats[match.team1].played++;
+      const sim = simulations[match.id] || defaultScore;
+      const g1 = Number(sim.team1_goals) || 0;
+      const g2 = Number(sim.team2_goals) || 0;
+
+      stats[match.team1].played += 1;
       stats[match.team1].goalsFor += g1;
       stats[match.team1].goalsAgainst += g2;
 
-      stats[match.team2].played++;
+      stats[match.team2].played += 1;
       stats[match.team2].goalsFor += g2;
       stats[match.team2].goalsAgainst += g1;
 
       if (g1 > g2) {
-        stats[match.team1].won++;
+        stats[match.team1].won += 1;
         stats[match.team1].points += 3;
-        stats[match.team2].lost++;
-      } else if (g1 < g2) {
-        stats[match.team2].won++;
+        stats[match.team2].lost += 1;
+      } else if (g2 > g1) {
+        stats[match.team2].won += 1;
         stats[match.team2].points += 3;
-        stats[match.team1].lost++;
+        stats[match.team1].lost += 1;
       } else {
-        stats[match.team1].draw++;
+        stats[match.team1].draw += 1;
         stats[match.team1].points += 1;
-        stats[match.team2].draw++;
+        stats[match.team2].draw += 1;
         stats[match.team2].points += 1;
       }
     });
@@ -172,448 +175,218 @@ function Simulation() {
 
   const getGroupClassification = (groupLetter) => {
     const stats = calculateGroupStats(groupLetter);
-    const teams = getTeamsInGroup(groupLetter);
-
-    return teams
-      .map(team => ({ team, ...stats[team] }))
-      .sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        return (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst);
-      });
+    return getTeamsInGroup(groupLetter)
+      .map(team => ({
+        team,
+        group: groupLetter,
+        ...stats[team],
+        diff: stats[team].goalsFor - stats[team].goalsAgainst
+      }))
+      .sort((a, b) => (
+        b.points - a.points
+        || b.diff - a.diff
+        || b.goalsFor - a.goalsFor
+        || b.won - a.won
+        || a.team.localeCompare(b.team, 'fr')
+      ));
   };
 
   const groupsData = useMemo(() => {
-    const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
     const data = {};
-    groups.forEach(g => {
-      data[g] = getGroupClassification(g);
+    GROUPS.forEach(group => {
+      data[group] = getGroupClassification(group);
     });
     return data;
   }, [simulations, matches]);
 
   const allThirdPlaces = useMemo(() => {
-    const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-    const thirds = [];
+    const thirds = GROUPS
+      .map(group => groupsData[group]?.[2])
+      .filter(Boolean)
+      .map(team => ({
+        team: team.team,
+        group: team.group,
+        points: team.points,
+        gf: team.goalsFor,
+        ga: team.goalsAgainst,
+        diff: team.diff,
+        won: team.won
+      }));
 
-    groups.forEach(groupLetter => {
-      const classification = groupsData[groupLetter];
-      if (classification.length >= 3) {
-        thirds.push({
-          team: classification[2].team,
-          group: groupLetter,
-          points: classification[2].points,
-          gf: classification[2].goalsFor,
-          ga: classification[2].goalsAgainst,
-          diff: classification[2].goalsFor - classification[2].goalsAgainst
-        });
-      }
-    });
-
-    return thirds.sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.diff !== a.diff) return b.diff - a.diff;
-      return b.gf - a.gf; // Buts marqués
-    });
+    return thirds.sort((a, b) => (
+      b.points - a.points
+      || b.diff - a.diff
+      || b.gf - a.gf
+      || b.won - a.won
+      || a.team.localeCompare(b.team, 'fr')
+    ));
   }, [groupsData]);
 
-  const getKOMatchups = useMemo(() => {
-    const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-
-    const firstPlaces = {};
-    const secondPlaces = {};
-    groups.forEach(g => {
-      const classification = groupsData[g];
-      if (classification.length >= 2) {
-        firstPlaces[g] = classification[0].team;
-        secondPlaces[g] = classification[1].team;
-      }
-    });
-
-    const qualifiedThirds = allThirdPlaces.slice(0, 4);
-
-    const round16 = [
-      { home: firstPlaces['A'], away: secondPlaces['B'], desc: 'GA1 - GB2', id: 'r16_1' },
-      { home: firstPlaces['C'], away: secondPlaces['D'], desc: 'GC1 - GD2', id: 'r16_2' },
-      { home: firstPlaces['E'], away: secondPlaces['F'], desc: 'GE1 - GF2', id: 'r16_3' },
-      { home: firstPlaces['G'], away: secondPlaces['H'], desc: 'GG1 - GH2', id: 'r16_4' },
-      { home: firstPlaces['B'], away: secondPlaces['A'], desc: 'GB1 - GA2', id: 'r16_5' },
-      { home: firstPlaces['D'], away: secondPlaces['C'], desc: 'GD1 - GC2', id: 'r16_6' },
-      { home: firstPlaces['F'], away: secondPlaces['E'], desc: 'GF1 - GE2', id: 'r16_7' },
-      { home: firstPlaces['H'], away: secondPlaces['G'], desc: 'GH1 - GG2', id: 'r16_8' },
-      { home: firstPlaces['I'], away: secondPlaces['J'], desc: 'GI1 - GJ2', id: 'r16_9' },
-      { home: firstPlaces['K'], away: secondPlaces['L'], desc: 'GK1 - GL2', id: 'r16_10' },
-      { home: firstPlaces['J'], away: secondPlaces['I'], desc: 'GJ1 - GI2', id: 'r16_11' },
-      { home: firstPlaces['L'], away: secondPlaces['K'], desc: 'GL1 - GK2', id: 'r16_12' },
-      { home: qualifiedThirds[0]?.team, away: firstPlaces['B'], desc: '3e1 - GB1', id: 'r16_13' },
-      { home: qualifiedThirds[1]?.team, away: firstPlaces['D'], desc: '3e2 - GD1', id: 'r16_14' },
-      { home: qualifiedThirds[2]?.team, away: firstPlaces['F'], desc: '3e3 - GF1', id: 'r16_15' },
-      { home: qualifiedThirds[3]?.team, away: firstPlaces['H'], desc: '3e4 - GH1', id: 'r16_16' }
-    ];
-
-    return { firstPlaces, secondPlaces, qualifiedThirds, round16 };
-  }, [groupsData, allThirdPlaces]);
+  const totalSimulatedPoints = useMemo(() => {
+    return matches.reduce((total, match) => {
+      const prediction = predictions[match.id];
+      const points = calculatePoints(prediction, simulations[match.id] || defaultScore);
+      return total + (points || 0);
+    }, 0);
+  }, [matches, predictions, simulations]);
 
   const clearSimulation = () => {
     localStorage.removeItem('takotak_simulations');
     localStorage.removeItem('takotak_ko_simulations');
-    setSimulations({});
+    const resetSims = {};
+    matches.forEach(match => {
+      resetSims[match.id] = { ...defaultScore };
+    });
+    setSimulations(resetSims);
     setKoSimulations({});
-    setSaveMessage('Simulation réinitialisée!');
-    setTimeout(() => setSaveMessage(''), 2000);
+    setSaveMessage('Simulation réinitialisée');
+    setTimeout(() => setSaveMessage(''), 2200);
+  };
+
+  const renderFlag = (team, className = 'sim-flag') => {
+    const flag = team ? getFlag(team) : null;
+    return flag ? <img className={className} src={flag} alt={team} /> : <span className={className}>?</span>;
   };
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#f0f4f8'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px', animation: 'bounce 1s infinite' }}>⏳</div>
-          <p style={{ color: '#666', fontSize: '16px' }}>Chargement de la simulation...</p>
+      <div className="simulation-page loading-page">
+        <div className="simulation-loading-card">
+          <div className="simulation-ball">⚽</div>
+          <p>Chargement de la simulation...</p>
         </div>
+        <style>{styles}</style>
       </div>
     );
   }
 
-  const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f0f4f8 0%, #f3e7e9 100%)',
-      padding: '30px 20px',
-    }}>
-      <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="simulation-page">
+      <div className="simulation-container">
+        <section className="simulation-hero">
           <div>
-            <h1 style={{ fontSize: '36px', color: '#333', margin: '0 0 5px 0', fontWeight: 'bold' }}>
-              🎮 Simulation Coupe du Monde
-            </h1>
-            <p style={{ color: '#666', margin: '0', fontSize: '14px' }}>
-              Auto-sauvegardé dans votre navigateur • {saveMessage && <span style={{ color: '#059669' }}>✅ {saveMessage}</span>}
+            <span className="simulation-eyebrow">Mode bac à sable</span>
+            <h1>🎮 Simulation Coupe du Monde</h1>
+            <p>
+              Teste tous les scores, observe les classements évoluer et construis ton tableau final. Rien n'est envoyé en base : tout reste dans ton navigateur.
             </p>
           </div>
-          <button
-            onClick={clearSimulation}
-            style={{
-              padding: '8px 16px',
-              background: '#fee',
-              color: '#c33',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: '500'
-            }}
-          >
-            🔄 Réinitialiser
-          </button>
-        </div>
+          <div className="simulation-summary">
+            <div><strong>{totalSimulatedPoints}</strong><span>points simulés</span></div>
+            <div><strong>{allThirdPlaces.slice(0, 8).length}</strong><span>troisièmes qualifiés</span></div>
+            <button type="button" onClick={clearSimulation}>🔄 Réinitialiser</button>
+          </div>
+        </section>
 
-        {/* PHASE DE GROUPES - 2 par ligne */}
-        <div style={{ marginBottom: '50px' }}>
-          <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '20px', fontWeight: 'bold' }}>
-            🏆 Phase de Groupes
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-            {groups.map(groupLetter => {
-              const groupIndex = groupLetter.charCodeAt(0) - 65;
-              const startId = groupIndex * 6 + 1;
-              const groupMatches = matches.filter(m => m.id >= startId && m.id < startId + 6);
-              const classification = groupsData[groupLetter];
+        {saveMessage && <div className="simulation-toast">✅ {saveMessage}</div>}
 
+        <section className="simulation-section">
+          <div className="simulation-section-title">
+            <span>🏆 Phase de groupes</span>
+            <h2>Groupes A à L</h2>
+          </div>
+
+          <div className="groups-grid">
+            {GROUPS.map(groupLetter => {
+              const groupMatches = getGroupMatches(groupLetter);
+              const classification = groupsData[groupLetter] || [];
               if (groupMatches.length === 0) return null;
 
               return (
-                <div key={groupLetter}>
-                  <div style={{
-                    background: GRADIENT,
-                    color: 'white',
-                    padding: '12px 15px',
-                    borderRadius: '8px 8px 0 0',
-                    fontWeight: 'bold'
-                  }}>
-                    Groupe {groupLetter}
-                  </div>
+                <article key={groupLetter} className="group-card">
+                  <header className="group-card-header">
+                    <div>
+                      <span>Groupe</span>
+                      <h3>{groupLetter}</h3>
+                    </div>
+                    <strong>{classification.length} équipes</strong>
+                  </header>
 
-                  <div style={{
-                    background: 'white',
-                    borderRadius: '0 0 8px 8px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-                    overflow: 'hidden',
-                    display: 'flex'
-                  }}>
-                    {/* MATCHS - Gauche */}
-                    <div style={{ flex: 1, padding: '12px', borderRight: '1px solid #eee' }}>
-                      {groupMatches.map((match, idx) => {
-                        const sim = simulations[match.id] || { team1_goals: 0, team2_goals: 0 };
-                        const pred = predictions[match.id];
-                        const points = pred ? calculatePoints(pred, sim) : 0;
+                  <div className="group-card-body">
+                    <div className="group-matches">
+                      {groupMatches.map(match => {
+                        const sim = simulations[match.id] || defaultScore;
+                        const prediction = predictions[match.id];
+                        const points = calculatePoints(prediction, sim);
 
                         return (
-                          <div key={match.id} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '8px 0',
-                            borderBottom: idx < groupMatches.length - 1 ? '1px solid #f0f0f0' : 'none',
-                            fontSize: '12px'
-                          }}>
-                            <div style={{ flex: 1, minWidth: '140px' }}>
-                              <div style={{ fontWeight: '500', color: '#333', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                                <span>{getFlag(match.team1)}</span>
-                                {match.team1} vs {match.team2}
-                                <span>{getFlag(match.team2)}</span>
+                          <div key={match.id} className="simulation-match-row">
+                            <div className="simulation-teams">
+                              <div className="team-line team-line-right">
+                                <span>{match.team1}</span>
+                                {renderFlag(match.team1)}
                               </div>
-                              {pred && (
-                                <div style={{ fontSize: '10px', color: '#999' }}>
-                                  Prono: {pred.team1_goals}-{pred.team2_goals}
-                                </div>
-                              )}
+                              <span className="versus">vs</span>
+                              <div className="team-line">
+                                {renderFlag(match.team2)}
+                                <span>{match.team2}</span>
+                              </div>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <input
-                                type="number"
-                                min="0"
-                                max="20"
-                                value={sim.team1_goals}
-                                onChange={(e) => handleSimulationChange(match.id, 'team1_goals', e.target.value)}
-                                style={{
-                                  width: '32px',
-                                  padding: '3px',
-                                  fontSize: '11px',
-                                  fontWeight: 'bold',
-                                  border: `1px solid ${PRIMARY}`,
-                                  borderRadius: '3px',
-                                  textAlign: 'center'
-                                }}
-                              />
-                              <span style={{ fontSize: '10px', color: '#ddd' }}>-</span>
-                              <input
-                                type="number"
-                                min="0"
-                                max="20"
-                                value={sim.team2_goals}
-                                onChange={(e) => handleSimulationChange(match.id, 'team2_goals', e.target.value)}
-                                style={{
-                                  width: '32px',
-                                  padding: '3px',
-                                  fontSize: '11px',
-                                  fontWeight: 'bold',
-                                  border: `1px solid ${PRIMARY}`,
-                                  borderRadius: '3px',
-                                  textAlign: 'center'
-                                }}
-                              />
-                              <div style={{
-                                background: points >= 3 ? '#d1fae5' : points >= 2 ? '#dbeafe' : points >= 1 ? '#fef3c7' : '#f3f4f6',
-                                color: points >= 3 ? '#059669' : points >= 2 ? '#1e40af' : points >= 1 ? '#92400e' : '#4b5563',
-                                padding: '2px 6px',
-                                borderRadius: '3px',
-                                fontSize: '10px',
-                                fontWeight: 'bold',
-                                minWidth: '35px',
-                                textAlign: 'center'
-                              }}>
-                                {points}pt
-                              </div>
+                            <div className="simulation-score-editor">
+                              <input type="text" inputMode="numeric" maxLength="2" value={sim.team1_goals} onChange={(e) => handleSimulationChange(match.id, 'team1_goals', e.target.value)} />
+                              <span>-</span>
+                              <input type="text" inputMode="numeric" maxLength="2" value={sim.team2_goals} onChange={(e) => handleSimulationChange(match.id, 'team2_goals', e.target.value)} />
+                              <strong className={`sim-points points-${points ?? 0}`}>{points === null ? '—' : `${points} pt${points > 1 ? 's' : ''}`}</strong>
                             </div>
+
+                            {prediction && <div className="prediction-line">Prono : {prediction.team1_goals}-{prediction.team2_goals}</div>}
                           </div>
                         );
                       })}
                     </div>
 
-                    {/* CLASSEMENT - Droite */}
-                    <div style={{ width: '320px', padding: '12px', background: '#f9f9f9' }}>
-                      <table style={{
-                        width: '100%',
-                        borderCollapse: 'collapse',
-                        fontSize: '10px'
-                      }}>
-                        <thead>
-                          <tr style={{ background: '#f0f0f0' }}>
-                            <th style={{ padding: '4px 2px', textAlign: 'left', fontWeight: 'bold', fontSize: '9px' }}>Équipe</th>
-                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>J</th>
-                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>G</th>
-                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>N</th>
-                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>P</th>
-                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>B+</th>
-                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '18px' }}>B-</th>
-                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', width: '20px' }}>Diff</th>
-                            <th style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 'bold', color: PRIMARY, width: '18px' }}>Pts</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {classification.map((data, idx) => {
-                            const diff = data.goalsFor - data.goalsAgainst;
-                            return (
-                              <tr key={data.team} style={{
-                                background: idx < 2 ? '#eff6ff' : 'white',
-                                borderTop: '1px solid #eee'
-                              }}>
-                                <td style={{ padding: '4px 2px', fontWeight: '500', fontSize: '9px', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                                  <span style={{
-                                    display: 'inline-block',
-                                    width: '16px',
-                                    height: '16px',
-                                    background: idx < 2 ? GRADIENT : '#e0e0e0',
-                                    color: 'white',
-                                    borderRadius: '50%',
-                                    textAlign: 'center',
-                                    lineHeight: '16px',
-                                    fontSize: '8px',
-                                    fontWeight: 'bold'
-                                  }}>
-                                    {idx + 1}
-                                  </span>
-                                  <img src={getFlag(data.team)} alt={data.team} style={{ height: '14px', width: '14px', borderRadius: '50%' }} />
-                                  <span>{data.team}</span>
-                                  <button onClick={() => setSelectedTeam(data)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '9px', padding: 0 }}>ℹ️</button>
-                                </td>
-                                <td style={{ padding: '4px 2px', textAlign: 'center', fontSize: '9px' }}>{data.played}</td>
-                                <td style={{ padding: '4px 2px', textAlign: 'center', color: '#059669', fontWeight: 'bold', fontSize: '9px' }}>{data.won}</td>
-                                <td style={{ padding: '4px 2px', textAlign: 'center', color: '#92400e', fontWeight: 'bold', fontSize: '9px' }}>{data.draw}</td>
-                                <td style={{ padding: '4px 2px', textAlign: 'center', color: '#dc2626', fontWeight: 'bold', fontSize: '9px' }}>{data.lost}</td>
-                                <td style={{ padding: '4px 2px', textAlign: 'center', fontSize: '9px', fontWeight: 'bold' }}>{data.goalsFor}</td>
-                                <td style={{ padding: '4px 2px', textAlign: 'center', fontSize: '9px', fontWeight: 'bold' }}>{data.goalsAgainst}</td>
-                                <td style={{
-                                  padding: '4px 2px',
-                                  textAlign: 'center',
-                                  color: diff > 0 ? '#059669' : diff < 0 ? '#dc2626' : '#666',
-                                  fontWeight: 'bold',
-                                  fontSize: '9px'
-                                }}>
-                                  {diff > 0 ? '+' : ''}{diff}
-                                </td>
-                                <td style={{
-                                  padding: '4px 2px',
-                                  textAlign: 'center',
-                                  color: PRIMARY,
-                                  fontWeight: 'bold',
-                                  fontSize: '9px'
-                                }}>
-                                  {data.points}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                    <div className="group-standings">
+                      <div className="standing-header">
+                        <span>Équipe</span><span>J</span><span>G</span><span>N</span><span>P</span><span>Diff</span><span>Pts</span>
+                      </div>
+                      {classification.map((data, index) => (
+                        <button key={`${groupLetter}-${data.team}`} type="button" className={`standing-row rank-${index + 1}`} onClick={() => setSelectedTeam(data)}>
+                          <span className="team-standing-name"><em>{index + 1}</em>{renderFlag(data.team)}{data.team}</span>
+                          <span>{data.played}</span>
+                          <span>{data.won}</span>
+                          <span>{data.draw}</span>
+                          <span>{data.lost}</span>
+                          <span className={data.diff > 0 ? 'positive' : data.diff < 0 ? 'negative' : ''}>{data.diff > 0 ? '+' : ''}{data.diff}</span>
+                          <strong>{data.points}</strong>
+                        </button>
+                      ))}
                     </div>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
-        </div>
+        </section>
 
-        {/* MEILLEURS 3e COMPLETS */}
-        <div style={{ marginBottom: '50px' }}>
-          <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '20px', fontWeight: 'bold' }}>
-            🥉 Classement des 3e
-          </h2>
-          <div style={{
-            background: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-            overflow: 'hidden'
-          }}>
-            <table style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: '12px'
-            }}>
-              <thead>
-                <tr style={{ background: GRADIENT, color: 'white' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold' }}>Équipe</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '60px' }}>Groupe</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '40px' }}>Pts</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '50px' }}>Diff</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '45px' }}>B+</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', width: '50px' }}>Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allThirdPlaces.map((data, idx) => (
-                  <tr key={data.team} style={{
-                    background: idx < 8 ? '#eff6ff' : 'white',
-                    borderTop: '1px solid #eee',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s'
-                  }} onClick={() => setSelectedTeam(data)} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'} onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>
-                    <td style={{ padding: '10px 12px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        width: '24px',
-                        height: '24px',
-                        background: idx < 8 ? GRADIENT : '#e0e0e0',
-                        color: 'white',
-                        borderRadius: '50%',
-                        textAlign: 'center',
-                        lineHeight: '24px',
-                        fontSize: '11px',
-                        fontWeight: 'bold'
-                      }}>
-                        {idx + 1}
-                      </span>
-                      <img src={getFlag(data.team)} alt={data.team} style={{ height: '20px', width: '20px', borderRadius: '50%' }} />
-                      <span>{data.team}</span>
-                      <TeamInfoButton teamName={data.team} onClick={() => setSelectedTeam(data)} />
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 'bold' }}>{data.group}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 'bold', color: PRIMARY }}>
-                      {data.points}
-                    </td>
-                    <td style={{
-                      padding: '10px 12px',
-                      textAlign: 'center',
-                      fontWeight: 'bold',
-                      color: data.diff > 0 ? '#059669' : data.diff < 0 ? '#dc2626' : '#666'
-                    }}>
-                      {data.diff > 0 ? '+' : ''}{data.diff}
-                    </td>
-                    <td style={{
-                      padding: '10px 12px',
-                      textAlign: 'center',
-                      fontWeight: 'bold'
-                    }}>
-                      {data.gf}
-                    </td>
-                    <td style={{
-                      padding: '10px 12px',
-                      textAlign: 'center',
-                      fontWeight: 'bold',
-                      color: idx < 8 ? '#059669' : '#dc2626',
-                      background: idx < 8 ? 'rgba(16, 185, 129, 0.05)' : 'rgba(220, 38, 38, 0.05)'
-                    }}>
-                      {idx < 8 ? '✓ Qualifié' : '✗ Éliminé'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <section className="simulation-section thirds-section">
+          <div className="simulation-section-title">
+            <span>🥉 Meilleurs troisièmes</span>
+            <h2>8 qualifiés sur 12</h2>
           </div>
-        </div>
 
-        {/* PHASE ÉLIMINATOIRE - Bracket */}
+          <div className="thirds-grid">
+            {allThirdPlaces.map((team, index) => (
+              <button key={`${team.group}-${team.team}`} type="button" className={`third-card ${index < 8 ? 'qualified' : 'out'}`} onClick={() => setSelectedTeam(team)}>
+                <strong>#{index + 1}</strong>
+                {renderFlag(team.team)}
+                <span>{team.team}</span>
+                <em>Groupe {team.group}</em>
+                <small>{team.points} pts · diff {team.diff > 0 ? '+' : ''}{team.diff} · BP {team.gf}</small>
+                <b>{index < 8 ? 'Qualifié' : 'Éliminé'}</b>
+              </button>
+            ))}
+          </div>
+        </section>
+
         <TournamentBracket
           groupsData={groupsData}
           allThirdPlaces={allThirdPlaces}
           koSimulations={koSimulations}
           onScoreChange={handleKoSimulationChange}
-          PRIMARY={PRIMARY}
-          SECONDARY={SECONDARY}
-          GRADIENT={GRADIENT}
         />
       </div>
 
-      {/* Modal infos équipe */}
       {selectedTeam && (
         <TeamInfoModal
           teamId={selectedTeam.team}
@@ -622,14 +395,80 @@ function Simulation() {
         />
       )}
 
-      <style>{`
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-      `}</style>
+      <style>{styles}</style>
     </div>
   );
 }
+
+const styles = `
+  .simulation-page { min-height: 100vh; background: radial-gradient(circle at top left, rgba(217,119,6,.15), transparent 32%), radial-gradient(circle at top right, rgba(15,118,110,.18), transparent 32%), linear-gradient(135deg, #071b16 0%, #0f172a 45%, #111827 100%); padding: 24px 18px 42px; color: ${DARK}; }
+  .simulation-container { width: min(1480px, 100%); margin: 0 auto; }
+  .simulation-hero { display: flex; justify-content: space-between; gap: 22px; align-items: stretch; margin-bottom: 18px; color: white; }
+  .simulation-eyebrow { display: inline-flex; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: #fde68a; margin-bottom: 10px; }
+  .simulation-hero h1 { margin: 0 0 7px; font-size: clamp(28px, 3.4vw, 44px); line-height: 1; letter-spacing: -.04em; }
+  .simulation-hero p { margin: 0; max-width: 760px; color: rgba(255,255,255,.76); font-size: 14px; line-height: 1.5; }
+  .simulation-summary { min-width: 340px; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .simulation-summary div, .simulation-summary button { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); border-radius: 15px; padding: 13px; color: white; box-shadow: 0 16px 38px rgba(0,0,0,.16); }
+  .simulation-summary strong { display: block; font-size: 26px; color: #fde68a; line-height: 1; }
+  .simulation-summary span { display: block; margin-top: 6px; color: rgba(255,255,255,.7); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
+  .simulation-summary button { grid-column: span 2; cursor: pointer; font-weight: 950; background: linear-gradient(135deg, rgba(239,68,68,.9), rgba(185,28,28,.9)); }
+  .simulation-toast { margin-bottom: 16px; padding: 10px 14px; border-radius: 14px; color: #064e3b; background: #dcfce7; border: 1px solid rgba(34,197,94,.35); font-size: 12px; font-weight: 950; }
+  .simulation-section { margin-bottom: 26px; }
+  .simulation-section-title { color: white; margin-bottom: 12px; }
+  .simulation-section-title span { color: #fde68a; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+  .simulation-section-title h2 { margin: 4px 0 0; font-size: 25px; letter-spacing: -.04em; }
+  .groups-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .group-card { overflow: hidden; border-radius: 20px; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 18px 55px rgba(0,0,0,.2); }
+  .group-card-header { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; background: ${GRADIENT}; color: white; }
+  .group-card-header span { display: block; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; opacity: .8; }
+  .group-card-header h3 { margin: 0; font-size: 23px; }
+  .group-card-header strong { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.16); font-size: 11px; }
+  .group-card-body { display: grid; grid-template-columns: minmax(0, 1.2fr) 330px; gap: 0; }
+  .group-matches { padding: 10px; border-right: 1px solid #e2e8f0; }
+  .simulation-match-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 9px 4px; border-bottom: 1px solid #eef2f7; }
+  .simulation-match-row:last-child { border-bottom: 0; }
+  .simulation-teams { min-width: 0; display: grid; grid-template-columns: minmax(0,1fr) 22px minmax(0,1fr); gap: 6px; align-items: center; }
+  .team-line { min-width: 0; display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 900; color: #0f172a; }
+  .team-line span:last-child, .team-line-right span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .team-line-right { justify-content: flex-end; text-align: right; }
+  .versus { color: #94a3b8; font-size: 10px; font-weight: 950; text-align: center; }
+  .sim-flag { width: 25px; height: 25px; border-radius: 999px; object-fit: cover; flex: 0 0 auto; border: 2px solid white; box-shadow: 0 5px 12px rgba(15,23,42,.14); background: #e2e8f0; display: grid; place-items: center; font-size: 10px; font-weight: 900; color: #64748b; }
+  .simulation-score-editor { display: flex; align-items: center; gap: 5px; }
+  .simulation-score-editor input { width: 38px; height: 32px; border: 1.5px solid #cbd5e1; border-radius: 10px; text-align: center; color: #0f172a; background: white; font-size: 14px; font-weight: 950; outline: none; box-shadow: 0 6px 14px rgba(15,23,42,.06); }
+  .simulation-score-editor input:focus { border-color: ${SECONDARY}; }
+  .simulation-score-editor > span { color: #94a3b8; font-weight: 950; }
+  .sim-points { min-width: 42px; padding: 5px 7px; border-radius: 9px; font-size: 10px; font-weight: 950; text-align: center; }
+  .points-3 { background: #dcfce7; color: #047857; }
+  .points-2 { background: #dbeafe; color: #1d4ed8; }
+  .points-1 { background: #fef3c7; color: #92400e; }
+  .points-0 { background: #fee2e2; color: #b91c1c; }
+  .prediction-line { grid-column: 1 / -1; color: #64748b; font-size: 10px; font-weight: 750; margin-top: -4px; }
+  .group-standings { padding: 10px; background: #f8fafc; }
+  .standing-header, .standing-row { display: grid; grid-template-columns: minmax(135px,1fr) 24px 24px 24px 24px 42px 34px; gap: 4px; align-items: center; }
+  .standing-header { padding: 4px 6px 7px; color: #64748b; font-size: 9px; font-weight: 950; text-transform: uppercase; }
+  .standing-row { width: 100%; border: 0; border-top: 1px solid #e2e8f0; background: white; padding: 6px; cursor: pointer; text-align: left; font-size: 10px; color: #0f172a; }
+  .standing-row.rank-1, .standing-row.rank-2 { background: #ecfdf5; }
+  .standing-row.rank-3 { background: #fff7ed; }
+  .team-standing-name { display: flex; align-items: center; gap: 5px; min-width: 0; font-weight: 900; }
+  .team-standing-name em { width: 18px; height: 18px; border-radius: 999px; background: #e2e8f0; display: grid; place-items: center; font-style: normal; font-size: 10px; flex: 0 0 auto; }
+  .team-standing-name img { width: 18px; height: 18px; }
+  .standing-row span:not(.team-standing-name), .standing-row strong { text-align: center; font-weight: 850; }
+  .positive { color: #047857; } .negative { color: #b91c1c; }
+  .thirds-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 10px; }
+  .third-card { display: grid; grid-template-columns: 34px 28px minmax(0,1fr); align-items: center; gap: 7px; padding: 10px; border-radius: 16px; border: 1px solid #e2e8f0; background: rgba(255,255,255,.96); cursor: pointer; text-align: left; box-shadow: 0 10px 24px rgba(0,0,0,.12); }
+  .third-card.qualified { border-color: #bbf7d0; background: #ecfdf5; }
+  .third-card.out { opacity: .72; }
+  .third-card strong { width: 30px; height: 28px; border-radius: 10px; display: grid; place-items: center; color: #92400e; background: #fef3c7; font-size: 12px; }
+  .third-card img, .third-card .sim-flag { width: 26px; height: 26px; }
+  .third-card span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 950; }
+  .third-card em, .third-card small, .third-card b { grid-column: 3; font-style: normal; font-size: 10px; color: #64748b; font-weight: 800; }
+  .third-card b { color: #047857; } .third-card.out b { color: #b91c1c; }
+  .loading-page { display: grid; place-items: center; }
+  .simulation-loading-card { text-align: center; color: white; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); border-radius: 18px; padding: 30px 42px; box-shadow: 0 22px 65px rgba(0,0,0,.22); }
+  .simulation-ball { font-size: 42px; margin-bottom: 12px; animation: bounce 1s infinite; }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  @media (max-width: 1180px) { .groups-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 780px) { .simulation-hero { flex-direction: column; } .simulation-summary { min-width: 0; } .group-card-body { grid-template-columns: 1fr; } .group-matches { border-right: 0; border-bottom: 1px solid #e2e8f0; } .simulation-match-row { grid-template-columns: 1fr; } .simulation-score-editor { justify-content: center; } }
+`;
 
 export default Simulation;
