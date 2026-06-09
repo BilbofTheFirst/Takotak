@@ -210,6 +210,42 @@ a {
   background: rgba(148, 163, 184, 0.08);
 }
 
+.predictions-page .flag-shell {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+}
+
+.predictions-page .flag-shell > span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  line-height: 1 !important;
+  transform: none !important;
+}
+
+.predictions-page .football-placeholder-icon {
+  font-size: 21px !important;
+  line-height: 1 !important;
+  transform: translateY(0) !important;
+}
+
+.predictions-page .team-info-mini {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  font-size: 13px !important;
+}
+
+.predictions-page .team-info-mini:hover {
+  transform: translateY(-1px) !important;
+}
+
 @media (max-width: 900px) {
   .top-nav {
     align-items: flex-start;
