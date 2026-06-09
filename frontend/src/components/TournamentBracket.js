@@ -49,7 +49,6 @@ const COLUMN_TITLES = [
 ];
 
 const BRACKET_LAYOUT = [
-  // Left wing. Each child is placed between its two parents.
   { id: 74, col: 1, row: 2 },
   { id: 77, col: 1, row: 5 },
   { id: 73, col: 1, row: 8 },
@@ -64,16 +63,10 @@ const BRACKET_LAYOUT = [
   { id: 92, col: 2, row: 22 },
   { id: 97, col: 3, row: 7 },
   { id: 99, col: 3, row: 19 },
-
-  // Semi-finals in the middle left/right columns.
   { id: 101, col: 4, row: 10 },
   { id: 102, col: 6, row: 19 },
-
-  // Center.
   { id: 104, col: 5, row: 14 },
   { id: 103, col: 5, row: 22 },
-
-  // Right wing.
   { id: 83, col: 9, row: 2 },
   { id: 84, col: 9, row: 5 },
   { id: 81, col: 9, row: 8 },
@@ -175,21 +168,6 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     const sim = koSimulations[match.id] || { team1_goals: 0, team2_goals: 0 };
     const winner = getWinner(match.id);
 
-    const renderTeam = (teamSide, teamName) => (
-      <div className={`compact-team ${winner === teamSide ? 'winner' : ''}`} title={teamName || 'À définir'}>
-        {renderFlag(teamName)}
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength="2"
-          value={teamSide === 'team1' ? sim.team1_goals : sim.team2_goals}
-          aria-label={`Score ${teamName || teamSide}`}
-          title={teamName || 'À définir'}
-          onChange={(event) => onScoreChange(match.id, `${teamSide}_goals`, event.target.value)}
-        />
-      </div>
-    );
-
     return (
       <article
         className={`compact-bracket-match ${match.id === 103 ? 'third-place-match' : ''}`}
@@ -201,9 +179,32 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           {match.start_time && <em>{formatDateTime(match.start_time)}</em>}
           <strong>M{match.id}</strong>
         </header>
-        <div className="compact-teams">
-          {renderTeam('team1', match.team1Name)}
-          {renderTeam('team2', match.team2Name)}
+
+        <div className="compact-scoreline">
+          <div className={`team-flag-slot ${winner === 'team1' ? 'winner' : ''}`} title={match.team1Name || 'À définir'}>
+            {renderFlag(match.team1Name)}
+          </div>
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength="2"
+            value={sim.team1_goals}
+            aria-label={`Score ${match.team1Name || 'équipe 1'}`}
+            title={match.team1Name || 'Équipe 1'}
+            onChange={(event) => onScoreChange(match.id, 'team1_goals', event.target.value)}
+          />
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength="2"
+            value={sim.team2_goals}
+            aria-label={`Score ${match.team2Name || 'équipe 2'}`}
+            title={match.team2Name || 'Équipe 2'}
+            onChange={(event) => onScoreChange(match.id, 'team2_goals', event.target.value)}
+          />
+          <div className={`team-flag-slot ${winner === 'team2' ? 'winner' : ''}`} title={match.team2Name || 'À définir'}>
+            {renderFlag(match.team2Name)}
+          </div>
         </div>
       </article>
     );
@@ -247,11 +248,21 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
         }
 
         .compact-bracket-board {
+          width: 100%;
           min-width: 1010px;
           display: grid;
-          grid-template-columns: 108px 98px 90px 84px 118px 84px 90px 98px 108px;
+          grid-template-columns:
+            minmax(96px, 1.12fr)
+            minmax(88px, .98fr)
+            minmax(82px, .9fr)
+            minmax(78px, .86fr)
+            minmax(112px, 1.22fr)
+            minmax(78px, .86fr)
+            minmax(82px, .9fr)
+            minmax(88px, .98fr)
+            minmax(96px, 1.12fr);
           grid-template-rows: 32px repeat(25, 24px);
-          gap: 5px 8px;
+          gap: 5px clamp(8px, 1.25vw, 18px);
           align-items: center;
         }
 
@@ -315,27 +326,27 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           color: #92400e;
         }
 
-        .compact-teams {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
+        .compact-scoreline {
           height: calc(100% - 19px);
-        }
-
-        .compact-team {
           display: grid;
-          grid-template-columns: 26px 30px;
+          grid-template-columns: 1fr 30px 30px 1fr;
           gap: 4px;
           align-items: center;
-          justify-content: center;
-          padding: 4px;
+          justify-items: center;
+          padding: 4px 5px;
           border-top: 1px solid #e2e8f0;
         }
 
-        .compact-team + .compact-team {
-          border-left: 1px solid #e2e8f0;
+        .team-flag-slot {
+          width: 100%;
+          height: 28px;
+          display: grid;
+          place-items: center;
+          border-radius: 10px;
+          background: transparent;
         }
 
-        .compact-team.winner {
+        .team-flag-slot.winner {
           background: #dcfce7;
         }
 
@@ -355,7 +366,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
         .bracket-token {
           width: auto;
           min-width: 24px;
-          max-width: 30px;
+          max-width: 34px;
           padding: 0 3px;
           color: #475569;
           font-size: 8px;
@@ -366,7 +377,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           white-space: nowrap;
         }
 
-        .compact-team input {
+        .compact-scoreline input {
           width: 29px;
           height: 25px;
           border: 1.5px solid #cbd5e1;
@@ -403,10 +414,14 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
         }
 
         @media (max-width: 1200px) {
-          .compact-bracket-board { min-width: 940px; grid-template-columns: 98px 90px 82px 76px 110px 76px 82px 90px 98px; gap: 5px 6px; }
-          .compact-team { grid-template-columns: 24px 28px; gap: 3px; }
+          .compact-bracket-board {
+            min-width: 940px;
+            gap: 5px 7px;
+            grid-template-columns: 98px 90px 82px 76px 110px 76px 82px 90px 98px;
+          }
+          .compact-scoreline { grid-template-columns: 1fr 28px 28px 1fr; gap: 3px; padding-inline: 4px; }
           .bracket-flag, .bracket-token { width: 22px; height: 22px; min-width: 22px; }
-          .compact-team input { width: 27px; }
+          .compact-scoreline input { width: 27px; }
         }
       `}</style>
     </section>
