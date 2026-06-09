@@ -2,7 +2,7 @@ const KNOCKOUT_SLOTS = {
   73: { team1: '2A', team2: '2B' },
   74: { team1: '1E', team2: '3A/B/C/D/F' },
   75: { team1: '1F', team2: '2C' },
-  76: { team1: '1C', team2: '2F' },
+  76: { round: '16e de finale', team1: '1C', team2: '2F' }.team1 ? { team1: '1C', team2: '2F' } : null,
   77: { team1: '1I', team2: '3C/D/F/G/H' },
   78: { team1: '2E', team2: '2I' },
   79: { team1: '1A', team2: '3C/E/F/H/I' },
@@ -83,9 +83,13 @@ const buildGroupPlacements = (matches) => {
 
   const placements = {};
   const thirdTeams = [];
+  const groups = [];
 
   for (const [groupCode, groupMatches] of groupedMatches.entries()) {
-    if (groupMatches.length === 0 || !groupMatches.every(hasResult)) continue;
+    if (groupMatches.length === 0 || !groupMatches.every(hasResult)) {
+      groups.push({ group_code: groupCode, complete: false, standings: [] });
+      continue;
+    }
 
     const standings = new Map();
 
@@ -124,6 +128,8 @@ const buildGroupPlacements = (matches) => {
     });
 
     const ranked = Array.from(standings.values()).sort(sortStandings);
+    groups.push({ group_code: groupCode, complete: true, standings: ranked });
+
     if (ranked[0]) placements[`1${groupCode}`] = ranked[0];
     if (ranked[1]) placements[`2${groupCode}`] = ranked[1];
     if (ranked[2]) {
@@ -133,8 +139,45 @@ const buildGroupPlacements = (matches) => {
   }
 
   thirdTeams.sort(sortStandings);
+  thirdTeams.forEach((team, index) => { team.auto_rank = index + 1; });
 
-  return { placements, thirdTeams };
+  return { placements, thirdTeams, groups };
+};
+
+const ensureThirdPlaceOrderTable = async (client) => {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS third_place_order (
+      group_code varchar(1) PRIMARY KEY,
+      manual_rank integer NOT NULL,
+      updated_at timestamp DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+};
+
+const getManualThirdPlaceOrder = async (client) => {
+  await ensureThirdPlaceOrderTable(client);
+  const result = await client.query('SELECT group_code, manual_rank FROM third_place_order ORDER BY manual_rank ASC');
+  return result.rows;
+};
+
+const applyManualThirdPlaceOrder = (thirdTeams, manualOrderRows) => {
+  const autoIndex = new Map(thirdTeams.map((team, index) => [team.group_code, index]));
+  const manualRank = new Map(manualOrderRows.map(row => [row.group_code, Number(row.manual_rank)]));
+
+  return [...thirdTeams]
+    .sort((a, b) => {
+      const rankA = manualRank.get(a.group_code);
+      const rankB = manualRank.get(b.group_code);
+      if (rankA && rankB) return rankA - rankB;
+      if (rankA) return -1;
+      if (rankB) return 1;
+      return (autoIndex.get(a.group_code) ?? 999) - (autoIndex.get(b.group_code) ?? 999);
+    })
+    .map((team, index) => ({
+      ...team,
+      rank: index + 1,
+      manual_rank: manualRank.get(team.group_code) || null
+    }));
 };
 
 const getWinnerTeamId = (match) => {
@@ -188,7 +231,7 @@ const resolveSlotToken = (token, placements, thirdTeams, matchById) => {
   return null;
 };
 
-const propagateKnockoutTeams = async (client) => {
+const fetchBracketMatches = async (client) => {
   const result = await client.query(`
     SELECT
       m.id,
@@ -209,10 +252,43 @@ const propagateKnockoutTeams = async (client) => {
     LEFT JOIN results r ON m.id = r.match_id
     ORDER BY m.id
   `);
+  return result.rows;
+};
 
-  const matches = result.rows;
+const getThirdPlaceSnapshot = async (client) => {
+  const matches = await fetchBracketMatches(client);
+  const { placements, thirdTeams, groups } = buildGroupPlacements(matches);
+  const manualOrderRows = await getManualThirdPlaceOrder(client);
+  const effectiveThirdTeams = applyManualThirdPlaceOrder(thirdTeams, manualOrderRows);
+
+  return {
+    groups,
+    placements,
+    autoThirdTeams: thirdTeams,
+    thirdTeams: effectiveThirdTeams,
+    manualOrder: manualOrderRows
+  };
+};
+
+const saveManualThirdPlaceOrder = async (client, groupCodes) => {
+  await ensureThirdPlaceOrderTable(client);
+  await client.query('DELETE FROM third_place_order');
+
+  for (let index = 0; index < groupCodes.length; index += 1) {
+    await client.query(
+      `INSERT INTO third_place_order (group_code, manual_rank, updated_at)
+       VALUES ($1, $2, CURRENT_TIMESTAMP)
+       ON CONFLICT (group_code)
+       DO UPDATE SET manual_rank = EXCLUDED.manual_rank, updated_at = CURRENT_TIMESTAMP`,
+      [groupCodes[index], index + 1]
+    );
+  }
+};
+
+const propagateKnockoutTeams = async (client) => {
+  const matches = await fetchBracketMatches(client);
   const matchById = new Map(matches.map(match => [Number(match.id), match]));
-  const { placements, thirdTeams } = buildGroupPlacements(matches);
+  const { placements, thirdTeams } = await getThirdPlaceSnapshot(client);
   const updates = [];
 
   for (const [matchIdString, slots] of Object.entries(KNOCKOUT_SLOTS)) {
@@ -240,5 +316,7 @@ const propagateKnockoutTeams = async (client) => {
 };
 
 module.exports = {
-  propagateKnockoutTeams
+  getThirdPlaceSnapshot,
+  propagateKnockoutTeams,
+  saveManualThirdPlaceOrder
 };
