@@ -1,6 +1,41 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { matchesService, resultsService } from '../services/api';
 
+const KNOCKOUT_MATCHES = {
+  73: { round: '16e de finale', team1: '2A', team2: '2B' },
+  74: { round: '16e de finale', team1: '1E', team2: '3A/B/C/D/F' },
+  75: { round: '16e de finale', team1: '1F', team2: '2C' },
+  76: { round: '16e de finale', team1: '1C', team2: '2F' },
+  77: { round: '16e de finale', team1: '1I', team2: '3C/D/F/G/H' },
+  78: { round: '16e de finale', team1: '2E', team2: '2I' },
+  79: { round: '16e de finale', team1: '1A', team2: '3C/E/F/H/I' },
+  80: { round: '16e de finale', team1: '1L', team2: '3E/H/I/J/K' },
+  81: { round: '16e de finale', team1: '1D', team2: '3B/E/F/I/J' },
+  82: { round: '16e de finale', team1: '1G', team2: '3A/E/H/I/J' },
+  83: { round: '16e de finale', team1: '2K', team2: '2L' },
+  84: { round: '16e de finale', team1: '1H', team2: '2J' },
+  85: { round: '16e de finale', team1: '1B', team2: '3E/F/G/I/J' },
+  86: { round: '16e de finale', team1: '1J', team2: '2H' },
+  87: { round: '16e de finale', team1: '1K', team2: '3D/E/I/J/L' },
+  88: { round: '16e de finale', team1: '2D', team2: '2G' },
+  89: { round: '8e de finale', team1: 'V74', team2: 'V77' },
+  90: { round: '8e de finale', team1: 'V73', team2: 'V75' },
+  91: { round: '8e de finale', team1: 'V76', team2: 'V78' },
+  92: { round: '8e de finale', team1: 'V79', team2: 'V80' },
+  93: { round: '8e de finale', team1: 'V83', team2: 'V84' },
+  94: { round: '8e de finale', team1: 'V81', team2: 'V82' },
+  95: { round: '8e de finale', team1: 'V86', team2: 'V88' },
+  96: { round: '8e de finale', team1: 'V85', team2: 'V87' },
+  97: { round: 'Quart de finale', team1: 'V89', team2: 'V90' },
+  98: { round: 'Quart de finale', team1: 'V93', team2: 'V94' },
+  99: { round: 'Quart de finale', team1: 'V91', team2: 'V92' },
+  100: { round: 'Quart de finale', team1: 'V95', team2: 'V96' },
+  101: { round: 'Demi-finale', team1: 'V97', team2: 'V98' },
+  102: { round: 'Demi-finale', team1: 'V99', team2: 'V100' },
+  103: { round: '3e place', team1: 'P101', team2: 'P102' },
+  104: { round: 'Finale', team1: 'V101', team2: 'V102' }
+};
+
 function Admin() {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -167,7 +202,23 @@ function Admin() {
     }
   };
 
-  const getGroupLabel = (match) => match.groupe1 ? `Groupe ${match.groupe1}` : 'Match';
+  const getPhaseLabel = (match) => {
+    const knockout = KNOCKOUT_MATCHES[match.id];
+    if (knockout) return knockout.round;
+    if (match.groupe1) return `Groupe ${match.groupe1}`;
+    return 'Match';
+  };
+
+  const getTeamLabel = (match, position) => {
+    const teamName = position === 'team1' ? match.team1 : match.team2;
+    if (teamName) return teamName;
+
+    const knockout = KNOCKOUT_MATCHES[match.id];
+    if (knockout) return knockout[position];
+
+    return 'À déterminer';
+  };
+
   const getTimeLabel = (match) => match.start_time?.substring(0, 16).replace('T', ' ') || '--';
   const getStatusLabel = (match, hasResult) => hasResult ? 'Encodé' : 'À jouer';
 
@@ -233,7 +284,7 @@ function Admin() {
 
         <div className="results-table">
           <div className="results-header">
-            <span>Groupe</span>
+            <span>Phase</span>
             <span>Heure</span>
             <span>Équipes</span>
             <span>Statut</span>
@@ -255,15 +306,17 @@ function Admin() {
               || !isValidResultInput(scores.team2)
               || (showPenalties && !hasValidPenaltyShootout(scores))
               || (hasResult && !scoreChanged);
+            const team1Label = getTeamLabel(match, 'team1');
+            const team2Label = getTeamLabel(match, 'team2');
 
             return (
               <div key={match.id} className={`result-row ${hasResult ? 'finished' : ''} ${showPenalties ? 'has-penalties' : ''}`}>
-                <div className="group-cell">{getGroupLabel(match)}</div>
+                <div className="group-cell">{getPhaseLabel(match)}</div>
                 <div className="time-cell">{getTimeLabel(match)}</div>
-                <div className="teams-cell" title={`${match.team1 || 'À déterminer'} vs ${match.team2 || 'À déterminer'}`}>
-                  <strong>{match.team1 || 'À déterminer'}</strong>
+                <div className="teams-cell" title={`${team1Label} vs ${team2Label}`}>
+                  <strong className={!match.team1 ? 'team-placeholder' : ''}>{team1Label}</strong>
                   <span>vs</span>
-                  <strong>{match.team2 || 'À déterminer'}</strong>
+                  <strong className={!match.team2 ? 'team-placeholder' : ''}>{team2Label}</strong>
                 </div>
                 <div className={`status-cell ${hasResult ? 'done' : ''}`}>{getStatusLabel(match, hasResult)}</div>
 
@@ -274,7 +327,7 @@ function Admin() {
                     maxLength="2"
                     value={scores.team1}
                     disabled={!hasKnownTeams || isSaving}
-                    aria-label={`Score ${match.team1 || 'équipe 1'}`}
+                    aria-label={`Score ${team1Label}`}
                     onChange={(event) => updateResultInput(match.id, 'team1', event.target.value)}
                   />
                   <span>-</span>
@@ -284,7 +337,7 @@ function Admin() {
                     maxLength="2"
                     value={scores.team2}
                     disabled={!hasKnownTeams || isSaving}
-                    aria-label={`Score ${match.team2 || 'équipe 2'}`}
+                    aria-label={`Score ${team2Label}`}
                     onChange={(event) => updateResultInput(match.id, 'team2', event.target.value)}
                   />
                 </div>
@@ -298,7 +351,7 @@ function Admin() {
                         maxLength="2"
                         value={scores.penalty1}
                         disabled={!hasKnownTeams || isSaving}
-                        aria-label={`Tirs au but ${match.team1 || 'équipe 1'}`}
+                        aria-label={`Tirs au but ${team1Label}`}
                         onChange={(event) => updateResultInput(match.id, 'penalty1', event.target.value)}
                       />
                       <span>-</span>
@@ -308,7 +361,7 @@ function Admin() {
                         maxLength="2"
                         value={scores.penalty2}
                         disabled={!hasKnownTeams || isSaving}
-                        aria-label={`Tirs au but ${match.team2 || 'équipe 2'}`}
+                        aria-label={`Tirs au but ${team2Label}`}
                         onChange={(event) => updateResultInput(match.id, 'penalty2', event.target.value)}
                       />
                     </>
@@ -543,7 +596,7 @@ function Admin() {
         .results-header,
         .result-row {
           display: grid;
-          grid-template-columns: 95px 135px minmax(300px, 1fr) 82px 112px 112px 230px;
+          grid-template-columns: 120px 135px minmax(300px, 1fr) 82px 112px 112px 230px;
           gap: 10px;
           align-items: center;
         }
@@ -615,6 +668,13 @@ function Admin() {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        .teams-cell .team-placeholder {
+          color: #64748b;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          font-size: 13px;
+          letter-spacing: -0.02em;
         }
 
         .teams-cell span {
