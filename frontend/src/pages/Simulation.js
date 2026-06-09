@@ -187,6 +187,11 @@ function Simulation() {
     return flag ? <img className={className} src={flag} alt={team} /> : <span className={className}>?</span>;
   };
 
+  const formatMatchDateTime = (timestamp) => {
+    if (!timestamp) return '--/-- --:--';
+    return `${timestamp.substring(8, 10)}/${timestamp.substring(5, 7)} ${timestamp.substring(11, 16)}`;
+  };
+
   if (loading) {
     return (
       <div className="simulation-page loading-page">
@@ -232,6 +237,7 @@ function Simulation() {
                         const points = calculatePoints(prediction, sim);
                         return (
                           <div key={match.id} className="simulation-match-line">
+                            <span className="match-schedule">{formatMatchDateTime(match.start_time)}</span>
                             <span className="match-team-name match-team-left" title={match.team1}>{match.team1}</span>
                             {renderFlag(match.team1)}
                             <input type="text" inputMode="numeric" maxLength="2" value={sim.team1_goals} onChange={(e) => handleSimulationChange(match.id, 'team1_goals', e.target.value)} aria-label={`Score ${match.team1}`} />
@@ -305,18 +311,19 @@ const styles = `
   .group-card-header h3 { margin: 0; font-size: 23px; }
   .group-card-header strong { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.16); font-size: 11px; }
   .group-card-body { display: grid; grid-template-columns: 1fr; }
-  .group-matches { padding: 10px; border-bottom: 1px solid #e2e8f0; }
-  .simulation-match-line { display: grid; grid-template-columns: minmax(110px, 1fr) 26px 38px 12px 38px 26px minmax(110px, 1fr) 74px 52px; align-items: center; gap: 7px; padding: 8px 4px; border-bottom: 1px solid #eef2f7; }
+  .group-matches { padding: 7px 9px; border-bottom: 1px solid #e2e8f0; }
+  .simulation-match-line { display: grid; grid-template-columns: 64px minmax(98px, 1fr) 24px 36px 10px 36px 24px minmax(98px, 1fr) 72px 48px; align-items: center; gap: 5px; padding: 5px 2px; border-bottom: 1px solid #eef2f7; }
   .simulation-match-line:last-child { border-bottom: 0; }
-  .match-team-name { min-width: 0; color: #0f172a; font-size: 13px; font-weight: 950; line-height: 1.15; }
+  .match-schedule { color: #64748b; font-size: 10px; font-weight: 900; white-space: nowrap; }
+  .match-team-name { min-width: 0; color: #0f172a; font-size: 12px; font-weight: 950; line-height: 1.12; }
   .match-team-left { text-align: right; }
   .match-team-right { text-align: left; }
-  .score-separator { color: #94a3b8; font-size: 14px; font-weight: 950; text-align: center; }
-  .sim-flag { width: 25px; height: 25px; border-radius: 999px; object-fit: cover; flex: 0 0 auto; border: 2px solid white; box-shadow: 0 5px 12px rgba(15,23,42,.14); background: #e2e8f0; display: grid; place-items: center; font-size: 10px; font-weight: 900; color: #64748b; }
-  .simulation-match-line input { width: 38px; height: 32px; border: 1.5px solid #cbd5e1; border-radius: 10px; text-align: center; color: #0f172a; background: white; font-size: 14px; font-weight: 950; outline: none; box-shadow: 0 6px 14px rgba(15,23,42,.06); }
+  .score-separator { color: #94a3b8; font-size: 13px; font-weight: 950; text-align: center; }
+  .sim-flag { width: 23px; height: 23px; border-radius: 999px; object-fit: cover; flex: 0 0 auto; border: 2px solid white; box-shadow: 0 5px 12px rgba(15,23,42,.14); background: #e2e8f0; display: grid; place-items: center; font-size: 10px; font-weight: 900; color: #64748b; }
+  .simulation-match-line input { width: 36px; height: 30px; border: 1.5px solid #cbd5e1; border-radius: 9px; text-align: center; color: #0f172a; background: white; font-size: 13px; font-weight: 950; outline: none; box-shadow: 0 6px 14px rgba(15,23,42,.06); }
   .simulation-match-line input:focus { border-color: ${SECONDARY}; }
-  .prediction-pill { justify-self: center; padding: 5px 7px; border-radius: 999px; background: #e2e8f0; color: #475569; font-size: 10px; font-weight: 900; white-space: nowrap; }
-  .sim-points { min-width: 42px; padding: 5px 7px; border-radius: 9px; font-size: 10px; font-weight: 950; text-align: center; }
+  .prediction-pill { justify-self: center; padding: 4px 7px; border-radius: 999px; background: #e2e8f0; color: #475569; font-size: 9px; font-weight: 900; white-space: nowrap; }
+  .sim-points { min-width: 42px; padding: 4px 6px; border-radius: 9px; font-size: 9px; font-weight: 950; text-align: center; }
   .points-3 { background: #dcfce7; color: #047857; } .points-2 { background: #dbeafe; color: #1d4ed8; } .points-1 { background: #fef3c7; color: #92400e; } .points-0 { background: #fee2e2; color: #b91c1c; }
   .group-standings { padding: 10px; background: #f8fafc; }
   .standing-header, .standing-row { display: grid; grid-template-columns: minmax(240px,1fr) 34px 34px 34px 34px 42px 42px 52px 42px; gap: 6px; align-items: center; }
@@ -340,7 +347,7 @@ const styles = `
   .loading-page { display: grid; place-items: center; } .simulation-loading-card { text-align: center; color: white; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); border-radius: 18px; padding: 30px 42px; box-shadow: 0 22px 65px rgba(0,0,0,.22); } .simulation-ball { font-size: 42px; margin-bottom: 12px; animation: bounce 1s infinite; }
   @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   @media (max-width: 1180px) { .groups-grid { grid-template-columns: 1fr; } }
-  @media (max-width: 780px) { .simulation-hero { flex-direction: column; } .simulation-summary { min-width: 0; } .simulation-match-line { grid-template-columns: 1fr 25px 38px 12px 38px 25px 1fr; } .prediction-pill, .sim-points { grid-column: auto; } .standing-header, .standing-row { grid-template-columns: minmax(190px,1fr) repeat(8, 34px); } }
+  @media (max-width: 780px) { .simulation-hero { flex-direction: column; } .simulation-summary { min-width: 0; } .simulation-match-line { grid-template-columns: 64px 1fr 23px 36px 10px 36px 23px 1fr; } .prediction-pill, .sim-points { grid-column: auto; } .standing-header, .standing-row { grid-template-columns: minmax(190px,1fr) repeat(8, 34px); } }
 `;
 
 export default Simulation;
