@@ -5,13 +5,16 @@ const { hashPassword, comparePassword } = require('../utils/password');
 
 const router = express.Router();
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'alexandre_jacques@hotmail.com')
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .split(',')
   .map(email => email.trim().toLowerCase())
   .filter(Boolean);
 
+const isConfiguredAdminEmail = (email) =>
+  ADMIN_EMAILS.includes((email || '').trim().toLowerCase());
+
 const isAdminUser = (user) =>
-  Boolean(user?.is_admin) || ADMIN_EMAILS.includes((user?.email || '').trim().toLowerCase());
+  Boolean(user?.is_admin) || isConfiguredAdminEmail(user?.email);
 
 const buildPublicUser = (user) => ({
   id: user.id,
@@ -59,11 +62,13 @@ router.post('/register', async (req, res) => {
     }
 
     const passwordHash = await hashPassword(password);
+    const isAdmin = isConfiguredAdminEmail(email);
+
     const result = await pool.query(
-      `INSERT INTO users (username, email, password_hash)
-       VALUES ($1, $2, $3)
+      `INSERT INTO users (username, email, password_hash, is_admin)
+       VALUES ($1, $2, $3, $4)
        RETURNING id, username, email, is_admin`,
-      [username, email, passwordHash]
+      [username, email, passwordHash, isAdmin]
     );
 
     const user = result.rows[0];
