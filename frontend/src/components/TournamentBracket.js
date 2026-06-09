@@ -36,18 +36,58 @@ const KNOCKOUT = {
   104: { round: 'Finale', team1: 'V101', team2: 'V102' }
 };
 
-const LEFT_ROUNDS = [
-  { title: '16es', ids: [73, 74, 75, 76, 77, 78, 79, 80] },
-  { title: '8es', ids: [89, 90, 91, 92] },
-  { title: 'Quarts', ids: [97, 99] },
-  { title: 'Demi', ids: [101] }
+const COLUMN_TITLES = [
+  { col: 1, label: '16es' },
+  { col: 2, label: '8es' },
+  { col: 3, label: 'Quarts' },
+  { col: 4, label: 'Demies' },
+  { col: 5, label: 'Finale' },
+  { col: 6, label: 'Demies' },
+  { col: 7, label: 'Quarts' },
+  { col: 8, label: '8es' },
+  { col: 9, label: '16es' }
 ];
 
-const RIGHT_ROUNDS = [
-  { title: 'Demi', ids: [102] },
-  { title: 'Quarts', ids: [98, 100] },
-  { title: '8es', ids: [93, 94, 95, 96] },
-  { title: '16es', ids: [81, 82, 83, 84, 85, 86, 87, 88] }
+const BRACKET_LAYOUT = [
+  // Left wing. Each child is placed between its two parents.
+  { id: 74, col: 1, row: 2 },
+  { id: 77, col: 1, row: 5 },
+  { id: 73, col: 1, row: 8 },
+  { id: 75, col: 1, row: 11 },
+  { id: 76, col: 1, row: 14 },
+  { id: 78, col: 1, row: 17 },
+  { id: 79, col: 1, row: 20 },
+  { id: 80, col: 1, row: 23 },
+  { id: 89, col: 2, row: 4 },
+  { id: 90, col: 2, row: 10 },
+  { id: 91, col: 2, row: 16 },
+  { id: 92, col: 2, row: 22 },
+  { id: 97, col: 3, row: 7 },
+  { id: 99, col: 3, row: 19 },
+
+  // Semi-finals in the middle left/right columns.
+  { id: 101, col: 4, row: 10 },
+  { id: 102, col: 6, row: 19 },
+
+  // Center.
+  { id: 104, col: 5, row: 14 },
+  { id: 103, col: 5, row: 22 },
+
+  // Right wing.
+  { id: 83, col: 9, row: 2 },
+  { id: 84, col: 9, row: 5 },
+  { id: 81, col: 9, row: 8 },
+  { id: 82, col: 9, row: 11 },
+  { id: 86, col: 9, row: 14 },
+  { id: 88, col: 9, row: 17 },
+  { id: 85, col: 9, row: 20 },
+  { id: 87, col: 9, row: 23 },
+  { id: 93, col: 8, row: 4 },
+  { id: 94, col: 8, row: 10 },
+  { id: 95, col: 8, row: 16 },
+  { id: 96, col: 8, row: 22 },
+  { id: 98, col: 7, row: 7 },
+  { id: 100, col: 7, row: 19 }
 ];
 
 function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, matchSchedule = [] }) {
@@ -86,7 +126,12 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
   const matches = useMemo(() => {
     const map = {};
     Object.entries(KNOCKOUT).forEach(([id, config]) => {
-      map[id] = { id: Number(id), ...config, team1Name: getPlacement(config.team1), team2Name: getPlacement(config.team2) };
+      map[id] = {
+        id: Number(id),
+        ...config,
+        team1Name: getPlacement(config.team1),
+        team2Name: getPlacement(config.team2)
+      };
     });
 
     const resolveToken = (token) => {
@@ -111,9 +156,14 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
   }, [getPlacement, getWinner, getLoser, scheduleById]);
 
   const renderFlag = (team) => {
-    if (!team || /^[123VP]/.test(team)) return <span className="bracket-placeholder-ball">⚽</span>;
+    if (!team || /^[123VP]/.test(team)) {
+      return <span className="bracket-token" title={team || 'À définir'}>{team || '⚽'}</span>;
+    }
+
     const flag = getFlag(team);
-    return flag ? <img className="bracket-flag" src={flag} alt={team} /> : <span className="bracket-placeholder-ball">?</span>;
+    return flag
+      ? <img className="bracket-flag" src={flag} alt={team} title={team} />
+      : <span className="bracket-token" title={team}>?</span>;
   };
 
   const formatDateTime = (value) => {
@@ -121,91 +171,243 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     return `${value.substring(8, 10)}/${value.substring(5, 7)} ${value.substring(11, 16)}`;
   };
 
-  const MatchCard = ({ match, side = 'left' }) => {
+  const MatchCard = ({ match, col, row }) => {
     const sim = koSimulations[match.id] || { team1_goals: 0, team2_goals: 0 };
     const winner = getWinner(match.id);
 
     const renderTeam = (teamSide, teamName) => (
-      <div className={`bracket-team ${winner === teamSide ? 'winner' : ''}`}>
+      <div className={`compact-team ${winner === teamSide ? 'winner' : ''}`} title={teamName || 'À définir'}>
         {renderFlag(teamName)}
-        <span className={/^[123VP]/.test(teamName || '') ? 'placeholder' : ''}>{teamName || 'À définir'}</span>
         <input
           type="text"
           inputMode="numeric"
           maxLength="2"
           value={teamSide === 'team1' ? sim.team1_goals : sim.team2_goals}
+          aria-label={`Score ${teamName || teamSide}`}
+          title={teamName || 'À définir'}
           onChange={(event) => onScoreChange(match.id, `${teamSide}_goals`, event.target.value)}
         />
       </div>
     );
 
     return (
-      <article className={`bracket-match bracket-${side} ${match.id === 103 ? 'third-place-match' : ''}`}>
+      <article
+        className={`compact-bracket-match ${match.id === 103 ? 'third-place-match' : ''}`}
+        style={{ gridColumn: col, gridRow: `${row} / span 2` }}
+        title={`${match.round} M${match.id} — ${match.team1Name} vs ${match.team2Name}`}
+      >
         <header>
-          <div><span>{match.round}</span>{match.start_time && <em>{formatDateTime(match.start_time)}</em>}</div>
+          <span>{match.round}</span>
+          {match.start_time && <em>{formatDateTime(match.start_time)}</em>}
           <strong>M{match.id}</strong>
         </header>
-        {renderTeam('team1', match.team1Name)}
-        {renderTeam('team2', match.team2Name)}
+        <div className="compact-teams">
+          {renderTeam('team1', match.team1Name)}
+          {renderTeam('team2', match.team2Name)}
+        </div>
       </article>
     );
   };
 
-  const RoundColumn = ({ round, side }) => (
-    <section className={`bracket-round ${side}`}>
-      <h3>{round.title}</h3>
-      <div className="bracket-round-list">
-        {round.ids.map(id => <MatchCard key={id} match={matches[id]} side={side} />)}
-      </div>
-    </section>
-  );
+  const champion = getWinner(104)
+    ? (getWinner(104) === 'team1' ? matches[104].team1Name : matches[104].team2Name)
+    : 'À définir';
 
   return (
     <section className="simulation-section knockout-section">
       <div className="simulation-section-title"><span>🏆 Phase éliminatoire</span><h2>Tableau final simulé</h2></div>
-      <div className="world-bracket-scroll">
-        <div className="world-bracket-board">
-          {LEFT_ROUNDS.map(round => <RoundColumn key={`left-${round.title}`} round={round} side="left" />)}
-
-          <section className="bracket-center">
-            <h3>Finales</h3>
-            <MatchCard match={matches[104]} side="center" />
-            <div className="champion-box">
-              <span>🏆 Vainqueur simulé</span>
-              <strong>{getWinner(104) ? (getWinner(104) === 'team1' ? matches[104].team1Name : matches[104].team2Name) : 'À définir'}</strong>
+      <div className="compact-bracket-scroll">
+        <div className="compact-bracket-board">
+          {COLUMN_TITLES.map(title => (
+            <div key={`${title.col}-${title.label}`} className="compact-round-title" style={{ gridColumn: title.col, gridRow: 1 }}>
+              {title.label}
             </div>
-            <MatchCard match={matches[103]} side="center" />
-          </section>
+          ))}
 
-          {RIGHT_ROUNDS.map(round => <RoundColumn key={`right-${round.title}`} round={round} side="right" />)}
+          {BRACKET_LAYOUT.map(item => (
+            <MatchCard key={item.id} match={matches[item.id]} col={item.col} row={item.row} />
+          ))}
+
+          <div className="compact-champion" style={{ gridColumn: 5, gridRow: '18 / span 2' }} title={champion}>
+            <span>🏆</span>
+            <strong>{champion}</strong>
+          </div>
         </div>
       </div>
+
       <style>{`
         .knockout-section { margin-top: 30px; }
-        .world-bracket-scroll { overflow-x: auto; border-radius: 22px; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 18px 55px rgba(0,0,0,.2); padding: 16px; }
-        .world-bracket-board { min-width: 1780px; display: grid; grid-template-columns: 310px 255px 230px 215px 250px 215px 230px 255px 310px; gap: 12px; align-items: start; }
-        .bracket-round, .bracket-center { min-width: 0; }
-        .bracket-round h3, .bracket-center h3 { margin: 0 0 10px; padding: 10px 12px; border-radius: 14px; color: white; background: linear-gradient(135deg, #0f766e, #d97706); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; text-align: center; }
-        .bracket-round-list { display: grid; gap: 9px; }
-        .bracket-round:nth-child(2) .bracket-round-list, .bracket-round:nth-child(8) .bracket-round-list { padding-top: 30px; gap: 18px; }
-        .bracket-round:nth-child(3) .bracket-round-list, .bracket-round:nth-child(7) .bracket-round-list { padding-top: 86px; gap: 50px; }
-        .bracket-round:nth-child(4) .bracket-round-list, .bracket-round:nth-child(6) .bracket-round-list { padding-top: 205px; }
-        .bracket-center { padding-top: 210px; display: grid; gap: 18px; }
-        .bracket-match { overflow: hidden; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; box-shadow: 0 10px 24px rgba(15,23,42,.08); }
-        .bracket-match header { display: flex; justify-content: space-between; align-items: center; padding: 7px 9px; background: #ecfdf5; color: #047857; font-size: 10px; font-weight: 950; text-transform: uppercase; }
-        .bracket-match header div { display: flex; flex-direction: column; gap: 1px; }
-        .bracket-match header em { color: #64748b; font-size: 9px; font-style: normal; font-weight: 850; }
-        .bracket-match header strong { padding: 3px 6px; border-radius: 999px; background: #fff7ed; color: #c2410c; }
-        .third-place-match header { background: #fff7ed; color: #92400e; }
-        .bracket-team { display: grid; grid-template-columns: 26px minmax(0,1fr) 34px; gap: 7px; align-items: center; padding: 8px 9px; border-top: 1px solid #e2e8f0; }
-        .bracket-team.winner { background: #dcfce7; }
-        .bracket-flag, .bracket-placeholder-ball { width: 25px; height: 25px; border-radius: 999px; object-fit: cover; display: grid; place-items: center; background: #e2e8f0; border: 2px solid white; box-shadow: 0 4px 11px rgba(15,23,42,.13); font-size: 14px; }
-        .bracket-team span:not(.bracket-placeholder-ball) { min-width: 0; overflow: visible; text-overflow: unset; white-space: normal; color: #0f172a; font-size: 12px; font-weight: 950; line-height: 1.15; }
-        .bracket-team .placeholder { color: #64748b !important; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px !important; }
-        .bracket-team input { width: 34px; height: 28px; border: 1.5px solid #cbd5e1; border-radius: 9px; text-align: center; font-size: 12px; font-weight: 950; }
-        .champion-box { padding: 14px; border-radius: 18px; color: white; background: linear-gradient(135deg, #0f766e, #d97706); text-align: center; box-shadow: 0 12px 28px rgba(15,23,42,.18); }
-        .champion-box span { display: block; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; opacity: .82; }
-        .champion-box strong { display: block; margin-top: 5px; font-size: 17px; line-height: 1.1; }
+        .compact-bracket-scroll {
+          overflow-x: auto;
+          border-radius: 22px;
+          background: rgba(255,255,255,.96);
+          border: 1px solid rgba(255,255,255,.55);
+          box-shadow: 0 18px 55px rgba(0,0,0,.2);
+          padding: 14px;
+        }
+
+        .compact-bracket-board {
+          min-width: 1010px;
+          display: grid;
+          grid-template-columns: 108px 98px 90px 84px 118px 84px 90px 98px 108px;
+          grid-template-rows: 32px repeat(25, 24px);
+          gap: 5px 8px;
+          align-items: center;
+        }
+
+        .compact-round-title {
+          align-self: stretch;
+          display: grid;
+          place-items: center;
+          border-radius: 13px;
+          color: white;
+          background: linear-gradient(135deg, #0f766e, #d97706);
+          font-size: 11px;
+          font-weight: 950;
+          text-transform: uppercase;
+          letter-spacing: .06em;
+          white-space: nowrap;
+        }
+
+        .compact-bracket-match {
+          align-self: stretch;
+          overflow: hidden;
+          border-radius: 13px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 8px 18px rgba(15,23,42,.08);
+        }
+
+        .compact-bracket-match header {
+          height: 19px;
+          display: grid;
+          grid-template-columns: auto 1fr auto;
+          gap: 3px;
+          align-items: center;
+          padding: 2px 5px;
+          background: #ecfdf5;
+          color: #047857;
+          font-size: 8px;
+          font-weight: 950;
+          text-transform: uppercase;
+        }
+
+        .compact-bracket-match header em {
+          min-width: 0;
+          color: #64748b;
+          font-size: 8px;
+          font-style: normal;
+          font-weight: 850;
+          text-align: center;
+          white-space: nowrap;
+        }
+
+        .compact-bracket-match header strong {
+          padding: 1px 4px;
+          border-radius: 999px;
+          background: #fff7ed;
+          color: #c2410c;
+          font-size: 8px;
+        }
+
+        .third-place-match header {
+          background: #fff7ed;
+          color: #92400e;
+        }
+
+        .compact-teams {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          height: calc(100% - 19px);
+        }
+
+        .compact-team {
+          display: grid;
+          grid-template-columns: 26px 30px;
+          gap: 4px;
+          align-items: center;
+          justify-content: center;
+          padding: 4px;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .compact-team + .compact-team {
+          border-left: 1px solid #e2e8f0;
+        }
+
+        .compact-team.winner {
+          background: #dcfce7;
+        }
+
+        .bracket-flag,
+        .bracket-token {
+          width: 24px;
+          height: 24px;
+          border-radius: 999px;
+          object-fit: cover;
+          display: grid;
+          place-items: center;
+          background: #e2e8f0;
+          border: 2px solid white;
+          box-shadow: 0 4px 10px rgba(15,23,42,.12);
+        }
+
+        .bracket-token {
+          width: auto;
+          min-width: 24px;
+          max-width: 30px;
+          padding: 0 3px;
+          color: #475569;
+          font-size: 8px;
+          font-weight: 950;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .compact-team input {
+          width: 29px;
+          height: 25px;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 8px;
+          text-align: center;
+          color: #0f172a;
+          background: white;
+          font-size: 12px;
+          font-weight: 950;
+        }
+
+        .compact-champion {
+          align-self: stretch;
+          display: grid;
+          align-content: center;
+          justify-items: center;
+          gap: 3px;
+          padding: 8px;
+          border-radius: 16px;
+          color: white;
+          background: linear-gradient(135deg, #0f766e, #d97706);
+          box-shadow: 0 12px 28px rgba(15,23,42,.18);
+          text-align: center;
+        }
+
+        .compact-champion span { font-size: 20px; }
+        .compact-champion strong {
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-size: 12px;
+          line-height: 1.1;
+        }
+
+        @media (max-width: 1200px) {
+          .compact-bracket-board { min-width: 940px; grid-template-columns: 98px 90px 82px 76px 110px 76px 82px 90px 98px; gap: 5px 6px; }
+          .compact-team { grid-template-columns: 24px 28px; gap: 3px; }
+          .bracket-flag, .bracket-token { width: 22px; height: 22px; min-width: 22px; }
+          .compact-team input { width: 27px; }
+        }
       `}</style>
     </section>
   );
