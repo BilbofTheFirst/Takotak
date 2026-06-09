@@ -5,16 +5,24 @@ const { hashPassword, comparePassword } = require('../utils/password');
 
 const router = express.Router();
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'alexandre_jacques@hotmail.com')
+  .split(',')
+  .map(email => email.trim().toLowerCase())
+  .filter(Boolean);
+
+const isAdminUser = (user) =>
+  Boolean(user?.is_admin) || ADMIN_EMAILS.includes((user?.email || '').trim().toLowerCase());
+
 const buildPublicUser = (user) => ({
   id: user.id,
   username: user.username,
   email: user.email,
-  is_admin: Boolean(user.is_admin)
+  is_admin: isAdminUser(user)
 });
 
 const createToken = (user) =>
   jwt.sign(
-    { id: user.id, username: user.username, is_admin: Boolean(user.is_admin) },
+    { id: user.id, username: user.username, email: user.email, is_admin: isAdminUser(user) },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
