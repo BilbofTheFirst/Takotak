@@ -7,15 +7,29 @@ function Admin() {
   const [simulationDate, setSimulationDate] = useState('2026-06-20');
   const [simulationTime, setSimulationTime] = useState('20:59');
   const [includeMockResults, setIncludeMockResults] = useState(true);
+  const [resultInputs, setResultInputs] = useState({});
+  const [savingMatchId, setSavingMatchId] = useState(null);
 
   useEffect(() => {
     loadMatches();
   }, []);
 
+  const buildResultInputs = (items) => {
+    const nextInputs = {};
+    items.forEach(match => {
+      nextInputs[match.id] = {
+        team1: match.team1_goals !== null && match.team1_goals !== undefined ? String(match.team1_goals) : '',
+        team2: match.team2_goals !== null && match.team2_goals !== undefined ? String(match.team2_goals) : ''
+      };
+    });
+    return nextInputs;
+  };
+
   const loadMatches = async () => {
     try {
       const res = await matchesService.getAll();
       setMatches(res.data);
+      setResultInputs(buildResultInputs(res.data));
     } catch (error) {
       console.error('Error loading matches:', error);
     } finally {
@@ -23,18 +37,65 @@ function Admin() {
     }
   };
 
-  const handleSaveResult = async (matchId) => {
-    const team1 = prompt('Buts de l\'équipe 1:');
-    const team2 = prompt('Buts de l\'équipe 2:');
-    if (team1 !== null && team2 !== null) {
-      try {
-        await resultsService.create(matchId, parseInt(team1, 10), parseInt(team2, 10));
-        alert('Résultat enregistré et points calculés!');
-        loadMatches();
-      } catch (error) {
-        alert(error.response?.data?.error || 'Erreur lors de la sauvegarde');
+  const updateResultInput = (matchId, team, value) => {
+    const cleanedValue = String(value).replace(/[^0-9]/g, '').slice(0, 2);
+    setResultInputs(prev => ({
+      ...prev,
+      [matchId]: {
+        ...(prev[matchId] || { team1: '', team2: '' }),
+        [team]: cleanedValue
       }
+    }));
+  };
+
+  const isValidResultInput = (score) => {
+    const n = Number(score);
+    return score !== '' && Number.isInteger(n) && n >= 0 && n <= 20;
+  };
+
+  const handleSaveResult = async (matchId) => {
+    const scores = resultInputs[matchId] || { team1: '', team2: '' };
+
+    if (!isValidResultInput(scores.team1) || !isValidResultInput(scores.team2)) {
+      alert('Encode un score valide entre 0 et 20 pour les deux équipes.');
+      return;
     }
+
+    try {
+      setSavingMatchId(matchId);
+      await resultsService.create(matchId, Number(scores.team1), Number(scores.team2));
+      await loadMatches();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Erreur lors de la sauvegarde');
+    } finally {
+      setSavingMatchId(null);
+    }
+  };
+
+  const handleClearResult = async (matchId) => {
+    if (!window.confirm('Effacer ce résultat et recalculer le classement sans ce match ?')) {
+      return;
+    }
+
+    try {
+      setSavingMatchId(matchId);
+      await resultsService.delete(matchId);
+      await loadMatches();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Erreur lors de la suppression');
+    } finally {
+      setSavingMatchId(null);
+    }
+  };
+
+  const resetResultInput = (match) => {
+    setResultInputs(prev => ({
+      ...prev,
+      [match.id]: {
+        team1: match.team1_goals !== null && match.team1_goals !== undefined ? String(match.team1_goals) : '',
+        team2: match.team2_goals !== null && match.team2_goals !== undefined ? String(match.team2_goals) : ''
+      }
+    }));
   };
 
   const simulationUrl = useMemo(() => {
@@ -71,7 +132,7 @@ function Admin() {
         <div>
           <span className="admin-eyebrow">Administration</span>
           <h1>⚙️ Panel Admin</h1>
-          <p>Ajouter les résultats des matchs et accéder rapidement aux outils de simulation.</p>
+          <p>Ajouter, modifier ou effacer les résultats officiels. Les points sont recalculés à chaque sauvegarde.</p>
         </div>
       </section>
 
@@ -119,27 +180,76 @@ function Admin() {
         <div className="admin-card-title">
           <div>
             <span>🏁 Résultats officiels</span>
-            <h2>Matchs</h2>
+            <h2>Encodage des matchs</h2>
           </div>
         </div>
 
         <div className="match-admin-list">
-          {matches.map(match => (
-            <div key={match.id} className={`match-admin-row ${match.team1_goals !== null ? 'finished' : ''}`}>
-              <div>
-                <h3>{match.team1 || 'À déterminer'} vs {match.team2 || 'À déterminer'}</h3>
-                <p>{match.start_time?.substring(0, 16).replace('T', ' ')} · Statut: <strong>{match.status}</strong></p>
-              </div>
+          {matches.map(match => {
+            const scores = resultInputs[match.id] || { team1: '', team2: '' };
+            const hasResult = match.team1_goals !== null && match.team1_goals !== undefined;
+            const isSaving = savingMatchId === match.id;
+            const scoreChanged = String(match.team1_goals ?? '') !== scores.team1 || String(match.team2_goals ?? '') !== scores.team2;
+            const hasKnownTeams = Boolean(match.team1 && match.team2);
 
-              {match.team1_goals !== null ? (
-                <div className="result-pill">{match.team1_goals} - {match.team2_goals}</div>
-              ) : (
-                <button type="button" className="button primary" onClick={() => handleSaveResult(match.id)}>
-                  Ajouter résultat
-                </button>
-              )}
-            </div>
-          ))}
+            return (
+              <div key={match.id} className={`match-admin-row ${hasResult ? 'finished' : ''}`}>
+                <div className="match-admin-info">
+                  <div className="match-admin-labels">
+                    <span>{match.groupe1 ? `Groupe ${match.groupe1}` : 'Match'}</span>
+                    <span>{match.start_time?.substring(0, 16).replace('T', ' ')}</span>
+                  </div>
+                  <h3>{match.team1 || 'À déterminer'} <em>vs</em> {match.team2 || 'À déterminer'}</h3>
+                  <p>Statut : <strong>{hasResult ? 'résultat encodé' : match.status}</strong></p>
+                </div>
+
+                <div className="result-editor">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength="2"
+                    value={scores.team1}
+                    disabled={!hasKnownTeams || isSaving}
+                    aria-label={`Score ${match.team1 || 'équipe 1'}`}
+                    onChange={(event) => updateResultInput(match.id, 'team1', event.target.value)}
+                  />
+                  <span>-</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength="2"
+                    value={scores.team2}
+                    disabled={!hasKnownTeams || isSaving}
+                    aria-label={`Score ${match.team2 || 'équipe 2'}`}
+                    onChange={(event) => updateResultInput(match.id, 'team2', event.target.value)}
+                  />
+                </div>
+
+                <div className="result-actions">
+                  <button
+                    type="button"
+                    className="button primary"
+                    disabled={!hasKnownTeams || isSaving || !isValidResultInput(scores.team1) || !isValidResultInput(scores.team2) || (hasResult && !scoreChanged)}
+                    onClick={() => handleSaveResult(match.id)}
+                  >
+                    {isSaving ? 'Sauvegarde...' : hasResult ? 'Modifier' : 'Sauver'}
+                  </button>
+
+                  {hasResult && scoreChanged && (
+                    <button type="button" className="button secondary" disabled={isSaving} onClick={() => resetResultInput(match)}>
+                      Annuler
+                    </button>
+                  )}
+
+                  {hasResult && (
+                    <button type="button" className="button danger" disabled={isSaving} onClick={() => handleClearResult(match.id)}>
+                      Effacer
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -272,10 +382,14 @@ function Admin() {
           font-weight: 800;
         }
 
-        .admin-actions {
+        .admin-actions,
+        .result-actions {
           display: flex;
           flex-wrap: wrap;
-          gap: 10px;
+          gap: 8px;
+        }
+
+        .admin-actions {
           margin-top: 13px;
         }
 
@@ -287,6 +401,11 @@ function Admin() {
           font-weight: 900;
         }
 
+        .button:disabled {
+          cursor: not-allowed;
+          opacity: 0.5;
+        }
+
         .button.primary {
           color: white;
           background: linear-gradient(135deg, #0f766e, #d97706);
@@ -296,6 +415,11 @@ function Admin() {
         .button.secondary {
           color: #334155;
           background: #e2e8f0;
+        }
+
+        .button.danger {
+          color: white;
+          background: linear-gradient(135deg, #ef4444, #b91c1c);
         }
 
         .admin-help {
@@ -311,9 +435,9 @@ function Admin() {
         }
 
         .match-admin-row {
-          display: flex;
+          display: grid;
+          grid-template-columns: minmax(280px, 1fr) 130px auto;
           align-items: center;
-          justify-content: space-between;
           gap: 14px;
           padding: 12px;
           border-radius: 16px;
@@ -326,9 +450,36 @@ function Admin() {
           border-color: #bbf7d0;
         }
 
+        .match-admin-info {
+          min-width: 0;
+        }
+
+        .match-admin-labels {
+          display: flex;
+          gap: 7px;
+          flex-wrap: wrap;
+          margin-bottom: 5px;
+        }
+
+        .match-admin-labels span {
+          padding: 3px 7px;
+          border-radius: 999px;
+          background: #e2e8f0;
+          color: #475569;
+          font-size: 10px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+
         .match-admin-row h3 {
           margin: 0;
           font-size: 16px;
+        }
+
+        .match-admin-row h3 em {
+          color: #94a3b8;
+          font-style: normal;
+          font-weight: 800;
         }
 
         .match-admin-row p {
@@ -338,16 +489,50 @@ function Admin() {
           font-weight: 700;
         }
 
-        .result-pill {
-          min-width: 72px;
-          padding: 7px 12px;
-          border-radius: 999px;
-          color: white;
-          background: #0f172a;
+        .result-editor {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+        }
+
+        .result-editor input {
+          width: 48px;
+          height: 38px;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 12px;
           text-align: center;
-          font-size: 18px;
+          color: #0f172a;
+          background: white;
+          font-size: 16px;
           font-weight: 950;
-          font-variant-numeric: tabular-nums;
+          outline: none;
+          box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+        }
+
+        .result-editor input:focus {
+          border-color: #d97706;
+        }
+
+        .result-editor input:disabled {
+          background: #f1f5f9;
+          color: #94a3b8;
+        }
+
+        .result-editor span {
+          color: #94a3b8;
+          font-weight: 950;
+        }
+
+        @media (max-width: 860px) {
+          .match-admin-row {
+            grid-template-columns: 1fr;
+            align-items: flex-start;
+          }
+
+          .result-editor {
+            justify-content: flex-start;
+          }
         }
 
         @media (max-width: 760px) {
@@ -355,7 +540,6 @@ function Admin() {
             grid-template-columns: 1fr;
           }
 
-          .match-admin-row,
           .admin-card-title {
             align-items: flex-start;
             flex-direction: column;
