@@ -2,7 +2,11 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken, authenticateAdmin } = require('../middleware/auth');
 const { calculatePointsDetailed } = require('../utils/scoring');
-const { propagateKnockoutTeams } = require('../utils/knockoutPropagation');
+const {
+  getThirdPlaceSnapshot,
+  propagateKnockoutTeams,
+  saveManualThirdPlaceOrder
+} = require('../utils/knockoutPropagation');
 
 const router = express.Router();
 let resultExtraColumnsReady = false;
@@ -150,6 +154,43 @@ router.post('/', authenticateAdmin, async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Create result error:', error);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
+  }
+});
+
+router.get('/third-places', authenticateAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const snapshot = await getThirdPlaceSnapshot(client);
+    res.json(snapshot);
+  } catch (error) {
+    console.error('Get third places error:', error);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/third-places/order', authenticateAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { group_codes } = req.body;
+    if (!Array.isArray(group_codes) || group_codes.some(code => !/^[A-L]$/.test(String(code)))) {
+      return res.status(400).json({ error: 'Valid group_codes array required' });
+    }
+
+    await client.query('BEGIN');
+    await saveManualThirdPlaceOrder(client, group_codes.map(code => String(code)));
+    await propagateKnockoutTeams(client);
+    await client.query('COMMIT');
+
+    const snapshot = await getThirdPlaceSnapshot(client);
+    res.json(snapshot);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Save third places order error:', error);
     res.status(500).json({ error: 'Server error' });
   } finally {
     client.release();
