@@ -1,0 +1,201 @@
+@media (max-width: 780px) {
+  .simulation-page {
+    padding: 18px 10px 36px !important;
+  }
+
+  .simulation-hero {
+    gap: 14px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .simulation-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+
+  .simulation-summary div,
+  .simulation-summary button {
+    padding: 10px !important;
+    border-radius: 13px !important;
+  }
+
+  .simulation-summary button {
+    grid-column: 1 / -1 !important;
+  }
+
+  .groups-grid {
+    gap: 14px !important;
+  }
+
+  .group-card {
+    border-radius: 16px !important;
+  }
+
+  .group-card-header {
+    padding: 11px 13px !important;
+  }
+
+  .group-matches {
+    padding: 6px !important;
+  }
+
+  .simulation-match-line {
+    grid-template-columns: minmax(0, 1fr) 20px 32px 8px 32px 20px minmax(0, 1fr) !important;
+    gap: 4px 4px !important;
+    padding: 7px 0 !important;
+  }
+
+  .simulation-match-line .match-schedule {
+    grid-column: 1 / 3 !important;
+    grid-row: 1 !important;
+    justify-self: start !important;
+    font-size: 9px !important;
+  }
+
+  .simulation-match-line .prediction-pill {
+    grid-column: 3 / 6 !important;
+    grid-row: 1 !important;
+    justify-self: center !important;
+    padding: 3px 5px !important;
+    font-size: 8px !important;
+    max-width: 86px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .simulation-match-line .sim-points {
+    grid-column: 6 / 8 !important;
+    grid-row: 1 !important;
+    justify-self: end !important;
+    min-width: 34px !important;
+    padding: 3px 5px !important;
+    font-size: 8px !important;
+  }
+
+  .simulation-match-line .match-team-left {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    justify-self: stretch !important;
+    text-align: right !important;
+  }
+
+  .simulation-match-line > .sim-flag:nth-child(3) {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+  }
+
+  .simulation-match-line > input:nth-child(4) {
+    grid-column: 3 !important;
+    grid-row: 2 !important;
+  }
+
+  .simulation-match-line .score-separator {
+    grid-column: 4 !important;
+    grid-row: 2 !important;
+  }
+
+  .simulation-match-line > input:nth-child(6) {
+    grid-column: 5 !important;
+    grid-row: 2 !important;
+  }
+
+  .simulation-match-line > .sim-flag:nth-child(7) {
+    grid-column: 6 !important;
+    grid-row: 2 !important;
+  }
+
+  .simulation-match-line .match-team-right {
+    grid-column: 7 !important;
+    grid-row: 2 !important;
+    justify-self: stretch !important;
+    text-align: left !important;
+  }
+
+  .simulation-match-line .match-team-name {
+    white-space: normal !important;
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    font-size: 11px !important;
+    line-height: 1.08 !important;
+  }
+
+  .simulation-match-line .sim-flag {
+    width: 20px !important;
+    height: 20px !important;
+    border-width: 1px !important;
+  }
+
+  .simulation-match-line input {
+    width: 32px !important;
+    height: 30px !important;
+    border-radius: 9px !important;
+    font-size: 13px !important;
+  }
+
+  .group-standings {
+    padding: 6px !important;
+  }
+
+  .standing-header,
+  .standing-row {
+    grid-template-columns: minmax(0, 1fr) 24px 24px 24px 24px 34px 30px !important;
+    gap: 2px !important;
+  }
+
+  .standing-header span:nth-child(6),
+  .standing-header span:nth-child(7),
+  .standing-row > :nth-child(6),
+  .standing-row > :nth-child(7) {
+    display: none !important;
+  }
+
+  .standing-header {
+    padding: 4px 3px 6px !important;
+    font-size: 8px !important;
+  }
+
+  .standing-row {
+    padding: 6px 3px !important;
+    font-size: 10px !important;
+  }
+
+  .team-standing-name {
+    gap: 4px !important;
+  }
+
+  .team-standing-name em,
+  .team-standing-name img {
+    width: 18px !important;
+    height: 18px !important;
+    font-size: 9px !important;
+  }
+
+  .team-standing-name strong {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .standing-header,
+  .standing-row {
+    grid-template-columns: minmax(0, 1fr) 22px 22px 22px 22px 32px 28px !important;
+  }
+
+  .simulation-match-line {
+    grid-template-columns: minmax(0, 1fr) 18px 30px 8px 30px 18px minmax(0, 1fr) !important;
+  }
+
+  .simulation-match-line .sim-flag {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .simulation-match-line input {
+    width: 30px !important;
+  }
+}
