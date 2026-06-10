@@ -1,0 +1,90 @@
+.takotak-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: -0.055em;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 1000;
+  font-style: italic;
+}
+
+.takotak-logo-text {
+  display: inline-block;
+}
+
+.takotak-logo-left {
+  color: #14b8a6;
+  text-shadow: 0 1px 0 rgba(255,255,255,.18);
+}
+
+.takotak-logo-right {
+  color: #f97316;
+  text-shadow: 0 1px 0 rgba(255,255,255,.16);
+}
+
+.takotak-logo-ball {
+  display: inline-grid;
+  place-items: center;
+  margin: 0 .03em;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,.96), rgba(255,255,255,.78) 45%, rgba(15,23,42,.14));
+  box-shadow:
+    0 0 0 .08em rgba(255,255,255,.75),
+    0 0 0 .14em rgba(20,184,166,.30),
+    .08em .1em .35em rgba(0,0,0,.18);
+  transform: translateY(.02em) rotate(-8deg);
+}
+
+.takotak-logo-medium {
+  font-size: 26px;
+}
+
+.takotak-logo-medium .takotak-logo-ball {
+  width: 1.02em;
+  height: 1.02em;
+  font-size: .78em;
+}
+
+.takotak-logo-large {
+  font-size: clamp(42px, 8vw, 74px);
+  gap: .02em;
+}
+
+.takotak-logo-large .takotak-logo-ball {
+  width: 1.05em;
+  height: 1.05em;
+  font-size: .78em;
+  box-shadow:
+    0 0 0 .07em rgba(255,255,255,.82),
+    0 0 0 .13em rgba(20,184,166,.32),
+    .08em .12em .4em rgba(0,0,0,.22),
+    -.12em 0 .42em rgba(20,184,166,.24),
+    .12em 0 .42em rgba(249,115,22,.22);
+}
+
+.takotak-logo-small {
+  font-size: 22px;
+}
+
+.takotak-logo-small .takotak-logo-ball {
+  width: 1em;
+  height: 1em;
+  font-size: .76em;
+}
+
+.takotak-logo-badge {
+  padding: .2em .42em .24em;
+  border-radius: 999px;
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+@media (max-width: 560px) {
+  .takotak-logo-medium { font-size: 22px; }
+  .takotak-logo-large { font-size: 44px; }
+}
