@@ -40,9 +40,11 @@ function BonusPredictions() {
           </div>
 
           <div className="bonus-hero-summary">
-            <div><strong>12</strong><span>groupes</span></div>
-            <div><strong>15</strong><span>pts champion</span></div>
-            <div><strong>105</strong><span>pts max</span></div>
+            <div className="bonus-summary-card">
+              <div><strong>12</strong><span>groupes</span></div>
+              <div><strong>15</strong><span>pts champion</span></div>
+              <div><strong>105</strong><span>pts max</span></div>
+            </div>
           </div>
         </section>
 
@@ -109,29 +111,42 @@ const styles = `
   }
 
   .bonus-hero-summary {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(82px,1fr));
-    gap: 8px;
     min-width: 340px;
+    display: flex;
+    align-items: stretch;
   }
 
-  .bonus-hero-summary div {
+  .bonus-summary-card {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(70px, 1fr));
+    gap: 0;
     background: rgba(255,255,255,.1);
     border: 1px solid rgba(255,255,255,.16);
-    border-radius: 14px;
+    border-radius: 16px;
     padding: 12px;
     backdrop-filter: blur(10px);
     box-shadow: 0 16px 38px rgba(0,0,0,.16);
   }
 
-  .bonus-hero-summary strong {
+  .bonus-summary-card div {
+    min-width: 0;
+    padding: 2px 10px;
+    text-align: center;
+  }
+
+  .bonus-summary-card div + div {
+    border-left: 1px solid rgba(255,255,255,.14);
+  }
+
+  .bonus-summary-card strong {
     display: block;
     font-size: 25px;
     color: #fde68a;
     line-height: 1;
   }
 
-  .bonus-hero-summary span {
+  .bonus-summary-card span {
     display: block;
     margin-top: 6px;
     color: rgba(255,255,255,.7);
@@ -139,6 +154,7 @@ const styles = `
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: .05em;
+    white-space: nowrap;
   }
 
   @media (max-width: 920px) {
@@ -148,7 +164,10 @@ const styles = `
 
   @media (max-width: 560px) {
     .bonus-page { padding: 18px 10px 36px; }
-    .bonus-hero-summary { grid-template-columns: 1fr; }
+    .bonus-summary-card { padding: 10px 8px; }
+    .bonus-summary-card div { padding: 2px 6px; }
+    .bonus-summary-card strong { font-size: 22px; }
+    .bonus-summary-card span { font-size: 9px; letter-spacing: .03em; }
   }
 `;
 
