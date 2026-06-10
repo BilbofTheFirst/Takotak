@@ -26,7 +26,8 @@ function UserStats() {
   const statCards = [
     { label: 'Points totaux', value: stats.total_points || 0, icon: '🏆' },
     { label: 'Classement', value: stats.rank ? `#${stats.rank}` : '-', icon: '🥇' },
-    { label: 'Matchs scorés', value: stats.matches_played || 0, icon: '⚽' },
+    { label: 'Points matchs', value: stats.match_points || 0, icon: '⚽' },
+    { label: 'Points bonus', value: stats.bonus_points || 0, icon: '🎁' },
     { label: 'Moyenne / match', value: stats.avg_points_per_match || 0, icon: '📈' }
   ];
 
@@ -36,12 +37,12 @@ function UserStats() {
         <div className="section-title">
           <div>
             <h1>📊 Mes statistiques</h1>
-            <p>Suivi des points calculés après encodage des résultats officiels.</p>
+            <p>Suivi des points calculés après encodage des résultats officiels, bonus inclus.</p>
           </div>
           <button className="button" onClick={loadStats}>Rafraîchir</button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '15px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '15px', marginBottom: '24px' }}>
           {statCards.map(card => (
             <div className="card" key={card.label}>
               <div style={{ fontSize: 26 }}>{card.icon}</div>
@@ -66,6 +67,10 @@ function UserStats() {
               <tr>
                 <td>→ Bons vainqueurs / bons nuls simples</td>
                 <td><strong>{stats.correct_winners || 0}</strong> × 1 pt</td>
+              </tr>
+              <tr>
+                <td>🎁 Bonus compétition</td>
+                <td><strong>{stats.bonus_points || 0}</strong> pts</td>
               </tr>
               <tr>
                 <td>✗ Mauvais pronostics</td>
