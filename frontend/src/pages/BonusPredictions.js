@@ -2,10 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { matchesService } from '../services/api';
 import BonusPredictionsPanel from '../components/BonusPredictionsPanel';
 
-const PRIMARY = '#0f766e';
-const SECONDARY = '#d97706';
-const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
-
 function BonusPredictions() {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,8 +61,8 @@ const styles = `
   .bonus-page {
     min-height: 100vh;
     background:
-      radial-gradient(circle at top left, rgba(217,119,6,.16), transparent 32%),
-      radial-gradient(circle at top right, rgba(15,118,110,.2), transparent 34%),
+      radial-gradient(circle at top left, rgba(217,119,6,.15), transparent 32%),
+      radial-gradient(circle at top right, rgba(15,118,110,.18), transparent 32%),
       linear-gradient(135deg, #071b16 0%, #0f172a 45%, #111827 100%);
     padding: 24px 18px 42px;
     color: #0f172a;
@@ -75,6 +71,7 @@ const styles = `
   .bonus-page-container {
     width: min(1220px, 100%);
     margin: 0 auto;
+    scroll-margin-top: 20px;
   }
 
   .bonus-hero {
@@ -93,7 +90,7 @@ const styles = `
     background: rgba(255,255,255,.12);
     border: 1px solid rgba(255,255,255,.18);
     font-size: 11px;
-    font-weight: 850;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: .08em;
     color: #fde68a;
@@ -110,7 +107,7 @@ const styles = `
   .bonus-hero p {
     margin: 0;
     max-width: 690px;
-    color: rgba(255,255,255,.78);
+    color: rgba(255,255,255,.76);
     font-size: 14px;
     line-height: 1.5;
   }
@@ -143,7 +140,7 @@ const styles = `
     margin-top: 6px;
     color: rgba(255,255,255,.7);
     font-size: 10px;
-    font-weight: 850;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: .05em;
   }
