@@ -15,36 +15,57 @@ import UserAvatar from './components/UserAvatar';
 import './nav-status.css';
 
 function Navigation({ user, onLogout }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   if (!user) return null;
 
+  const closeMenu = () => setMenuOpen(false);
+
   return (
-    <nav className="top-nav">
-      <div className="brand">
-        <Link to="/predictions">⚽ TakoTak</Link>
+    <nav className={`top-nav ${menuOpen ? 'mobile-open' : ''}`}>
+      <div className="nav-mobile-header">
+        <div className="brand">
+          <Link to="/predictions" onClick={closeMenu}>⚽ TakoTak</Link>
+        </div>
+
+        <button
+          type="button"
+          className="mobile-menu-toggle"
+          aria-expanded={menuOpen}
+          aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+          onClick={() => setMenuOpen(prev => !prev)}
+        >
+          {menuOpen ? '✕ Fermer' : '☰ Menu'}
+        </button>
       </div>
 
       <div className="nav-links">
-        <Link to="/predictions">🎯 Pronostics</Link>
-        <Link to="/bonus" className="nav-bonus-link">🎁 Bonus</Link>
+        <Link to="/predictions" onClick={closeMenu}>🎯 Pronostics</Link>
+        <Link to="/bonus" className="nav-bonus-link" onClick={closeMenu}>🎁 Bonus</Link>
         {user?.is_admin ? (
-          <Link to="/rankings">🏆 Classement</Link>
+          <Link to="/rankings" onClick={closeMenu}>🏆 Classement</Link>
         ) : (
           <span className="nav-rankings-locked" title="Classement en construction">
             🏆 Classement <small>en construction</small>
           </span>
         )}
-        <Link to="/stats">📊 Mes Stats</Link>
-        <Link to="/simulation">🎮 Simulation</Link>
-        <Link to="/rules">📋 Règles</Link>
-        {user?.is_admin && <Link to="/admin">⚙️ Admin</Link>}
+        <Link to="/stats" onClick={closeMenu}>📊 Mes Stats</Link>
+        <Link to="/simulation" onClick={closeMenu}>🎮 Simulation</Link>
+        <Link to="/rules" onClick={closeMenu}>📋 Règles</Link>
+        {user?.is_admin && <Link to="/admin" onClick={closeMenu}>⚙️ Admin</Link>}
       </div>
 
       <div className="nav-user">
-        <Link to="/profile" className="nav-profile-link" title="Mon profil">
+        <Link to="/profile" className="nav-profile-link" title="Mon profil" onClick={closeMenu}>
           <UserAvatar user={user} size={32} />
           <span>{user.username}</span>
         </Link>
-        <button onClick={onLogout} className="button button-danger button-small">
+        <button
+          onClick={() => {
+            closeMenu();
+            onLogout();
+          }}
+          className="button button-danger button-small"
+        >
           Déconnexion
         </button>
       </div>
