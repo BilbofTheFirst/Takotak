@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { resultsService } from '../services/api';
+import PageLoader from '../components/PageLoader';
 
 function Rankings() {
   const [rankings, setRankings] = useState([]);
@@ -20,7 +21,7 @@ function Rankings() {
     }
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '20px' }}>Chargement...</div>;
+  if (loading) return <PageLoader title="Chargement du classement..." icon="🏆" subtitle="Calcul des points et des bonus" />;
 
   return (
     <div style={{ padding: '20px', maxWidth: '760px', margin: '0 auto' }}>
