@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useCallback, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import UserAvatar from './components/UserAvatar';
+import TakotakLogo from './components/TakotakLogo';
 import './nav-status.css';
 import './mobile-responsive.css';
 import './simulation-responsive.css';
@@ -58,7 +59,9 @@ function Navigation({ user, onLogout }) {
     <nav className={`top-nav ${menuOpen ? 'mobile-open' : ''}`}>
       <div className="nav-mobile-header">
         <div className="brand">
-          <Link to="/predictions" onClick={closeMenu}>⚽ TakoTak</Link>
+          <Link to="/predictions" onClick={closeMenu} aria-label="TakOtak">
+            <TakotakLogo size="small" withBadge />
+          </Link>
         </div>
 
         <button
