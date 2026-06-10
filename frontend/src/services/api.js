@@ -64,7 +64,8 @@ export const matchesService = {
 export const predictionsService = {
   create: (match_id, team1_goals, team2_goals) =>
     api.post('/predictions', { match_id, team1_goals, team2_goals }),
-  getAll: () => api.get('/predictions')
+  getAll: () => api.get('/predictions'),
+  getPublicForMatch: (match_id) => api.get(`/predictions/match/${match_id}/public`)
 };
 
 export const bonusPredictionsService = {
