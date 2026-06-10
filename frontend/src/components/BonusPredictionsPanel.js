@@ -202,42 +202,46 @@ function BonusPredictionsPanel({ matches }) {
             <strong>45 pts</strong>
           </div>
 
-          <label className="final-pick-row">
-            <span className="pick-points">15</span>
-            <span className="bonus-flag">{renderSelectedFlag(bonus.champion)}</span>
-            <div>
-              <span className="field-label">Champion du monde</span>
-              <select disabled={locked} value={bonus.champion} onChange={(event) => updateField('champion', event.target.value)}>
-                {renderTeamOption('')}
-                {allTeams.map(renderTeamOption)}
-              </select>
-            </div>
-          </label>
-
-          <label className="final-pick-row">
-            <span className="pick-points">10</span>
-            <span className="bonus-flag">{renderSelectedFlag(bonus.runner_up)}</span>
-            <div>
-              <span className="field-label">Finaliste perdant</span>
-              <select disabled={locked} value={bonus.runner_up} onChange={(event) => updateField('runner_up', event.target.value)}>
-                {renderTeamOption('')}
-                {allTeams.map(renderTeamOption)}
-              </select>
-            </div>
-          </label>
-
-          <div className="semifinalists-box">
-            <div className="semifinalists-title"><span>4 × 5 pts</span><strong>Demi-finalistes</strong></div>
-            {bonus.semifinalists.map((team, index) => (
-              <label className="semifinalist-row" key={`semi-${index}`}>
-                <span className="pick-points">5</span>
-                <span className="bonus-flag">{renderSelectedFlag(team)}</span>
-                <select disabled={locked} value={team} onChange={(event) => updateSemifinalist(index, event.target.value)}>
+          <div className="final-picks-grid">
+            <label className="final-pick-row">
+              <span className="pick-points">15</span>
+              <span className="bonus-flag">{renderSelectedFlag(bonus.champion)}</span>
+              <div>
+                <span className="field-label">Champion du monde</span>
+                <select disabled={locked} value={bonus.champion} onChange={(event) => updateField('champion', event.target.value)}>
                   {renderTeamOption('')}
                   {allTeams.map(renderTeamOption)}
                 </select>
-              </label>
-            ))}
+              </div>
+            </label>
+
+            <label className="final-pick-row">
+              <span className="pick-points">10</span>
+              <span className="bonus-flag">{renderSelectedFlag(bonus.runner_up)}</span>
+              <div>
+                <span className="field-label">Finaliste perdant</span>
+                <select disabled={locked} value={bonus.runner_up} onChange={(event) => updateField('runner_up', event.target.value)}>
+                  {renderTeamOption('')}
+                  {allTeams.map(renderTeamOption)}
+                </select>
+              </div>
+            </label>
+          </div>
+
+          <div className="semifinalists-box">
+            <div className="semifinalists-title"><span>4 × 5 pts</span><strong>Demi-finalistes</strong></div>
+            <div className="semifinalists-grid">
+              {bonus.semifinalists.map((team, index) => (
+                <label className="semifinalist-row" key={`semi-${index}`}>
+                  <span className="pick-points">5</span>
+                  <span className="bonus-flag">{renderSelectedFlag(team)}</span>
+                  <select disabled={locked} value={team} onChange={(event) => updateSemifinalist(index, event.target.value)}>
+                    {renderTeamOption('')}
+                    {allTeams.map(renderTeamOption)}
+                  </select>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -267,7 +271,7 @@ function BonusPredictionsPanel({ matches }) {
         .bonus-progress-row strong { display: block; color: #d97706; font-size: 18px; line-height: 1; }
         .bonus-progress-row span { display: block; margin-top: 5px; color: #64748b; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
         .bonus-locked-banner { margin-bottom: 14px; padding: 10px 12px; border-radius: 14px; color: #713f12; background: #fef3c7; border: 1px solid rgba(251,191,36,.5); font-size: 12px; font-weight: 900; }
-        .bonus-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(320px, .55fr); gap: 14px; }
+        .bonus-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
         .bonus-card { border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 18px; padding: 14px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.55); }
         .bonus-card-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
         .bonus-card-title span, .field-label, .semifinalists-title span { display: block; color: #0f766e; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
@@ -281,14 +285,16 @@ function BonusPredictionsPanel({ matches }) {
         .bonus-panel select { width: 100%; min-width: 0; border: 1.5px solid #cbd5e1; border-radius: 11px; background: white; color: #0f172a; padding: 8px 9px; font-size: 13px; font-weight: 850; outline: none; box-shadow: 0 5px 12px rgba(15,23,42,.05); }
         .bonus-panel select:focus { border-color: #d97706; box-shadow: 0 8px 18px rgba(217,119,6,.13); }
         .bonus-panel select:disabled { color: #94a3b8; background: #f1f5f9; }
-        .bonus-final-card { display: grid; gap: 12px; align-content: start; }
+        .bonus-final-card { display: grid; gap: 14px; align-content: start; }
+        .final-picks-grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 10px; }
         .final-pick-row { display: grid; grid-template-columns: 32px 34px minmax(0, 1fr); gap: 8px; align-items: center; }
         .pick-points { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: #fff7ed; color: #c2410c; font-size: 13px; font-weight: 950; }
-        .semifinalists-box { display: grid; gap: 8px; padding-top: 4px; border-top: 1px solid #e2e8f0; }
+        .semifinalists-box { display: grid; gap: 8px; padding-top: 6px; border-top: 1px solid #e2e8f0; }
+        .semifinalists-grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 9px; }
         .semifinalists-title { display: flex; justify-content: space-between; align-items: center; }
         .semifinalists-title strong { color: #0f172a; font-size: 14px; }
         .semifinalist-row { display: grid; grid-template-columns: 32px 34px minmax(0, 1fr); gap: 8px; align-items: center; }
-        @media (max-width: 940px) { .bonus-panel-header, .bonus-grid { grid-template-columns: 1fr; } .bonus-actions-card { grid-template-columns: 1fr; } }
+        @media (max-width: 940px) { .bonus-panel-header { grid-template-columns: 1fr; } .bonus-actions-card { grid-template-columns: 1fr; } .final-picks-grid, .semifinalists-grid { grid-template-columns: 1fr; } }
         @media (max-width: 640px) { .bonus-progress-row { grid-template-columns: 1fr; } .bonus-group-grid { grid-template-columns: 1fr; } .bonus-panel { padding: 12px; } }
       `}</style>
     </section>
