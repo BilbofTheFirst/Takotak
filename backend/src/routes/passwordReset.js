@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const express = require('express');
+const nodemailer = require('nodemailer');
 const pool = require('../db/pool');
 const { hashPassword } = require('../utils/password');
 
@@ -42,53 +43,45 @@ const hashToken = (token) => crypto
 const getFrontendUrl = () =>
   (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
 
-const getSender = () => ({
-  email: process.env.PASSWORD_RESET_FROM_EMAIL || process.env.BREVO_FROM_EMAIL,
-  name: process.env.PASSWORD_RESET_FROM_NAME || process.env.BREVO_FROM_NAME || 'TakoTak'
-});
+const getMailFrom = () =>
+  process.env.MAIL_FROM || `TakoTak <${process.env.SMTP_USER || ''}>`;
 
 const sendPasswordResetEmail = async ({ to, resetUrl }) => {
-  if (!process.env.BREVO_API_KEY) {
-    console.warn('Password reset email not sent: missing BREVO_API_KEY');
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+
+  if (!smtpHost || !smtpUser || !smtpPass) {
+    console.warn('Password reset email not sent: missing SMTP_HOST, SMTP_USER or SMTP_PASS');
     if (process.env.PASSWORD_RESET_DEBUG_LOG === 'true') {
       console.warn(`Password reset debug link for ${to}: ${resetUrl}`);
     }
     return false;
   }
 
-  const sender = getSender();
-  if (!sender.email) {
-    console.warn('Password reset email not sent: missing PASSWORD_RESET_FROM_EMAIL or BREVO_FROM_EMAIL');
-    return false;
-  }
-
-  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      accept: 'application/json',
-      'api-key': process.env.BREVO_API_KEY,
-      'content-type': 'application/json'
-    },
-    body: JSON.stringify({
-      sender,
-      to: [{ email: to }],
-      subject: 'Réinitialisation de ton mot de passe TakoTak',
-      htmlContent: `
-        <p>Bonjour,</p>
-        <p>Tu as demandé à réinitialiser ton mot de passe TakoTak.</p>
-        <p><a href="${resetUrl}">Clique ici pour choisir un nouveau mot de passe</a>.</p>
-        <p>Ce lien expire dans ${RESET_TOKEN_TTL_MINUTES} minutes.</p>
-        <p>Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.</p>
-      `,
-      textContent: `Réinitialisation de ton mot de passe TakoTak\n\nOuvre ce lien pour choisir un nouveau mot de passe : ${resetUrl}\n\nCe lien expire dans ${RESET_TOKEN_TTL_MINUTES} minutes.\n\nSi tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.`
-    })
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: String(process.env.SMTP_SECURE || 'true') === 'true',
+    auth: {
+      user: smtpUser,
+      pass: smtpPass
+    }
   });
 
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => '');
-    console.error('Brevo password reset email error:', response.status, errorBody);
-    return false;
-  }
+  await transporter.sendMail({
+    from: getMailFrom(),
+    to,
+    subject: 'Réinitialisation de ton mot de passe TakoTak',
+    html: `
+      <p>Bonjour,</p>
+      <p>Tu as demandé à réinitialiser ton mot de passe TakoTak.</p>
+      <p><a href="${resetUrl}">Clique ici pour choisir un nouveau mot de passe</a>.</p>
+      <p>Ce lien expire dans ${RESET_TOKEN_TTL_MINUTES} minutes.</p>
+      <p>Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.</p>
+    `,
+    text: `Réinitialisation de ton mot de passe TakoTak\n\nOuvre ce lien pour choisir un nouveau mot de passe : ${resetUrl}\n\nCe lien expire dans ${RESET_TOKEN_TTL_MINUTES} minutes.\n\nSi tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.`
+  });
 
   return true;
 };
