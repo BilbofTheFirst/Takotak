@@ -1,12 +1,20 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
+const { calculatePointsDetailed } = require('../utils/scoring');
 
 const router = express.Router();
 
 const isValidScore = (value) => {
   const n = Number(value);
   return Number.isInteger(n) && n >= 0 && n <= 99;
+};
+
+const buildAvatarUrl = (user) => {
+  if (!user?.avatar_data) return null;
+  const rawVersion = user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : Date.now();
+  const version = Number.isNaN(rawVersion) ? Date.now() : rawVersion;
+  return `/profile/users/${user.id}/avatar?v=${version}`;
 };
 
 // Create/Update prediction
@@ -80,6 +88,104 @@ router.post('/', authenticateToken, async (req, res) => {
     });
   } finally {
     client.release();
+  }
+});
+
+// Get public predictions for a started/finished match
+router.get('/match/:matchId/public', authenticateToken, async (req, res) => {
+  try {
+    const matchId = Number(req.params.matchId);
+    if (!Number.isInteger(matchId)) {
+      return res.status(400).json({ error: 'Valid match id required' });
+    }
+
+    const matchResult = await pool.query(
+      `SELECT
+        m.id,
+        m.start_time,
+        m.status,
+        m.team1_id,
+        m.team2_id,
+        t1.name as team1,
+        t2.name as team2,
+        r.team1_goals,
+        r.team2_goals,
+        CASE
+          WHEN (m.start_time AT TIME ZONE 'Europe/Brussels') <= NOW()
+            OR COALESCE(m.status, 'scheduled') = 'finished'
+          THEN true
+          ELSE false
+        END AS is_visible,
+        CASE
+          WHEN r.match_id IS NOT NULL
+            OR COALESCE(m.status, 'scheduled') = 'finished'
+          THEN true
+          ELSE false
+        END AS has_result
+       FROM matches m
+       LEFT JOIN teams t1 ON m.team1_id = t1.id
+       LEFT JOIN teams t2 ON m.team2_id = t2.id
+       LEFT JOIN results r ON r.match_id = m.id
+       WHERE m.id = $1`,
+      [matchId]
+    );
+
+    if (matchResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+
+    const match = matchResult.rows[0];
+    if (!match.is_visible) {
+      return res.status(403).json({ error: 'Predictions are hidden until kickoff' });
+    }
+
+    const predictionsResult = await pool.query(
+      `SELECT
+        p.user_id,
+        p.team1_goals,
+        p.team2_goals,
+        u.username,
+        u.avatar_data,
+        u.avatar_updated_at
+       FROM predictions p
+       JOIN users u ON u.id = p.user_id
+       WHERE p.match_id = $1
+       ORDER BY u.username ASC`,
+      [matchId]
+    );
+
+    const hasResult = Boolean(match.has_result && match.team1_goals !== null && match.team2_goals !== null);
+    const predictions = predictionsResult.rows.map(row => {
+      const scoring = hasResult
+        ? calculatePointsDetailed(row, { team1_goals: match.team1_goals, team2_goals: match.team2_goals })
+        : null;
+
+      return {
+        user_id: Number(row.user_id),
+        username: row.username,
+        avatar_url: buildAvatarUrl(row),
+        team1_goals: Number(row.team1_goals),
+        team2_goals: Number(row.team2_goals),
+        points: scoring?.points ?? null,
+        category: scoring?.category ?? null,
+        label: scoring?.label ?? null
+      };
+    });
+
+    res.json({
+      match: {
+        id: Number(match.id),
+        team1: match.team1,
+        team2: match.team2,
+        team1_goals: hasResult ? Number(match.team1_goals) : null,
+        team2_goals: hasResult ? Number(match.team2_goals) : null,
+        has_result: hasResult
+      },
+      predictions
+    });
+  } catch (error) {
+    console.error('Get public match predictions error:', error);
+    res.status(500).json({ error: 'Server error', detail: error.message, code: error.code });
   }
 });
 
