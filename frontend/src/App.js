@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-do
 import UserAvatar from './components/UserAvatar';
 import './nav-status.css';
 import './mobile-responsive.css';
+import './simulation-responsive.css';
 
 const Home = lazy(() => import('./pages/Home'));
 const Predictions = lazy(() => import('./pages/Predictions'));
