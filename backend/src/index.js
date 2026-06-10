@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
+const profileRoutes = require('./routes/profile');
 const matchesRoutes = require('./routes/matches');
 const predictionsRoutes = require('./routes/predictions');
 const bonusPredictionsRoutes = require('./routes/bonusPredictions');
@@ -10,7 +11,6 @@ const teamsRoutes = require('./routes/teams');
 
 const app = express();
 
-// CORS config for Vercel frontend
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -19,10 +19,10 @@ app.use(cors({
   ].filter(Boolean),
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
-// Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
 app.use('/api/matches', matchesRoutes);
 app.use('/api/predictions', predictionsRoutes);
 app.use('/api/bonus-predictions', bonusPredictionsRoutes);
