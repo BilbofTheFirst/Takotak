@@ -111,7 +111,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
   const getWinner = useCallback((matchId) => {
     const sim = koSimulations[matchId];
     if (!sim || sim.team1_goals === undefined || sim.team2_goals === undefined) return null;
-    if (Number(sim.team1_goals) === Number(sim.team2_goals)) return null;
+    if (Number(sim.team1_goals) === Number(sim.team2_goals)) return sim.winner || null;
     return Number(sim.team1_goals) > Number(sim.team2_goals) ? 'team1' : 'team2';
   }, [koSimulations]);
 
@@ -169,13 +169,17 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     return `${value.substring(8, 10)}/${value.substring(5, 7)} ${value.substring(11, 16)}`;
   };
 
+  const selectScoreText = (event) => event.currentTarget.select();
+
   const MatchCard = ({ match, col, row }) => {
     const sim = koSimulations[match.id] || { team1_goals: 0, team2_goals: 0 };
     const winner = getWinner(match.id);
+    const isDraw = Number(sim.team1_goals) === Number(sim.team2_goals);
+    const canChooseWinner = isDraw && !isBracketToken(match.team1Name) && !isBracketToken(match.team2Name);
 
     return (
       <article
-        className={`compact-bracket-match ${match.id === 103 ? 'third-place-match' : ''}`}
+        className={`compact-bracket-match ${match.id === 103 ? 'third-place-match' : ''} ${canChooseWinner ? 'draw-needs-winner' : ''}`}
         style={{ gridColumn: col, gridRow: `${row} / span 2` }}
         title={`${match.round} M${match.id} — ${match.team1Name} vs ${match.team2Name}`}
       >
@@ -196,6 +200,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
             value={sim.team1_goals}
             aria-label={`Score ${match.team1Name || 'équipe 1'}`}
             title={match.team1Name || 'Équipe 1'}
+            onFocus={selectScoreText}
             onChange={(event) => onScoreChange(match.id, 'team1_goals', event.target.value)}
           />
           <span className="score-dash">-</span>
@@ -206,12 +211,21 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
             value={sim.team2_goals}
             aria-label={`Score ${match.team2Name || 'équipe 2'}`}
             title={match.team2Name || 'Équipe 2'}
+            onFocus={selectScoreText}
             onChange={(event) => onScoreChange(match.id, 'team2_goals', event.target.value)}
           />
           <div className={`team-flag-slot ${winner === 'team2' ? 'winner' : ''}`} title={match.team2Name || 'À définir'}>
             {renderFlag(match.team2Name)}
           </div>
         </div>
+
+        {canChooseWinner && (
+          <div className="tie-winner-picker" aria-label="Choisir le qualifié après match nul">
+            <button type="button" className={sim.winner === 'team1' ? 'selected' : ''} title={match.team1Name} onClick={() => onScoreChange(match.id, 'winner', 'team1')}>1</button>
+            <span>qualifié</span>
+            <button type="button" className={sim.winner === 'team2' ? 'selected' : ''} title={match.team2Name} onClick={() => onScoreChange(match.id, 'winner', 'team2')}>2</button>
+          </div>
+        )}
       </article>
     );
   };
@@ -340,6 +354,12 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           border-radius: 0 0 13px 13px;
         }
 
+        .draw-needs-winner .compact-scoreline {
+          height: calc(100% - 41px);
+          min-height: 28px;
+          padding-bottom: 3px;
+        }
+
         .team-flag-slot {
           width: 26px;
           height: 31px;
@@ -397,6 +417,42 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           font-size: 10px;
           font-weight: 950;
           line-height: 1;
+        }
+
+        .tie-winner-picker {
+          display: grid;
+          grid-template-columns: 24px 1fr 24px;
+          align-items: center;
+          gap: 3px;
+          padding: 2px 5px 5px;
+          border-top: 1px dashed #cbd5e1;
+          background: #fff7ed;
+          color: #92400e;
+          font-size: 8px;
+          font-weight: 950;
+          text-transform: uppercase;
+        }
+
+        .tie-winner-picker button {
+          height: 19px;
+          border: 1px solid #fed7aa;
+          border-radius: 7px;
+          background: white;
+          color: #92400e;
+          font-size: 10px;
+          font-weight: 950;
+          cursor: pointer;
+        }
+
+        .tie-winner-picker button.selected {
+          background: #0f766e;
+          border-color: #0f766e;
+          color: white;
+        }
+
+        .tie-winner-picker span {
+          text-align: center;
+          white-space: nowrap;
         }
 
         .compact-champion {
