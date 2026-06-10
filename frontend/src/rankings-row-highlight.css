@@ -1,0 +1,7 @@
+.me-row td {
+  background-color: #f0fdfa;
+}
+
+.me-row td:first-child {
+  border-left: 4px solid #0f766e;
+}
