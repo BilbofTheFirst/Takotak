@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { matchesService, predictionsService } from '../services/api';
 import TeamInfoModal from '../components/TeamInfoModal';
+import PublicMatchPredictionsPanel from '../components/PublicMatchPredictionsPanel';
 import { getFlag } from '../utils/countryFlags';
 
 const PRIMARY = '#0f766e';
@@ -398,11 +399,13 @@ function Predictions() {
                 const statusConfig = getStatusConfig(displayMatch, scores);
                 const knockout = isKnockoutMatch(match.id);
                 const resultAvailable = hasResult(displayMatch);
+                const canRevealPublicPredictions = hasKnownTeams && (isClosed || resultAvailable);
                 return (
                   <article key={match.id} className={`match-row ${disabled ? 'match-row-disabled' : ''} ${resultAvailable ? 'match-row-result' : ''}`}>
                     <div className="match-meta"><span className="match-label">{getMatchLabel(displayMatch)}</span><span className="match-time">{formatTimeBelge(displayMatch.start_time)}</span></div>
                     <div className="match-main">{renderTeamBlock(displayMatch, 'team1', 'right')}<div className="score-zone">{renderScoreZone(displayMatch, match, scores, hasKnownTeams, disabled)}</div>{renderTeamBlock(displayMatch, 'team2')}</div>
                     <div className="match-status-zone">{knockout && <span className="match-number">M{match.id}</span>}{statusConfig && <div className={statusConfig.className} title={statusConfig.detail || ''}><span>{statusConfig.icon}</span>{statusConfig.label}</div>}</div>
+                    {canRevealPublicPredictions && <PublicMatchPredictionsPanel match={displayMatch} />}
                   </article>
                 );
               })}
