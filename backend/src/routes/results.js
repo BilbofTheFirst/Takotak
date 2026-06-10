@@ -11,6 +11,7 @@ const { getAllBonusScores } = require('../utils/bonusScoring');
 
 const router = express.Router();
 let resultExtraColumnsReady = false;
+let leaderboardUserColumnsReady = false;
 
 const isValidScore = (value) => {
   const n = Number(value);
@@ -23,6 +24,21 @@ const isValidPenaltyScore = (value) => {
 };
 
 const isKnockoutMatch = (matchId) => Number(matchId) >= 73;
+
+const buildAvatarUrl = (user) => {
+  if (!user?.avatar_data) return null;
+  const rawVersion = user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : Date.now();
+  const version = Number.isNaN(rawVersion) ? Date.now() : rawVersion;
+  return `/profile/users/${user.id}/avatar?v=${version}`;
+};
+
+const ensureLeaderboardUserColumns = async (clientOrPool = pool) => {
+  if (leaderboardUserColumnsReady) return;
+  await clientOrPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_data TEXT');
+  await clientOrPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_mime_type VARCHAR(80)');
+  await clientOrPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_updated_at TIMESTAMP');
+  leaderboardUserColumnsReady = true;
+};
 
 const ensureResultExtraColumns = async (clientOrPool = pool) => {
   if (resultExtraColumnsReady) return;
@@ -290,33 +306,146 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
 // Get leaderboard/rankings
 router.get('/leaderboard', async (req, res) => {
   try {
+    await ensureLeaderboardUserColumns();
     const { scores: bonusScores } = await getAllBonusScores(pool);
+
     const result = await pool.query(`
       SELECT
         u.id,
         u.username,
+        u.avatar_data,
+        u.avatar_updated_at,
         COALESCE(SUM(us.points), 0)::int as match_points,
         COUNT(us.match_id)::int as matches_predicted
       FROM users u
       LEFT JOIN user_scores us ON u.id = us.user_id
-      GROUP BY u.id, u.username
+      GROUP BY u.id, u.username, u.avatar_data, u.avatar_updated_at
     `);
 
-    const rows = result.rows
-      .map(row => {
-        const bonusPoints = bonusScores.get(Number(row.id))?.points || 0;
-        return {
-          ...row,
-          bonus_points: bonusPoints,
-          total_points: Number(row.match_points || 0) + bonusPoints
-        };
-      })
+    const latestMatchResult = await pool.query(`
+      SELECT r.match_id
+      FROM results r
+      JOIN matches m ON m.id = r.match_id
+      ORDER BY m.start_time DESC NULLS LAST, r.match_id DESC
+      LIMIT 1
+    `);
+
+    const latestMatchId = latestMatchResult.rows[0]?.match_id ? Number(latestMatchResult.rows[0].match_id) : null;
+    let latestScoreByUser = new Map();
+
+    if (latestMatchId) {
+      const latestScores = await pool.query(
+        'SELECT user_id, points FROM user_scores WHERE match_id = $1',
+        [latestMatchId]
+      );
+      latestScoreByUser = new Map(latestScores.rows.map(row => [Number(row.user_id), Number(row.points || 0)]));
+    }
+
+    const rows = result.rows.map(row => {
+      const id = Number(row.id);
+      const matchPoints = Number(row.match_points || 0);
+      const bonusPoints = bonusScores.get(id)?.points || 0;
+      return {
+        id,
+        username: row.username,
+        avatar_url: buildAvatarUrl(row),
+        match_points: matchPoints,
+        bonus_points: bonusPoints,
+        total_points: matchPoints + bonusPoints,
+        previous_total_points: latestMatchId ? matchPoints - (latestScoreByUser.get(id) || 0) + bonusPoints : matchPoints + bonusPoints,
+        matches_predicted: Number(row.matches_predicted || 0)
+      };
+    });
+
+    const rankedRows = [...rows]
       .sort((a, b) => b.total_points - a.total_points || a.username.localeCompare(b.username, 'fr'))
       .map((row, index) => ({ ...row, rank: index + 1 }));
 
-    res.json(rows);
+    const previousRanks = new Map(
+      [...rows]
+        .sort((a, b) => b.previous_total_points - a.previous_total_points || a.username.localeCompare(b.username, 'fr'))
+        .map((row, index) => [row.id, index + 1])
+    );
+
+    res.json(rankedRows.map(row => {
+      const previousRank = previousRanks.get(row.id) || row.rank;
+      const trend = previousRank - row.rank;
+      return {
+        ...row,
+        previous_rank: previousRank,
+        trend,
+        latest_match_id: latestMatchId
+      };
+    }));
   } catch (error) {
     console.error('Get leaderboard error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.get('/leaderboard/progression', async (req, res) => {
+  try {
+    await ensureLeaderboardUserColumns();
+
+    const usersResult = await pool.query(`
+      SELECT id, username, avatar_data, avatar_updated_at
+      FROM users
+      ORDER BY username ASC
+    `);
+
+    const matchesResult = await pool.query(`
+      SELECT m.id, m.start_time
+      FROM matches m
+      JOIN results r ON r.match_id = m.id
+      ORDER BY m.start_time ASC NULLS LAST, m.id ASC
+    `);
+
+    const scoresResult = await pool.query(`
+      SELECT us.user_id, us.match_id, us.points
+      FROM user_scores us
+      JOIN results r ON r.match_id = us.match_id
+    `);
+
+    const pointsByUserAndMatch = new Map();
+    scoresResult.rows.forEach(row => {
+      pointsByUserAndMatch.set(`${Number(row.user_id)}:${Number(row.match_id)}`, Number(row.points || 0));
+    });
+
+    const orderedMatches = matchesResult.rows.map((match, index) => ({
+      match_number: index + 1,
+      match_id: Number(match.id),
+      start_time: match.start_time
+    }));
+
+    const users = usersResult.rows.map(user => {
+      let cumulative = 0;
+      const id = Number(user.id);
+      const series = [{ match_number: 0, match_id: null, points: 0 }];
+
+      orderedMatches.forEach(match => {
+        cumulative += pointsByUserAndMatch.get(`${id}:${match.match_id}`) || 0;
+        series.push({
+          match_number: match.match_number,
+          match_id: match.match_id,
+          points: cumulative
+        });
+      });
+
+      return {
+        id,
+        username: user.username,
+        avatar_url: buildAvatarUrl(user),
+        total_match_points: cumulative,
+        series
+      };
+    });
+
+    res.json({
+      matches: [{ match_number: 0, match_id: null, start_time: null }, ...orderedMatches],
+      users
+    });
+  } catch (error) {
+    console.error('Get leaderboard progression error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
