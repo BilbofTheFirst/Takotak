@@ -65,8 +65,8 @@ const BRACKET_LAYOUT = [
   { id: 99, col: 3, row: 19 },
   { id: 101, col: 5, row: 7 },
   { id: 102, col: 5, row: 19 },
-  { id: 104, col: 5, row: 13 },
-  { id: 103, col: 5, row: 23 },
+  { id: 104, col: 4, row: 13 },
+  { id: 103, col: 6, row: 13 },
   { id: 83, col: 9, row: 2 },
   { id: 84, col: 9, row: 5 },
   { id: 81, col: 9, row: 8 },
@@ -251,7 +251,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
             <MatchCard key={item.id} match={matches[item.id]} col={item.col} row={item.row} />
           ))}
 
-          <div className="compact-champion" style={{ gridColumn: 5, gridRow: '16 / span 3' }} title={champion}>
+          <div className="compact-champion" style={{ gridColumn: 5, gridRow: '13 / span 4' }} title={champion}>
             <span>🏆</span>
             <strong>{champion}</strong>
           </div>
