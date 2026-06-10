@@ -17,6 +17,8 @@ const Simulation = lazy(() => import('./pages/Simulation'));
 const Profile = lazy(() => import('./pages/Profile'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
+const BONUS_NEON_END_AT = new Date('2026-06-11T00:00:00+02:00');
+
 function PageLoader() {
   return (
     <div className="route-loader-page">
@@ -49,6 +51,7 @@ function Navigation({ user, onLogout }) {
   if (!user) return null;
 
   const closeMenu = () => setMenuOpen(false);
+  const bonusClassName = new Date() < BONUS_NEON_END_AT ? 'nav-bonus-link' : '';
 
   return (
     <nav className={`top-nav ${menuOpen ? 'mobile-open' : ''}`}>
@@ -70,7 +73,7 @@ function Navigation({ user, onLogout }) {
 
       <div className="nav-links">
         <Link to="/predictions" onClick={closeMenu}>🎯 Pronostics</Link>
-        <Link to="/bonus" className="nav-bonus-link" onClick={closeMenu}>🎁 Bonus</Link>
+        <Link to="/bonus" className={bonusClassName} onClick={closeMenu}>🎁 Bonus</Link>
         <Link to="/rankings" onClick={closeMenu}>🏆 Classement</Link>
         <Link to="/stats" onClick={closeMenu}>📊 Mes Stats</Link>
         <Link to="/simulation" onClick={closeMenu}>🎮 Simulation</Link>
