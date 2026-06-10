@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const pool = require('./db/pool');
+const { ensureSchema } = require('./db/ensureSchema');
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const adminUsersRoutes = require('./routes/adminUsers');
@@ -18,7 +20,9 @@ app.use(cors({
     'https://takotak.vercel.app',
     process.env.FRONTEND_URL
   ].filter(Boolean),
-  credentials: true
+  credentials: true,
+  maxAge: 86400,
+  optionsSuccessStatus: 204
 }));
 app.use(express.json({ limit: '5mb' }));
 
@@ -32,6 +36,14 @@ app.use('/api/results', resultsRoutes);
 app.use('/api/teams', teamsRoutes);
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`✓ Server running on port ${PORT}`);
-});
+
+ensureSchema(pool)
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`✓ Server running on port ${PORT}`);
+    });
+  })
+  .catch(error => {
+    console.error('Database schema initialization failed:', error);
+    process.exit(1);
+  });
