@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { matchesService } from '../services/api';
 import BonusPredictionsPanel from '../components/BonusPredictionsPanel';
+import PageLoader from '../components/PageLoader';
 
 function BonusPredictions() {
   const [matches, setMatches] = useState([]);
@@ -22,12 +23,7 @@ function BonusPredictions() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="bonus-page bonus-loading-page">
-        <div className="bonus-loading-card"><div className="bonus-loading-ball">🎁</div><p>Chargement des pronostics bonus...</p></div>
-        <style>{styles}</style>
-      </div>
-    );
+    return <PageLoader title="Chargement des bonus..." icon="🎁" subtitle="Préparation des vainqueurs de groupes et grands paris" />;
   }
 
   return (
@@ -144,11 +140,6 @@ const styles = `
     text-transform: uppercase;
     letter-spacing: .05em;
   }
-
-  .bonus-loading-page { display: grid; place-items: center; }
-  .bonus-loading-card { text-align: center; color: white; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); border-radius: 18px; padding: 30px 42px; box-shadow: 0 22px 65px rgba(0,0,0,.22); }
-  .bonus-loading-ball { font-size: 42px; margin-bottom: 12px; animation: bonus-bounce 1s infinite; }
-  @keyframes bonus-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
   @media (max-width: 920px) {
     .bonus-hero { flex-direction: column; }
