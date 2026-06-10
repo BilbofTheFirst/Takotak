@@ -71,13 +71,7 @@ function Navigation({ user, onLogout }) {
       <div className="nav-links">
         <Link to="/predictions" onClick={closeMenu}>🎯 Pronostics</Link>
         <Link to="/bonus" className="nav-bonus-link" onClick={closeMenu}>🎁 Bonus</Link>
-        {user?.is_admin ? (
-          <Link to="/rankings" onClick={closeMenu}>🏆 Classement</Link>
-        ) : (
-          <span className="nav-rankings-locked" title="Classement en construction">
-            🏆 Classement <small>en construction</small>
-          </span>
-        )}
+        <Link to="/rankings" onClick={closeMenu}>🏆 Classement</Link>
         <Link to="/stats" onClick={closeMenu}>📊 Mes Stats</Link>
         <Link to="/simulation" onClick={closeMenu}>🎮 Simulation</Link>
         <Link to="/rules" onClick={closeMenu}>📋 Règles</Link>
@@ -109,17 +103,6 @@ function AdminPanel() {
       <Admin />
       <AdminUsers />
     </>
-  );
-}
-
-function RankingsLocked() {
-  return (
-    <div className="ranking-locked-page">
-      <div className="ranking-locked-card">
-        <h1>🚧 Classement en construction</h1>
-        <p>Le classement est encore en préparation et sera ouvert à tout le monde bientôt. En attendant, concentre-toi sur tes pronostics et surtout sur les bonus.</p>
-      </div>
-    </div>
   );
 }
 
@@ -160,7 +143,7 @@ function AppContent() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/predictions" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
           <Route path="/bonus" element={user ? <BonusPredictions /> : <Home onLogin={handleLogin} />} />
-          <Route path="/rankings" element={user?.is_admin ? <Rankings /> : <RankingsLocked />} />
+          <Route path="/rankings" element={user ? <Rankings currentUser={user} /> : <Home onLogin={handleLogin} />} />
           <Route path="/stats" element={user ? <UserStats /> : <Home onLogin={handleLogin} />} />
           <Route path="/simulation" element={user ? <Simulation /> : <Home onLogin={handleLogin} />} />
           <Route path="/profile" element={user ? <Profile user={user} onUserUpdate={handleUserUpdate} /> : <Home onLogin={handleLogin} />} />
