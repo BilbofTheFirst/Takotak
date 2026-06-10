@@ -4,6 +4,7 @@ import UserAvatar from './components/UserAvatar';
 import './nav-status.css';
 import './mobile-responsive.css';
 import './simulation-responsive.css';
+import './rankings-row-highlight.css';
 
 const Home = lazy(() => import('./pages/Home'));
 const Predictions = lazy(() => import('./pages/Predictions'));
