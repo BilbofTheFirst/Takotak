@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
-const passwordResetRoutes = require('./routes/passwordReset');
+const adminUsersRoutes = require('./routes/adminUsers');
 const matchesRoutes = require('./routes/matches');
 const predictionsRoutes = require('./routes/predictions');
 const bonusPredictionsRoutes = require('./routes/bonusPredictions');
@@ -24,7 +24,7 @@ app.use(express.json({ limit: '5mb' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/password-reset', passwordResetRoutes);
+app.use('/api/admin', adminUsersRoutes);
 app.use('/api/matches', matchesRoutes);
 app.use('/api/predictions', predictionsRoutes);
 app.use('/api/bonus-predictions', bonusPredictionsRoutes);
