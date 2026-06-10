@@ -9,6 +9,7 @@ import Admin from './pages/Admin';
 import Rules from './pages/Rules';
 import Simulation from './pages/Simulation';
 import Profile from './pages/Profile';
+import ResetPassword from './pages/ResetPassword';
 import UserAvatar from './components/UserAvatar';
 
 function Navigation({ user, onLogout }) {
@@ -76,6 +77,7 @@ function AppContent() {
       <Navigation user={user} onLogout={handleLogout} />
       <Routes>
         <Route path="/" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/predictions" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
         <Route path="/bonus" element={user ? <BonusPredictions /> : <Home onLogin={handleLogin} />} />
         <Route path="/rankings" element={<Rankings />} />
