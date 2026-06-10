@@ -45,6 +45,11 @@ export const predictionsService = {
   getAll: () => api.get('/predictions')
 };
 
+export const bonusPredictionsService = {
+  get: () => api.get('/bonus-predictions'),
+  save: (payload) => api.post('/bonus-predictions', payload)
+};
+
 export const resultsService = {
   create: (payloadOrMatchId, team1_goals, team2_goals) => {
     const payload = typeof payloadOrMatchId === 'object'
