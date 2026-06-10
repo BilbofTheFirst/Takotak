@@ -42,8 +42,56 @@ const hashToken = (token) => crypto
 const getFrontendUrl = () =>
   (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
 
-const shouldReturnResetLink = () =>
-  process.env.NODE_ENV !== 'production' || process.env.RETURN_PASSWORD_RESET_LINK === 'true';
+const getSender = () => ({
+  email: process.env.PASSWORD_RESET_FROM_EMAIL || process.env.BREVO_FROM_EMAIL,
+  name: process.env.PASSWORD_RESET_FROM_NAME || process.env.BREVO_FROM_NAME || 'TakoTak'
+});
+
+const sendPasswordResetEmail = async ({ to, resetUrl }) => {
+  if (!process.env.BREVO_API_KEY) {
+    console.warn('Password reset email not sent: missing BREVO_API_KEY');
+    if (process.env.PASSWORD_RESET_DEBUG_LOG === 'true') {
+      console.warn(`Password reset debug link for ${to}: ${resetUrl}`);
+    }
+    return false;
+  }
+
+  const sender = getSender();
+  if (!sender.email) {
+    console.warn('Password reset email not sent: missing PASSWORD_RESET_FROM_EMAIL or BREVO_FROM_EMAIL');
+    return false;
+  }
+
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      sender,
+      to: [{ email: to }],
+      subject: 'Réinitialisation de ton mot de passe TakoTak',
+      htmlContent: `
+        <p>Bonjour,</p>
+        <p>Tu as demandé à réinitialiser ton mot de passe TakoTak.</p>
+        <p><a href="${resetUrl}">Clique ici pour choisir un nouveau mot de passe</a>.</p>
+        <p>Ce lien expire dans ${RESET_TOKEN_TTL_MINUTES} minutes.</p>
+        <p>Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.</p>
+      `,
+      textContent: `Réinitialisation de ton mot de passe TakoTak\n\nOuvre ce lien pour choisir un nouveau mot de passe : ${resetUrl}\n\nCe lien expire dans ${RESET_TOKEN_TTL_MINUTES} minutes.\n\nSi tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.`
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => '');
+    console.error('Brevo password reset email error:', response.status, errorBody);
+    return false;
+  }
+
+  return true;
+};
 
 router.post('/request', async (req, res) => {
   try {
@@ -54,7 +102,7 @@ router.post('/request', async (req, res) => {
       return res.status(400).json({ error: 'Valid email is required' });
     }
 
-    const genericMessage = 'Si un compte existe avec cet email, un lien de réinitialisation a été généré.';
+    const genericMessage = 'Si un compte existe avec cet email, un lien de réinitialisation va être envoyé.';
     const userResult = await pool.query(
       'SELECT id, email FROM users WHERE LOWER(email) = LOWER($1)',
       [email]
@@ -85,15 +133,9 @@ router.post('/request', async (req, res) => {
     );
 
     const resetUrl = `${getFrontendUrl()}/reset-password?token=${token}`;
-    console.log(`Password reset link for ${user.email}: ${resetUrl}`);
+    await sendPasswordResetEmail({ to: user.email, resetUrl });
 
-    const payload = { message: genericMessage };
-    if (shouldReturnResetLink()) {
-      payload.reset_url = resetUrl;
-      payload.reset_token = token;
-    }
-
-    res.json(payload);
+    res.json({ message: genericMessage });
   } catch (error) {
     console.error('Password reset request error:', error);
     res.status(500).json({ error: 'Server error' });
