@@ -177,6 +177,20 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     const isDraw = Number(sim.team1_goals) === Number(sim.team2_goals);
     const canChooseWinner = isDraw && !isBracketToken(match.team1Name) && !isBracketToken(match.team2Name);
 
+    const renderWinnerFlag = (side, teamName) => (
+      <button
+        type="button"
+        className={`team-flag-slot ${winner === side ? 'winner' : ''} ${canChooseWinner ? 'winner-selectable' : ''}`}
+        disabled={!canChooseWinner}
+        aria-pressed={canChooseWinner ? winner === side : undefined}
+        aria-label={canChooseWinner ? `Qualifie ${teamName}` : teamName || 'À définir'}
+        title={canChooseWinner ? `Cliquer pour qualifier ${teamName}` : teamName || 'À définir'}
+        onClick={() => onScoreChange(match.id, 'winner', side)}
+      >
+        {renderFlag(teamName)}
+      </button>
+    );
+
     return (
       <article
         className={`compact-bracket-match ${match.id === 103 ? 'third-place-match' : ''} ${canChooseWinner ? 'draw-needs-winner' : ''}`}
@@ -190,9 +204,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
         </header>
 
         <div className="compact-scoreline">
-          <div className={`team-flag-slot ${winner === 'team1' ? 'winner' : ''}`} title={match.team1Name || 'À définir'}>
-            {renderFlag(match.team1Name)}
-          </div>
+          {renderWinnerFlag('team1', match.team1Name)}
           <input
             type="text"
             inputMode="numeric"
@@ -214,18 +226,8 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
             onFocus={selectScoreText}
             onChange={(event) => onScoreChange(match.id, 'team2_goals', event.target.value)}
           />
-          <div className={`team-flag-slot ${winner === 'team2' ? 'winner' : ''}`} title={match.team2Name || 'À définir'}>
-            {renderFlag(match.team2Name)}
-          </div>
+          {renderWinnerFlag('team2', match.team2Name)}
         </div>
-
-        {canChooseWinner && (
-          <div className="tie-winner-picker" aria-label="Choisir le qualifié après match nul">
-            <button type="button" className={sim.winner === 'team1' ? 'selected' : ''} title={match.team1Name} onClick={() => onScoreChange(match.id, 'winner', 'team1')}>1</button>
-            <span>qualifié</span>
-            <button type="button" className={sim.winner === 'team2' ? 'selected' : ''} title={match.team2Name} onClick={() => onScoreChange(match.id, 'winner', 'team2')}>2</button>
-          </div>
-        )}
       </article>
     );
   };
@@ -301,6 +303,11 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           box-shadow: 0 8px 18px rgba(15,23,42,.08);
         }
 
+        .compact-bracket-match.draw-needs-winner {
+          border-color: #fed7aa;
+          background: #fffaf0;
+        }
+
         .compact-bracket-match header {
           height: 20px;
           display: grid;
@@ -354,23 +361,37 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           border-radius: 0 0 13px 13px;
         }
 
-        .draw-needs-winner .compact-scoreline {
-          height: calc(100% - 41px);
-          min-height: 28px;
-          padding-bottom: 3px;
-        }
-
         .team-flag-slot {
           width: 26px;
           height: 31px;
           display: grid;
           place-items: center;
+          border: 0;
+          padding: 0;
           border-radius: 10px;
           background: transparent;
+          cursor: default;
+        }
+
+        .team-flag-slot:disabled {
+          opacity: 1;
+        }
+
+        .team-flag-slot.winner-selectable {
+          cursor: pointer;
+          background: #ffedd5;
+          box-shadow: inset 0 0 0 1px #fdba74;
+        }
+
+        .team-flag-slot.winner-selectable:hover,
+        .team-flag-slot.winner-selectable:focus-visible {
+          background: #fed7aa;
+          outline: none;
         }
 
         .team-flag-slot.winner {
           background: #dcfce7;
+          box-shadow: inset 0 0 0 2px #22c55e, 0 0 0 2px rgba(34,197,94,.18);
         }
 
         .bracket-flag,
@@ -417,42 +438,6 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           font-size: 10px;
           font-weight: 950;
           line-height: 1;
-        }
-
-        .tie-winner-picker {
-          display: grid;
-          grid-template-columns: 24px 1fr 24px;
-          align-items: center;
-          gap: 3px;
-          padding: 2px 5px 5px;
-          border-top: 1px dashed #cbd5e1;
-          background: #fff7ed;
-          color: #92400e;
-          font-size: 8px;
-          font-weight: 950;
-          text-transform: uppercase;
-        }
-
-        .tie-winner-picker button {
-          height: 19px;
-          border: 1px solid #fed7aa;
-          border-radius: 7px;
-          background: white;
-          color: #92400e;
-          font-size: 10px;
-          font-weight: 950;
-          cursor: pointer;
-        }
-
-        .tie-winner-picker button.selected {
-          background: #0f766e;
-          border-color: #0f766e;
-          color: white;
-        }
-
-        .tie-winner-picker span {
-          text-align: center;
-          white-space: nowrap;
         }
 
         .compact-champion {
