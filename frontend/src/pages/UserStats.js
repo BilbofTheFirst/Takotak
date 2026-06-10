@@ -32,6 +32,14 @@ function UserStats() {
     { label: 'Moyenne / match', value: stats.avg_points_per_match || 0, icon: '📈' }
   ];
 
+  const precisionRows = [
+    { label: 'Scores exacts', value: `${stats.exact_scores || 0} × 3 pts`, icon: '🎯', className: 'exact' },
+    { label: 'Bonnes différences', value: `${stats.correct_differences || 0} × 2 pts`, icon: '⚖️', className: 'difference' },
+    { label: 'Bons vainqueurs / bons nuls simples', value: `${stats.correct_winners || 0} × 1 pt`, icon: '✅', className: 'winner' },
+    { label: 'Bonus compétition', value: `${stats.bonus_points || 0} pts`, icon: '🎁', className: 'bonus' },
+    { label: 'Mauvais pronostics', value: `${stats.wrong_predictions || 0} × 0 pt`, icon: '🧊', className: 'wrong' }
+  ];
+
   return (
     <div className="stats-page">
       <div className="stats-container">
@@ -65,11 +73,12 @@ function UserStats() {
           </div>
 
           <div className="precision-list">
-            <div><span>✓ Scores exacts</span><strong>{stats.exact_scores || 0} × 3 pts</strong></div>
-            <div><span>≈ Bonnes différences</span><strong>{stats.correct_differences || 0} × 2 pts</strong></div>
-            <div><span>→ Bons vainqueurs / bons nuls simples</span><strong>{stats.correct_winners || 0} × 1 pt</strong></div>
-            <div><span>🎁 Bonus compétition</span><strong>{stats.bonus_points || 0} pts</strong></div>
-            <div><span>✗ Mauvais pronostics</span><strong>{stats.wrong_predictions || 0} × 0 pt</strong></div>
+            {precisionRows.map(row => (
+              <div className={`precision-row ${row.className}`} key={row.label}>
+                <span className="precision-label"><em>{row.icon}</em>{row.label}</span>
+                <strong>{row.value}</strong>
+              </div>
+            ))}
           </div>
         </section>
       </div>
@@ -132,12 +141,18 @@ const styles = `
   .stats-card-title span { display: block; color: #0f766e; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
   .stats-card-title h2 { margin: 2px 0 14px; color: #0f172a; font-size: 22px; }
   .precision-list { display: grid; gap: 8px; }
-  .precision-list div { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 11px 12px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
-  .precision-list span { color: #334155; font-weight: 850; }
-  .precision-list strong { color: #d97706; white-space: nowrap; }
+  .precision-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 15px; background: #f8fafc; border: 1px solid #e2e8f0; }
+  .precision-label { display: inline-flex; align-items: center; gap: 10px; color: #334155; font-weight: 900; }
+  .precision-label em { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 12px; font-style: normal; font-size: 18px; background: #e2e8f0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.6); }
+  .precision-row strong { color: #d97706; white-space: nowrap; font-weight: 950; }
+  .precision-row.exact .precision-label em { background: #dcfce7; }
+  .precision-row.difference .precision-label em { background: #e0f2fe; }
+  .precision-row.winner .precision-label em { background: #ccfbf1; }
+  .precision-row.bonus .precision-label em { background: #fef3c7; }
+  .precision-row.wrong .precision-label em { background: #fee2e2; }
 
   @media (max-width: 920px) { .stats-hero { flex-direction: column; } .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 560px) { .stats-page { padding: 18px 10px 36px; } .stats-grid { grid-template-columns: 1fr; } .precision-list div { flex-direction: column; align-items: flex-start; } }
+  @media (max-width: 560px) { .stats-page { padding: 18px 10px 36px; } .stats-grid { grid-template-columns: 1fr; } .precision-row { flex-direction: column; align-items: flex-start; } }
 `;
 
 export default UserStats;
