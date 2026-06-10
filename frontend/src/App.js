@@ -6,6 +6,7 @@ import BonusPredictions from './pages/BonusPredictions';
 import Rankings from './pages/Rankings';
 import UserStats from './pages/UserStats';
 import Admin from './pages/Admin';
+import AdminUsers from './pages/AdminUsers';
 import Rules from './pages/Rules';
 import Simulation from './pages/Simulation';
 import Profile from './pages/Profile';
@@ -29,6 +30,7 @@ function Navigation({ user, onLogout }) {
         <Link to="/simulation">🎮 Simulation</Link>
         <Link to="/rules">📋 Règles</Link>
         {user?.is_admin && <Link to="/admin">⚙️ Admin</Link>}
+        {user?.is_admin && <Link to="/admin/users">👥 Utilisateurs</Link>}
       </div>
 
       <div className="nav-user">
@@ -86,6 +88,7 @@ function AppContent() {
         <Route path="/profile" element={user ? <Profile user={user} onUserUpdate={handleUserUpdate} /> : <Home onLogin={handleLogin} />} />
         <Route path="/rules" element={<Rules />} />
         <Route path="/admin" element={user?.is_admin ? <Admin /> : <Predictions />} />
+        <Route path="/admin/users" element={user?.is_admin ? <AdminUsers /> : <Predictions />} />
       </Routes>
     </>
   );
