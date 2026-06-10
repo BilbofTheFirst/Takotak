@@ -59,13 +59,20 @@ function Simulation() {
   };
 
   const normalizeScore = (value) => Math.max(0, Math.min(20, parseInt(value, 10) || 0));
+  const selectScoreText = (event) => event.currentTarget.select();
 
   const handleSimulationChange = (matchId, field, value) => {
     setSimulations(prev => ({ ...prev, [matchId]: { ...(prev[matchId] || defaultScore), [field]: normalizeScore(value) } }));
   };
 
   const handleKoSimulationChange = (matchId, field, value) => {
-    setKoSimulations(prev => ({ ...prev, [matchId]: { ...(prev[matchId] || defaultScore), [field]: normalizeScore(value) } }));
+    setKoSimulations(prev => {
+      const current = prev[matchId] || defaultScore;
+      if (field === 'winner') {
+        return { ...prev, [matchId]: { ...current, winner: value } };
+      }
+      return { ...prev, [matchId]: { ...current, [field]: normalizeScore(value) } };
+    });
   };
 
   const calculatePoints = (prediction, result) => {
@@ -240,9 +247,9 @@ function Simulation() {
                             <span className="match-schedule">{formatMatchDateTime(match.start_time)}</span>
                             <span className="match-team-name match-team-left" title={match.team1}>{match.team1}</span>
                             {renderFlag(match.team1)}
-                            <input type="text" inputMode="numeric" maxLength="2" value={sim.team1_goals} onChange={(e) => handleSimulationChange(match.id, 'team1_goals', e.target.value)} aria-label={`Score ${match.team1}`} />
+                            <input type="text" inputMode="numeric" maxLength="2" value={sim.team1_goals} onFocus={selectScoreText} onChange={(e) => handleSimulationChange(match.id, 'team1_goals', e.target.value)} aria-label={`Score ${match.team1}`} />
                             <span className="score-separator">-</span>
-                            <input type="text" inputMode="numeric" maxLength="2" value={sim.team2_goals} onChange={(e) => handleSimulationChange(match.id, 'team2_goals', e.target.value)} aria-label={`Score ${match.team2}`} />
+                            <input type="text" inputMode="numeric" maxLength="2" value={sim.team2_goals} onFocus={selectScoreText} onChange={(e) => handleSimulationChange(match.id, 'team2_goals', e.target.value)} aria-label={`Score ${match.team2}`} />
                             {renderFlag(match.team2)}
                             <span className="match-team-name match-team-right" title={match.team2}>{match.team2}</span>
                             <span className="prediction-pill">{prediction ? `Prono ${prediction.team1_goals}-${prediction.team2_goals}` : 'Pas de prono'}</span>
