@@ -42,6 +42,12 @@ export const authService = {
     api.post('/auth/login', { email, password })
 };
 
+export const passwordResetService = {
+  request: (email) => api.post('/password-reset/request', { email }),
+  confirm: (token, newPassword, confirmPassword) =>
+    api.post('/password-reset/confirm', { token, newPassword, confirmPassword })
+};
+
 export const profileService = {
   getMe: () => api.get('/profile/me'),
   changePassword: (currentPassword, newPassword, confirmPassword) =>
