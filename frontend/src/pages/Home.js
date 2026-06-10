@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/api';
+import TakotakLogo from '../components/TakotakLogo';
 
 function Home() {
   const [isLogin, setIsLogin] = useState(true);
@@ -40,18 +41,17 @@ function Home() {
     }
   };
 
-  const PRIMARY = '#2563eb';
-  const SECONDARY = '#ec4899';
+  const PRIMARY = '#0f766e';
+  const SECONDARY = '#d97706';
   const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
 
   return (
-    <div style={{ minHeight: '100vh', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div style={{ width: '100%', maxWidth: '450px', background: 'white', borderRadius: '20px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: 'radial-gradient(circle at top left, rgba(217,119,6,.22), transparent 32%), radial-gradient(circle at top right, rgba(15,118,110,.24), transparent 34%), linear-gradient(135deg, #071b16 0%, #0f172a 45%, #111827 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ width: '100%', maxWidth: '470px', background: 'white', borderRadius: '24px', boxShadow: '0 24px 70px rgba(0,0,0,0.35)', overflow: 'hidden', border: '1px solid rgba(255,255,255,.5)' }}>
 
-        <div style={{ background: GRADIENT, padding: '40px 20px', textAlign: 'center', color: 'white' }}>
-          <h1 style={{ fontSize: '48px', margin: '0 0 10px 0' }}>🏆</h1>
-          <h2 style={{ fontSize: '32px', margin: '0 0 5px 0', fontWeight: 'bold' }}>TakoTak</h2>
-          <p style={{ margin: '0', opacity: 0.9, fontSize: '14px' }}>Prédictions Coupe du Monde 2026</p>
+        <div style={{ background: 'linear-gradient(135deg, rgba(15,118,110,.98), rgba(217,119,6,.98))', padding: '40px 20px 36px', textAlign: 'center', color: 'white' }}>
+          <TakotakLogo size="large" />
+          <p style={{ margin: '12px 0 0', opacity: 0.9, fontSize: '14px', fontWeight: 800 }}>Prédictions Coupe du Monde 2026</p>
         </div>
 
         <div style={{ padding: '40px' }}>
