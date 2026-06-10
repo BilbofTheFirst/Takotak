@@ -19,7 +19,7 @@ app.use(cors({
   ].filter(Boolean),
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Routes
 app.use('/api/auth', authRoutes);
