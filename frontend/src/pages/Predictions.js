@@ -7,6 +7,8 @@ const PRIMARY = '#0f766e';
 const SECONDARY = '#d97706';
 const DARK = '#0f172a';
 const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
+const MOBILE_INITIAL_DAYS = 3;
+const MOBILE_DAYS_STEP = 3;
 
 const KNOCKOUT_MATCHES = {
   73: { round: '16e de finale', team1: '2A', team2: '2B' },
@@ -59,6 +61,11 @@ const buildMockScore = (matchId) => ({
   team2_goals: (Number(matchId) * 11) % 4
 });
 
+const isMobileViewport = () => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(max-width: 760px)').matches;
+};
+
 function Predictions() {
   const [matches, setMatches] = useState([]);
   const [predictions, setPredictions] = useState({});
@@ -67,6 +74,8 @@ function Predictions() {
   const [saveStatus, setSaveStatus] = useState({});
   const [showPastDays, setShowPastDays] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => isMobileViewport());
+  const [visibleMobileDayCount, setVisibleMobileDayCount] = useState(MOBILE_INITIAL_DAYS);
   const dateRefs = useRef({});
   const hasAutoScrolled = useRef(false);
 
@@ -74,6 +83,19 @@ function Predictions() {
   const mockResultsEnabled = useMemo(() => isMockResultsEnabled(), []);
   const currentNow = useMemo(() => mockNowValue ? new Date(mockNowValue) : new Date(), [mockNowValue]);
   const isMockMode = Boolean(mockNowValue);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const media = window.matchMedia('(max-width: 760px)');
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener?.('change', update);
+    return () => media.removeEventListener?.('change', update);
+  }, []);
+
+  useEffect(() => {
+    setVisibleMobileDayCount(MOBILE_INITIAL_DAYS);
+  }, [showPastDays]);
 
   const formatDateBelge = (timestamp) => {
     if (!timestamp) return '';
@@ -294,6 +316,8 @@ function Predictions() {
   const isPastGroup = useCallback((group) => group.matches.every(match => new Date(match.start_time) < todayStart), [todayStart]);
   const hiddenPastGroupsCount = dayGroups.filter(isPastGroup).length;
   const visibleDayGroups = showPastDays ? dayGroups : dayGroups.filter(group => !isPastGroup(group));
+  const renderedDayGroups = isMobile ? visibleDayGroups.slice(0, visibleMobileDayCount) : visibleDayGroups;
+  const hiddenMobileDayCount = Math.max(visibleDayGroups.length - renderedDayGroups.length, 0);
 
   const firstRelevantDateKey = useMemo(() => {
     const nextGroup = dayGroups.find(group => !isPastGroup(group));
@@ -361,7 +385,13 @@ function Predictions() {
           <div className="autosave-inline"><span>💾</span> Sauvegarde en quittant le champ</div>
         </div>
 
-        {visibleDayGroups.map(group => (
+        {isMobile && hiddenMobileDayCount > 0 && (
+          <div className="mobile-days-hint">
+            Affichage mobile allégé : {renderedDayGroups.length} journée{renderedDayGroups.length > 1 ? 's' : ''} affichée{renderedDayGroups.length > 1 ? 's' : ''} sur {visibleDayGroups.length}.
+          </div>
+        )}
+
+        {renderedDayGroups.map(group => (
           <section key={group.key} ref={el => { dateRefs.current[group.key] = el; }} className={`match-day-card ${isPastGroup(group) ? 'past-day-card' : ''}`}>
             <div className="match-day-header"><div><span>📅 Journée</span><h2>{group.label}</h2></div><span className="match-count">{group.matches.length} match{group.matches.length > 1 ? 's' : ''}</span></div>
             <div className="match-list">
@@ -385,6 +415,14 @@ function Predictions() {
             </div>
           </section>
         ))}
+
+        {isMobile && hiddenMobileDayCount > 0 && (
+          <div className="mobile-load-more-wrap">
+            <button type="button" className="mobile-load-more-button" onClick={() => setVisibleMobileDayCount(prev => prev + MOBILE_DAYS_STEP)}>
+              Afficher plus de journées ({hiddenMobileDayCount} restantes)
+            </button>
+          </div>
+        )}
       </div>
 
       {selectedTeam && <TeamInfoModal teamId={selectedTeam.name} teamName={selectedTeam.name} onClose={() => setSelectedTeam(null)} />}
@@ -405,6 +443,8 @@ function Predictions() {
         .prediction-toolbar button { border: 0; border-radius: 999px; padding: 8px 12px; background: ${GRADIENT}; color: white; font-size: 12px; font-weight: 900; cursor: pointer; box-shadow: 0 8px 18px rgba(15,118,110,.18); }
         .prediction-toolbar button + button { background: #e2e8f0; color: #334155; box-shadow: none; }
         .autosave-inline { margin-left: auto; color: #64748b; font-size: 12px; font-weight: 800; }
+        .mobile-days-hint { display: none; }
+        .mobile-load-more-wrap { display: none; }
         .match-day-card { background: rgba(255,255,255,.94); border-radius: 18px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 18px 55px rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.55); scroll-margin-top: 18px; }
         .past-day-card { opacity: .92; }
         .match-day-header { display: flex; justify-content: space-between; align-items: center; padding: 13px 17px; background: ${GRADIENT}; color: white; }
@@ -460,6 +500,7 @@ function Predictions() {
         @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @media (max-width: 1060px) { .match-row { grid-template-columns: 1fr; gap: 10px; } .match-meta, .match-status-zone { justify-content: center; } }
         @media (max-width: 920px) { .predictions-hero { flex-direction: column; } .prediction-summary { min-width: 0; } .match-main { grid-template-columns: 1fr; gap: 8px; } .team-block, .team-block-right { justify-content: center; text-align: center; } .team-block-right { flex-direction: row-reverse; } .autosave-inline { margin-left: 0; } }
+        @media (max-width: 760px) { .mobile-days-hint { display: block; margin: 0 0 12px; padding: 9px 12px; border-radius: 14px; background: rgba(255,255,255,.92); color: #475569; font-size: 12px; font-weight: 850; text-align: center; } .mobile-load-more-wrap { display: flex; justify-content: center; margin: 14px 0 4px; } .mobile-load-more-button { width: 100%; min-height: 46px; border: 0; border-radius: 16px; background: ${GRADIENT}; color: white; font-size: 14px; font-weight: 950; box-shadow: 0 12px 28px rgba(0,0,0,.18); } }
         @media (max-width: 560px) { .predictions-page { padding: 18px 10px 36px; } .prediction-summary { grid-template-columns: 1fr; } .match-day-header { align-items: flex-start; flex-direction: column; gap: 8px; } .match-row { padding: 10px; } .prediction-toolbar button { width: 100%; } }
       `}</style>
     </div>
