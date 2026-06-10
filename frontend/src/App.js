@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Predictions from './pages/Predictions';
+import BonusPredictions from './pages/BonusPredictions';
 import Rankings from './pages/Rankings';
 import UserStats from './pages/UserStats';
 import Admin from './pages/Admin';
@@ -19,6 +20,7 @@ function Navigation({ user, onLogout }) {
 
       <div className="nav-links">
         <Link to="/predictions">🎯 Pronostics</Link>
+        <Link to="/bonus">🎁 Bonus</Link>
         <Link to="/rankings">🏆 Classement</Link>
         <Link to="/stats">📊 Mes Stats</Link>
         <Link to="/simulation">🎮 Simulation</Link>
@@ -65,6 +67,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
         <Route path="/predictions" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
+        <Route path="/bonus" element={user ? <BonusPredictions /> : <Home onLogin={handleLogin} />} />
         <Route path="/rankings" element={<Rankings />} />
         <Route path="/stats" element={user ? <UserStats /> : <Home onLogin={handleLogin} />} />
         <Route path="/simulation" element={user ? <Simulation /> : <Home onLogin={handleLogin} />} />
