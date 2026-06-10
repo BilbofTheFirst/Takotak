@@ -2,6 +2,14 @@ import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
+export const buildApiAssetUrl = (path) => {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path) || path.startsWith('data:')) return path;
+  const apiRoot = API_URL.replace(/\/api\/?$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${apiRoot}/api${normalizedPath}`;
+};
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -32,6 +40,14 @@ export const authService = {
     api.post('/auth/register', { username, email, password }),
   login: (email, password) =>
     api.post('/auth/login', { email, password })
+};
+
+export const profileService = {
+  getMe: () => api.get('/profile/me'),
+  changePassword: (currentPassword, newPassword, confirmPassword) =>
+    api.post('/profile/me/change-password', { currentPassword, newPassword, confirmPassword }),
+  updateAvatar: (imageData) => api.put('/profile/me/avatar', { imageData }),
+  deleteAvatar: () => api.delete('/profile/me/avatar')
 };
 
 export const matchesService = {
