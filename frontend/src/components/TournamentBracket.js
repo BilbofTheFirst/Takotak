@@ -83,6 +83,11 @@ const BRACKET_LAYOUT = [
   { id: 100, col: 7, row: 19 }
 ];
 
+const isBracketToken = (value) => {
+  if (!value || typeof value !== 'string') return false;
+  return /^[12][A-L]$/.test(value) || /^3[A-L](\/[A-L])+$/.test(value) || /^[VP]\d+$/.test(value);
+};
+
 function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, matchSchedule = [] }) {
   const qualifiedThirds = useMemo(() => allThirdPlaces.slice(0, 8), [allThirdPlaces]);
   const scheduleById = useMemo(() => new Map(matchSchedule.map(match => [Number(match.id), match])), [matchSchedule]);
@@ -149,7 +154,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
   }, [getPlacement, getWinner, getLoser, scheduleById]);
 
   const renderFlag = (team) => {
-    if (!team || /^[123VP]/.test(team)) {
+    if (!team || isBracketToken(team)) {
       return <span className="bracket-token" title={team || 'À définir'}>{team || '⚽'}</span>;
     }
 
@@ -250,11 +255,11 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
 
         .compact-bracket-board {
           width: 100%;
-          min-width: 1500px;
+          min-width: 1320px;
           display: grid;
-          grid-template-columns: repeat(9, minmax(150px, 1fr));
+          grid-template-columns: repeat(9, minmax(132px, 1fr));
           grid-template-rows: 32px repeat(25, 31px);
-          column-gap: clamp(10px, 1.2vw, 22px);
+          column-gap: clamp(8px, .9vw, 14px);
           row-gap: 5px;
           align-items: center;
         }
@@ -324,19 +329,19 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
           min-height: 44px;
           height: calc(100% - 20px);
           display: grid;
-          grid-template-columns: 28px 30px 8px 30px 28px;
+          grid-template-columns: 26px 28px 6px 28px 26px;
           justify-content: center;
           gap: 3px;
           align-items: center;
           justify-items: center;
-          padding: 7px 6px 10px;
+          padding: 7px 4px 10px;
           box-sizing: border-box;
           border-top: 1px solid #e2e8f0;
           border-radius: 0 0 13px 13px;
         }
 
         .team-flag-slot {
-          width: 28px;
+          width: 26px;
           height: 31px;
           display: grid;
           place-items: center;
@@ -350,8 +355,8 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
 
         .bracket-flag,
         .bracket-token {
-          width: 24px;
-          height: 24px;
+          width: 23px;
+          height: 23px;
           border-radius: 999px;
           object-fit: cover;
           display: grid;
@@ -363,9 +368,9 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
 
         .bracket-token {
           width: auto;
-          min-width: 24px;
-          max-width: 38px;
-          padding: 0 4px;
+          min-width: 23px;
+          max-width: 34px;
+          padding: 0 3px;
           color: #475569;
           font-size: 8px;
           font-weight: 950;
@@ -376,7 +381,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
         }
 
         .compact-scoreline input {
-          width: 30px;
+          width: 28px;
           height: 26px;
           border: 1.5px solid #cbd5e1;
           border-radius: 8px;
@@ -420,18 +425,18 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
 
         @media (max-width: 1200px) {
           .compact-bracket-board {
-            min-width: 1380px;
-            column-gap: 10px;
-            grid-template-columns: repeat(9, minmax(142px, 1fr));
+            min-width: 1200px;
+            column-gap: 8px;
+            grid-template-columns: repeat(9, minmax(118px, 1fr));
           }
           .compact-scoreline {
-            grid-template-columns: 27px 29px 8px 29px 27px;
+            grid-template-columns: 25px 27px 6px 27px 25px;
             gap: 3px;
-            padding: 7px 5px 10px;
+            padding: 7px 4px 10px;
           }
-          .bracket-flag, .bracket-token { width: 23px; height: 23px; min-width: 23px; }
-          .team-flag-slot { width: 27px; height: 30px; }
-          .compact-scoreline input { width: 29px; }
+          .bracket-flag, .bracket-token { width: 22px; height: 22px; min-width: 22px; }
+          .team-flag-slot { width: 25px; height: 30px; }
+          .compact-scoreline input { width: 27px; }
         }
       `}</style>
     </section>
