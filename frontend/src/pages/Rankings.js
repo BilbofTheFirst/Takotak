@@ -110,7 +110,7 @@ function PodiumPerson({ user, place }) {
     <div className={`podium-person place-${place}`}>
       <div className="podium-character">
         <div className="podium-head">
-          <UserAvatar user={user} size={68} />
+          <UserAvatar user={user} size={58} />
         </div>
         <div className="podium-body">
           <span className="podium-arm left" />
@@ -261,12 +261,11 @@ const styles = `
     color: white;
   }
 
-  .rankings-eyebrow,
   .podium-title span,
   .table-title span,
   .chart-header span {
     display: inline-flex;
-    color: #fde68a;
+    color: #0f766e;
     font-size: 11px;
     font-weight: 950;
     text-transform: uppercase;
@@ -274,6 +273,12 @@ const styles = `
   }
 
   .rankings-eyebrow {
+    display: inline-flex;
+    color: #fde68a;
+    font-size: 11px;
+    font-weight: 950;
+    text-transform: uppercase;
+    letter-spacing: .08em;
     padding: 5px 10px;
     border-radius: 999px;
     background: rgba(255,255,255,.12);
@@ -320,7 +325,7 @@ const styles = `
     justify-content: space-between;
     align-items: flex-start;
     gap: 16px;
-    padding: 18px 20px;
+    padding: 16px 18px;
     background: linear-gradient(135deg, rgba(15,118,110,.08), rgba(217,119,6,.08));
     border-bottom: 1px solid #e2e8f0;
   }
@@ -332,41 +337,41 @@ const styles = `
   .chart-header p { margin: 0; max-width: 420px; color: #64748b; font-size: 12px; font-weight: 800; line-height: 1.45; }
 
   .podium-stage {
-    min-height: 360px;
+    min-height: 288px;
     display: grid;
-    grid-template-columns: 1fr 1.15fr 1fr;
+    grid-template-columns: 1fr 1.12fr 1fr;
     align-items: end;
-    gap: 18px;
-    padding: 28px 22px 22px;
+    gap: 14px;
+    padding: 20px 18px 16px;
     background:
-      radial-gradient(circle at center top, rgba(251,191,36,.22), transparent 35%),
+      radial-gradient(circle at center top, rgba(251,191,36,.18), transparent 34%),
       linear-gradient(180deg, #ffffff, #f8fafc);
   }
 
-  .podium-person { display: grid; justify-items: center; gap: 10px; align-items: end; }
-  .place-1 { transform: translateY(-20px); }
-  .place-2 { transform: translateY(18px); }
-  .place-3 { transform: translateY(38px); }
+  .podium-person { display: grid; justify-items: center; gap: 7px; align-items: end; }
+  .place-1 { transform: translateY(-12px); }
+  .place-2 { transform: translateY(12px); }
+  .place-3 { transform: translateY(24px); }
 
   .podium-character { display: grid; justify-items: center; gap: 0; position: relative; z-index: 2; }
-  .podium-head { padding: 5px; border-radius: 999px; background: white; box-shadow: 0 10px 28px rgba(15,23,42,.18); }
-  .place-1 .podium-head { box-shadow: 0 0 0 4px rgba(251,191,36,.35), 0 14px 34px rgba(15,23,42,.2); }
+  .podium-head { padding: 4px; border-radius: 999px; background: white; box-shadow: 0 8px 22px rgba(15,23,42,.16); }
+  .place-1 .podium-head { box-shadow: 0 0 0 3px rgba(251,191,36,.32), 0 12px 28px rgba(15,23,42,.18); }
 
-  .podium-body { position: relative; width: 86px; height: 74px; display: grid; place-items: center; }
-  .podium-torso { width: 52px; height: 64px; border-radius: 24px 24px 16px 16px; background: ${GRADIENT}; box-shadow: inset 0 -10px 18px rgba(0,0,0,.14); }
-  .podium-arm { position: absolute; top: 14px; width: 16px; height: 48px; border-radius: 999px; background: #d97706; }
-  .podium-arm.left { left: 8px; transform: rotate(18deg); }
-  .podium-arm.right { right: 8px; transform: rotate(-18deg); }
+  .podium-body { position: relative; width: 70px; height: 58px; display: grid; place-items: center; }
+  .podium-torso { width: 42px; height: 50px; border-radius: 20px 20px 14px 14px; background: ${GRADIENT}; box-shadow: inset 0 -8px 14px rgba(0,0,0,.14); }
+  .podium-arm { position: absolute; top: 11px; width: 13px; height: 38px; border-radius: 999px; background: #d97706; }
+  .podium-arm.left { left: 7px; transform: rotate(18deg); }
+  .podium-arm.right { right: 7px; transform: rotate(-18deg); }
 
-  .podium-label { text-align: center; max-width: 210px; }
-  .podium-label span { display: block; color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
-  .podium-label strong { display: block; margin-top: 4px; color: #0f172a; font-size: 16px; line-height: 1.05; }
-  .podium-label em { display: block; margin-top: 5px; color: #0f766e; font-style: normal; font-weight: 950; }
+  .podium-label { text-align: center; max-width: 190px; }
+  .podium-label span { display: block; color: #64748b; font-size: 9px; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
+  .podium-label strong { display: block; margin-top: 3px; color: #0f172a; font-size: 14px; line-height: 1.05; }
+  .podium-label em { display: block; margin-top: 4px; color: #0f766e; font-style: normal; font-size: 13px; font-weight: 950; }
 
-  .podium-step { width: 100%; max-width: 250px; display: grid; place-items: center; border-radius: 18px 18px 8px 8px; color: white; background: ${GRADIENT}; box-shadow: 0 16px 32px rgba(15,23,42,.18); }
-  .podium-step strong { font-size: 36px; line-height: 1; padding: 28px 0; }
-  .place-1 .podium-step strong { padding: 48px 0; font-size: 46px; }
-  .place-3 .podium-step strong { padding: 20px 0; }
+  .podium-step { width: 100%; max-width: 215px; display: grid; place-items: center; border-radius: 16px 16px 8px 8px; color: white; background: ${GRADIENT}; box-shadow: 0 12px 26px rgba(15,23,42,.16); }
+  .podium-step strong { font-size: 30px; line-height: 1; padding: 18px 0; }
+  .place-1 .podium-step strong { padding: 32px 0; font-size: 38px; }
+  .place-3 .podium-step strong { padding: 14px 0; }
 
   .ranking-table-wrap { overflow-x: auto; }
   .ranking-table { width: 100%; border-collapse: collapse; min-width: 820px; }
@@ -406,26 +411,26 @@ const styles = `
   @media (max-width: 920px) {
     .rankings-hero { flex-direction: column; }
     .rankings-summary { min-width: 0; }
-    .podium-stage { grid-template-columns: 1fr; min-height: 0; gap: 24px; }
+    .podium-stage { grid-template-columns: 1fr; min-height: 0; gap: 16px; }
     .place-1, .place-2, .place-3 { transform: none; }
-    .podium-person { grid-template-columns: 96px 1fr; grid-template-areas: 'character label' 'step step'; justify-items: start; align-items: center; }
+    .podium-person { grid-template-columns: 84px 1fr; grid-template-areas: 'character label' 'step step'; justify-items: start; align-items: center; }
     .podium-character { grid-area: character; }
     .podium-label { grid-area: label; text-align: left; }
     .podium-step { grid-area: step; max-width: none; }
-    .podium-step strong, .place-1 .podium-step strong, .place-3 .podium-step strong { padding: 12px 0; font-size: 28px; }
+    .podium-step strong, .place-1 .podium-step strong, .place-3 .podium-step strong { padding: 10px 0; font-size: 24px; }
     .podium-title, .table-title, .chart-header { flex-direction: column; }
   }
 
   @media (max-width: 560px) {
     .rankings-page { padding: 18px 10px 36px; }
     .rankings-summary { grid-template-columns: 1fr; }
-    .podium-title, .table-title, .chart-header { padding: 15px; }
-    .podium-stage { padding: 20px 14px; }
-    .podium-person { grid-template-columns: 82px 1fr; }
-    .podium-head .user-avatar { width: 58px !important; height: 58px !important; min-width: 58px !important; }
-    .podium-body { width: 70px; height: 58px; }
-    .podium-torso { width: 42px; height: 50px; }
-    .podium-arm { height: 38px; }
+    .podium-title, .table-title, .chart-header { padding: 14px; }
+    .podium-stage { padding: 16px 12px; }
+    .podium-person { grid-template-columns: 74px 1fr; }
+    .podium-head .user-avatar { width: 50px !important; height: 50px !important; min-width: 50px !important; }
+    .podium-body { width: 62px; height: 50px; }
+    .podium-torso { width: 36px; height: 42px; }
+    .podium-arm { height: 32px; width: 11px; }
     .chart-scroll { padding: 10px; }
   }
 `;
