@@ -4,6 +4,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const matchesRoutes = require('./routes/matches');
 const predictionsRoutes = require('./routes/predictions');
+const bonusPredictionsRoutes = require('./routes/bonusPredictions');
 const resultsRoutes = require('./routes/results');
 const teamsRoutes = require('./routes/teams');
 
@@ -24,6 +25,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/matches', matchesRoutes);
 app.use('/api/predictions', predictionsRoutes);
+app.use('/api/bonus-predictions', bonusPredictionsRoutes);
 app.use('/api/results', resultsRoutes);
 app.use('/api/teams', teamsRoutes);
 
