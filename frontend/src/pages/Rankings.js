@@ -339,9 +339,10 @@ const styles = `
   .podium-stage {
     min-height: 288px;
     display: grid;
-    grid-template-columns: 1fr 1.12fr 1fr;
+    grid-template-columns: repeat(3, minmax(160px, 215px));
+    justify-content: center;
     align-items: end;
-    gap: 14px;
+    gap: 8px;
     padding: 20px 18px 16px;
     background:
       radial-gradient(circle at center top, rgba(251,191,36,.18), transparent 34%),
@@ -411,7 +412,7 @@ const styles = `
   @media (max-width: 920px) {
     .rankings-hero { flex-direction: column; }
     .rankings-summary { min-width: 0; }
-    .podium-stage { grid-template-columns: 1fr; min-height: 0; gap: 16px; }
+    .podium-stage { grid-template-columns: 1fr; min-height: 0; gap: 12px; }
     .place-1, .place-2, .place-3 { transform: none; }
     .podium-person { grid-template-columns: 84px 1fr; grid-template-areas: 'character label' 'step step'; justify-items: start; align-items: center; }
     .podium-character { grid-area: character; }
