@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Predictions from './pages/Predictions';
@@ -8,6 +8,8 @@ import UserStats from './pages/UserStats';
 import Admin from './pages/Admin';
 import Rules from './pages/Rules';
 import Simulation from './pages/Simulation';
+import Profile from './pages/Profile';
+import UserAvatar from './components/UserAvatar';
 
 function Navigation({ user, onLogout }) {
   if (!user) return null;
@@ -29,7 +31,10 @@ function Navigation({ user, onLogout }) {
       </div>
 
       <div className="nav-user">
-        <span>Bienvenue, {user.username}</span>
+        <Link to="/profile" className="nav-profile-link" title="Mon profil">
+          <UserAvatar user={user} size={32} />
+          <span>{user.username}</span>
+        </Link>
         <button onClick={onLogout} className="button button-danger button-small">
           Déconnexion
         </button>
@@ -49,8 +54,13 @@ function AppContent() {
     }
   }, []);
 
-  const handleLogin = (userData) => {
+  const handleUserUpdate = useCallback((userData) => {
     setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  }, []);
+
+  const handleLogin = (userData) => {
+    handleUserUpdate(userData);
     navigate('/predictions');
   };
 
@@ -71,6 +81,7 @@ function AppContent() {
         <Route path="/rankings" element={<Rankings />} />
         <Route path="/stats" element={user ? <UserStats /> : <Home onLogin={handleLogin} />} />
         <Route path="/simulation" element={user ? <Simulation /> : <Home onLogin={handleLogin} />} />
+        <Route path="/profile" element={user ? <Profile user={user} onUserUpdate={handleUserUpdate} /> : <Home onLogin={handleLogin} />} />
         <Route path="/rules" element={<Rules />} />
         <Route path="/admin" element={user?.is_admin ? <Admin /> : <Predictions />} />
       </Routes>
