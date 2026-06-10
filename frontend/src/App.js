@@ -30,7 +30,6 @@ function Navigation({ user, onLogout }) {
         <Link to="/simulation">🎮 Simulation</Link>
         <Link to="/rules">📋 Règles</Link>
         {user?.is_admin && <Link to="/admin">⚙️ Admin</Link>}
-        {user?.is_admin && <Link to="/admin/users">👥 Utilisateurs</Link>}
       </div>
 
       <div className="nav-user">
@@ -43,6 +42,15 @@ function Navigation({ user, onLogout }) {
         </button>
       </div>
     </nav>
+  );
+}
+
+function AdminPanel() {
+  return (
+    <>
+      <Admin />
+      <AdminUsers />
+    </>
   );
 }
 
@@ -87,8 +95,7 @@ function AppContent() {
         <Route path="/simulation" element={user ? <Simulation /> : <Home onLogin={handleLogin} />} />
         <Route path="/profile" element={user ? <Profile user={user} onUserUpdate={handleUserUpdate} /> : <Home onLogin={handleLogin} />} />
         <Route path="/rules" element={<Rules />} />
-        <Route path="/admin" element={user?.is_admin ? <Admin /> : <Predictions />} />
-        <Route path="/admin/users" element={user?.is_admin ? <AdminUsers /> : <Predictions />} />
+        <Route path="/admin" element={user?.is_admin ? <AdminPanel /> : <Predictions />} />
       </Routes>
     </>
   );
