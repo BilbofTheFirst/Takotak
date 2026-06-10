@@ -9,7 +9,7 @@
     top: 0;
     z-index: 100;
     display: block;
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
 
   .nav-mobile-header {
@@ -51,42 +51,67 @@
   }
 
   .top-nav.mobile-open .nav-links {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    margin-top: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 10px;
   }
 
   .top-nav.mobile-open .nav-links a,
   .top-nav.mobile-open .nav-rankings-locked {
     width: 100%;
-    min-height: 44px;
+    min-height: 40px;
     justify-content: center;
-    padding: 11px 12px;
-    border-radius: 14px;
+    padding: 9px 8px;
+    border-radius: 13px;
     text-align: center;
-    font-size: 15px;
+    font-size: 13px;
+    line-height: 1.1;
     background: rgba(255,255,255,0.10);
     border: 1px solid rgba(255,255,255,0.12);
   }
 
   .top-nav.mobile-open .nav-links .nav-bonus-link {
+    grid-column: 1 / -1;
+    min-height: 44px;
+    font-size: 15px;
     background: rgba(251, 191, 36, 0.16);
     border-color: rgba(251, 191, 36, 0.95);
   }
 
+  .top-nav.mobile-open .nav-rankings-locked small {
+    display: block;
+    margin-left: 3px;
+    font-size: 8px;
+  }
+
   .top-nav.mobile-open .nav-user {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
-    margin-top: 12px;
-    padding-top: 12px;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1px solid rgba(255,255,255,0.12);
   }
 
   .top-nav.mobile-open .nav-profile-link,
   .top-nav.mobile-open .button-danger {
-    width: 100%;
-    min-height: 44px;
+    min-height: 40px;
     justify-content: center;
+  }
+
+  .top-nav.mobile-open .nav-profile-link {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .top-nav.mobile-open .nav-profile-link span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .top-nav.mobile-open .button-danger {
+    white-space: nowrap;
   }
 
   .page-shell {
@@ -171,6 +196,249 @@
     flex-direction: column;
     align-items: stretch;
   }
+
+  /* Bonus: les 3 gros encarts deviennent une seule ligne compacte sur téléphone. */
+  .bonus-page .bonus-hero-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .bonus-page .bonus-hero-summary div {
+    min-height: 70px !important;
+    padding: 10px 8px !important;
+    border-radius: 14px !important;
+  }
+
+  .bonus-page .bonus-hero-summary strong {
+    font-size: 24px !important;
+  }
+
+  .bonus-page .bonus-hero-summary span {
+    font-size: 9px !important;
+    line-height: 1.15 !important;
+  }
+
+  .bonus-page .bonus-hero h1,
+  .predictions-page .predictions-hero h1,
+  .simulation-page .simulation-hero h1 {
+    font-size: 31px !important;
+  }
+
+  .bonus-page .bonus-panel-header {
+    gap: 12px !important;
+  }
+
+  .bonus-page .bonus-actions-card {
+    grid-template-columns: 1fr auto !important;
+    align-items: center !important;
+  }
+
+  .bonus-page .bonus-score-card {
+    justify-items: start !important;
+    min-height: 64px !important;
+    padding: 10px 13px !important;
+  }
+
+  .bonus-page .bonus-score-card strong {
+    font-size: 28px !important;
+  }
+
+  .bonus-page .bonus-actions-card button {
+    min-height: 46px !important;
+    padding: 10px 14px !important;
+  }
+
+  /* Pronostics: garder un match compact sur une ligne quand c'est possible. */
+  .predictions-page .match-row {
+    padding: 9px 8px !important;
+  }
+
+  .predictions-page .match-main {
+    grid-template-columns: minmax(0, 1fr) 94px minmax(0, 1fr) !important;
+    gap: 6px !important;
+    align-items: center !important;
+  }
+
+  .predictions-page .team-block,
+  .predictions-page .team-block-right {
+    justify-content: flex-start !important;
+    text-align: left !important;
+    padding: 2px 3px !important;
+  }
+
+  .predictions-page .team-block-right {
+    justify-content: flex-end !important;
+    text-align: right !important;
+    flex-direction: row !important;
+  }
+
+  .predictions-page .team-name {
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    font-size: 12px !important;
+    line-height: 1.08 !important;
+  }
+
+  .predictions-page .flag-shell {
+    width: 25px !important;
+    height: 25px !important;
+  }
+
+  .predictions-page .score-zone {
+    min-width: 94px !important;
+    gap: 4px !important;
+  }
+
+  .predictions-page .score-zone input {
+    width: 36px !important;
+    height: 32px !important;
+    font-size: 15px !important;
+  }
+
+  .predictions-page .match-status-zone {
+    justify-content: center !important;
+  }
+
+  /* Simulation: les matchs tiennent dans la largeur et le classement montre l'essentiel. */
+  .simulation-page {
+    padding: 18px 8px 36px !important;
+  }
+
+  .simulation-page .simulation-summary {
+    min-width: 0 !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 7px !important;
+  }
+
+  .simulation-page .simulation-summary div,
+  .simulation-page .simulation-summary button {
+    padding: 10px !important;
+    border-radius: 14px !important;
+  }
+
+  .simulation-page .groups-grid {
+    gap: 14px !important;
+  }
+
+  .simulation-page .group-card {
+    border-radius: 17px !important;
+  }
+
+  .simulation-page .group-card-header {
+    padding: 11px 12px !important;
+  }
+
+  .simulation-page .group-matches {
+    padding: 5px 6px !important;
+  }
+
+  .simulation-page .simulation-match-line {
+    grid-template-columns: 43px minmax(42px, 1fr) 22px 32px 8px 32px 22px minmax(42px, 1fr) !important;
+    gap: 3px !important;
+    padding: 7px 0 !important;
+    width: 100% !important;
+  }
+
+  .simulation-page .match-schedule {
+    font-size: 9px !important;
+    line-height: 1.05 !important;
+    white-space: normal !important;
+  }
+
+  .simulation-page .match-team-name {
+    font-size: 10.5px !important;
+    line-height: 1.05 !important;
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .simulation-page .sim-flag {
+    width: 21px !important;
+    height: 21px !important;
+    border-width: 1px !important;
+  }
+
+  .simulation-page .simulation-match-line input {
+    width: 32px !important;
+    height: 30px !important;
+    border-radius: 9px !important;
+    font-size: 13px !important;
+  }
+
+  .simulation-page .score-separator {
+    font-size: 12px !important;
+  }
+
+  .simulation-page .prediction-pill {
+    grid-column: 2 / span 3 !important;
+    justify-self: stretch !important;
+    text-align: center !important;
+    margin-top: 2px !important;
+    font-size: 8.5px !important;
+    padding: 4px 5px !important;
+  }
+
+  .simulation-page .sim-points {
+    grid-column: 6 / span 3 !important;
+    justify-self: stretch !important;
+    margin-top: 2px !important;
+    min-width: 0 !important;
+    font-size: 8.5px !important;
+    padding: 4px 5px !important;
+  }
+
+  .simulation-page .group-standings {
+    padding: 8px 6px !important;
+  }
+
+  .simulation-page .standing-header,
+  .simulation-page .standing-row {
+    grid-template-columns: minmax(0, 1fr) 32px 45px 38px !important;
+    gap: 5px !important;
+  }
+
+  .simulation-page .standing-header span:nth-child(3),
+  .simulation-page .standing-header span:nth-child(4),
+  .simulation-page .standing-header span:nth-child(5),
+  .simulation-page .standing-header span:nth-child(6),
+  .simulation-page .standing-header span:nth-child(7),
+  .simulation-page .standing-row > span:nth-child(3),
+  .simulation-page .standing-row > span:nth-child(4),
+  .simulation-page .standing-row > span:nth-child(5),
+  .simulation-page .standing-row > span:nth-child(6),
+  .simulation-page .standing-row > span:nth-child(7) {
+    display: none !important;
+  }
+
+  .simulation-page .standing-header span:nth-child(8)::before {
+    content: 'Diff';
+  }
+
+  .simulation-page .standing-header span:nth-child(8) {
+    font-size: 0 !important;
+  }
+
+  .simulation-page .standing-header span:nth-child(8)::before {
+    font-size: 9px !important;
+  }
+
+  .simulation-page .standing-row {
+    padding: 7px 6px !important;
+    font-size: 11px !important;
+  }
+
+  .simulation-page .team-standing-name {
+    gap: 5px !important;
+  }
+
+  .simulation-page .team-standing-name strong {
+    font-size: 12px !important;
+    line-height: 1.08 !important;
+  }
 }
 
 @media (min-width: 761px) {
@@ -194,5 +462,9 @@
 
   .ranking-locked-card h1 {
     font-size: 28px;
+  }
+
+  .bonus-page .bonus-hero-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
