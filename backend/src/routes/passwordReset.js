@@ -46,6 +46,22 @@ const getFrontendUrl = () =>
 const getMailFrom = () =>
   process.env.MAIL_FROM || `TakoTak <${process.env.SMTP_USER || ''}>`;
 
+const getSmtpConfig = () => {
+  const port = Number(process.env.SMTP_PORT || 465);
+  return {
+    host: process.env.SMTP_HOST,
+    port,
+    secure: String(process.env.SMTP_SECURE || 'true') === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
+  };
+};
+
 const sendPasswordResetEmail = async ({ to, resetUrl }) => {
   const smtpHost = process.env.SMTP_HOST;
   const smtpUser = process.env.SMTP_USER;
@@ -59,15 +75,17 @@ const sendPasswordResetEmail = async ({ to, resetUrl }) => {
     return false;
   }
 
-  const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: String(process.env.SMTP_SECURE || 'true') === 'true',
-    auth: {
-      user: smtpUser,
-      pass: smtpPass
-    }
+  const smtpConfig = getSmtpConfig();
+  console.info('Password reset SMTP config:', {
+    host: smtpConfig.host,
+    port: smtpConfig.port,
+    secure: smtpConfig.secure,
+    userConfigured: Boolean(smtpConfig.auth.user),
+    passConfigured: Boolean(smtpConfig.auth.pass),
+    mailFromConfigured: Boolean(process.env.MAIL_FROM)
   });
+
+  const transporter = nodemailer.createTransport(smtpConfig);
 
   await transporter.sendMail({
     from: getMailFrom(),
