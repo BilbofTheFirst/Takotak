@@ -83,6 +83,7 @@ export const resultsService = {
   getThirdPlaces: () => api.get('/results/third-places'),
   saveThirdPlaceOrder: (group_codes) => api.post('/results/third-places/order', { group_codes }),
   getLeaderboard: () => api.get('/results/leaderboard'),
+  getLeaderboardProgression: () => api.get('/results/leaderboard/progression'),
   getUserStats: () => api.get('/results/user/stats')
 };
 
