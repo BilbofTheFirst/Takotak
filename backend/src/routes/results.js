@@ -7,6 +7,7 @@ const {
   propagateKnockoutTeams,
   saveManualThirdPlaceOrder
 } = require('../utils/knockoutPropagation');
+const { getAllBonusScores } = require('../utils/bonusScoring');
 
 const router = express.Router();
 let resultExtraColumnsReady = false;
@@ -238,10 +239,12 @@ router.delete('/:matchId', authenticateAdmin, async (req, res) => {
 router.get('/user/stats', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    const { scores: bonusScores } = await getAllBonusScores(pool);
+    const userBonus = bonusScores.get(Number(userId))?.points || 0;
 
     const statsResult = await pool.query(
       `SELECT
-        COALESCE(SUM(us.points), 0)::int AS total_points,
+        COALESCE(SUM(us.points), 0)::int AS match_points,
         COUNT(us.match_id)::int AS matches_played,
         COALESCE(ROUND(AVG(us.points)::numeric, 2), 0)::float AS avg_points_per_match,
         COUNT(*) FILTER (WHERE us.points = 3)::int AS exact_scores,
@@ -253,23 +256,30 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
       [userId]
     );
 
-    const rankResult = await pool.query(
-      `WITH leaderboard AS (
-        SELECT
-          u.id,
-          COALESCE(SUM(us.points), 0) AS total_points,
-          RANK() OVER (ORDER BY COALESCE(SUM(us.points), 0) DESC) AS rank
-        FROM users u
-        LEFT JOIN user_scores us ON u.id = us.user_id
-        GROUP BY u.id
-      )
-      SELECT rank FROM leaderboard WHERE id = $1`,
-      [userId]
+    const rankRows = await pool.query(
+      `SELECT
+        u.id,
+        COALESCE(SUM(us.points), 0)::int AS match_points
+       FROM users u
+       LEFT JOIN user_scores us ON u.id = us.user_id
+       GROUP BY u.id`
     );
 
+    const ranked = rankRows.rows
+      .map(row => ({
+        id: Number(row.id),
+        total_points: Number(row.match_points || 0) + (bonusScores.get(Number(row.id))?.points || 0)
+      }))
+      .sort((a, b) => b.total_points - a.total_points || a.id - b.id);
+
+    const rank = ranked.findIndex(row => row.id === Number(userId)) + 1;
+    const baseStats = statsResult.rows[0];
+
     res.json({
-      ...statsResult.rows[0],
-      rank: rankResult.rows[0]?.rank || null
+      ...baseStats,
+      bonus_points: userBonus,
+      total_points: Number(baseStats.match_points || 0) + userBonus,
+      rank: rank || null
     });
   } catch (error) {
     console.error('Get user stats error:', error);
@@ -280,19 +290,31 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
 // Get leaderboard/rankings
 router.get('/leaderboard', async (req, res) => {
   try {
+    const { scores: bonusScores } = await getAllBonusScores(pool);
     const result = await pool.query(`
       SELECT
         u.id,
         u.username,
-        COALESCE(SUM(us.points), 0)::int as total_points,
-        COUNT(us.match_id)::int as matches_predicted,
-        RANK() OVER (ORDER BY COALESCE(SUM(us.points), 0) DESC) AS rank
+        COALESCE(SUM(us.points), 0)::int as match_points,
+        COUNT(us.match_id)::int as matches_predicted
       FROM users u
       LEFT JOIN user_scores us ON u.id = us.user_id
       GROUP BY u.id, u.username
-      ORDER BY total_points DESC, u.username ASC
     `);
-    res.json(result.rows);
+
+    const rows = result.rows
+      .map(row => {
+        const bonusPoints = bonusScores.get(Number(row.id))?.points || 0;
+        return {
+          ...row,
+          bonus_points: bonusPoints,
+          total_points: Number(row.match_points || 0) + bonusPoints
+        };
+      })
+      .sort((a, b) => b.total_points - a.total_points || a.username.localeCompare(b.username, 'fr'))
+      .map((row, index) => ({ ...row, rank: index + 1 }));
+
+    res.json(rows);
   } catch (error) {
     console.error('Get leaderboard error:', error);
     res.status(500).json({ error: 'Server error' });
