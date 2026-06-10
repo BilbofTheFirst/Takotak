@@ -12,6 +12,7 @@ import Simulation from './pages/Simulation';
 import Profile from './pages/Profile';
 import ResetPassword from './pages/ResetPassword';
 import UserAvatar from './components/UserAvatar';
+import './nav-status.css';
 
 function Navigation({ user, onLogout }) {
   if (!user) return null;
@@ -24,8 +25,14 @@ function Navigation({ user, onLogout }) {
 
       <div className="nav-links">
         <Link to="/predictions">🎯 Pronostics</Link>
-        <Link to="/bonus">🎁 Bonus</Link>
-        <Link to="/rankings">🏆 Classement</Link>
+        <Link to="/bonus" className="nav-bonus-link">🎁 Bonus</Link>
+        {user?.is_admin ? (
+          <Link to="/rankings">🏆 Classement</Link>
+        ) : (
+          <span className="nav-rankings-locked" title="Classement en construction">
+            🏆 Classement <small>en construction</small>
+          </span>
+        )}
         <Link to="/stats">📊 Mes Stats</Link>
         <Link to="/simulation">🎮 Simulation</Link>
         <Link to="/rules">📋 Règles</Link>
@@ -51,6 +58,17 @@ function AdminPanel() {
       <Admin />
       <AdminUsers />
     </>
+  );
+}
+
+function RankingsLocked() {
+  return (
+    <div className="ranking-locked-page">
+      <div className="ranking-locked-card">
+        <h1>🚧 Classement en construction</h1>
+        <p>Le classement est encore en préparation et sera ouvert à tout le monde bientôt. En attendant, concentre-toi sur tes pronostics et surtout sur les bonus.</p>
+      </div>
+    </div>
   );
 }
 
@@ -90,7 +108,7 @@ function AppContent() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/predictions" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
         <Route path="/bonus" element={user ? <BonusPredictions /> : <Home onLogin={handleLogin} />} />
-        <Route path="/rankings" element={<Rankings />} />
+        <Route path="/rankings" element={user?.is_admin ? <Rankings /> : <RankingsLocked />} />
         <Route path="/stats" element={user ? <UserStats /> : <Home onLogin={handleLogin} />} />
         <Route path="/simulation" element={user ? <Simulation /> : <Home onLogin={handleLogin} />} />
         <Route path="/profile" element={user ? <Profile user={user} onUserUpdate={handleUserUpdate} /> : <Home onLogin={handleLogin} />} />
