@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { resultsService } from '../services/api';
+import PageLoader from '../components/PageLoader';
 
 function UserStats() {
   const [stats, setStats] = useState(null);
@@ -20,7 +21,7 @@ function UserStats() {
     }
   };
 
-  if (loading) return <div className="page-shell"><div className="page-container">Chargement...</div></div>;
+  if (loading) return <PageLoader title="Chargement de tes stats..." icon="📊" subtitle="Calcul de tes points, bonus et classement" />;
   if (!stats) return <div className="page-shell"><div className="page-container">Pas de stats pour le moment</div></div>;
 
   const statCards = [
