@@ -385,12 +385,6 @@ function Predictions() {
           <div className="autosave-inline"><span>💾</span> Sauvegarde en quittant le champ</div>
         </div>
 
-        {isMobile && hiddenMobileDayCount > 0 && (
-          <div className="mobile-days-hint">
-            Affichage mobile allégé : {renderedDayGroups.length} journée{renderedDayGroups.length > 1 ? 's' : ''} affichée{renderedDayGroups.length > 1 ? 's' : ''} sur {visibleDayGroups.length}.
-          </div>
-        )}
-
         {renderedDayGroups.map(group => (
           <section key={group.key} ref={el => { dateRefs.current[group.key] = el; }} className={`match-day-card ${isPastGroup(group) ? 'past-day-card' : ''}`}>
             <div className="match-day-header"><div><span>📅 Journée</span><h2>{group.label}</h2></div><span className="match-count">{group.matches.length} match{group.matches.length > 1 ? 's' : ''}</span></div>
@@ -443,7 +437,6 @@ function Predictions() {
         .prediction-toolbar button { border: 0; border-radius: 999px; padding: 8px 12px; background: ${GRADIENT}; color: white; font-size: 12px; font-weight: 900; cursor: pointer; box-shadow: 0 8px 18px rgba(15,118,110,.18); }
         .prediction-toolbar button + button { background: #e2e8f0; color: #334155; box-shadow: none; }
         .autosave-inline { margin-left: auto; color: #64748b; font-size: 12px; font-weight: 800; }
-        .mobile-days-hint { display: none; }
         .mobile-load-more-wrap { display: none; }
         .match-day-card { background: rgba(255,255,255,.94); border-radius: 18px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 18px 55px rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.55); scroll-margin-top: 18px; }
         .past-day-card { opacity: .92; }
@@ -500,8 +493,8 @@ function Predictions() {
         @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @media (max-width: 1060px) { .match-row { grid-template-columns: 1fr; gap: 10px; } .match-meta, .match-status-zone { justify-content: center; } }
         @media (max-width: 920px) { .predictions-hero { flex-direction: column; } .prediction-summary { min-width: 0; } .match-main { grid-template-columns: 1fr; gap: 8px; } .team-block, .team-block-right { justify-content: center; text-align: center; } .team-block-right { flex-direction: row-reverse; } .autosave-inline { margin-left: 0; } }
-        @media (max-width: 760px) { .mobile-days-hint { display: block; margin: 0 0 12px; padding: 9px 12px; border-radius: 14px; background: rgba(255,255,255,.92); color: #475569; font-size: 12px; font-weight: 850; text-align: center; } .mobile-load-more-wrap { display: flex; justify-content: center; margin: 14px 0 4px; } .mobile-load-more-button { width: 100%; min-height: 46px; border: 0; border-radius: 16px; background: ${GRADIENT}; color: white; font-size: 14px; font-weight: 950; box-shadow: 0 12px 28px rgba(0,0,0,.18); } }
-        @media (max-width: 560px) { .predictions-page { padding: 18px 10px 36px; } .prediction-summary { grid-template-columns: 1fr; } .match-day-header { align-items: flex-start; flex-direction: column; gap: 8px; } .match-row { padding: 10px; } .prediction-toolbar button { width: 100%; } }
+        @media (max-width: 760px) { .mobile-load-more-wrap { display: flex; justify-content: center; margin: 14px 0 4px; } .mobile-load-more-button { width: 100%; min-height: 46px; border: 0; border-radius: 16px; background: ${GRADIENT}; color: white; font-size: 14px; font-weight: 950; box-shadow: 0 12px 28px rgba(0,0,0,.18); } .match-row { grid-template-columns: minmax(0, 1fr) auto; gap: 7px 8px; padding: 9px 8px; } .match-meta { justify-content: flex-start; gap: 6px; } .match-status-zone { justify-content: flex-end; gap: 5px; } .match-main { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) 94px minmax(0, 1fr); gap: 6px; align-items: center; } .team-block, .team-block-right { justify-content: flex-start; text-align: left; padding: 2px; gap: 5px; border-radius: 10px; } .team-block-right { justify-content: flex-end; text-align: right; flex-direction: row; } .team-name { white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 12px; line-height: 1.08; } .flag-shell { width: 24px; height: 24px; border-width: 1px; } .score-zone, .result-zone, .unknown-match-note { min-width: 94px; } .score-zone { gap: 4px; } .score-zone input { width: 34px; height: 32px; font-size: 14px; border-radius: 10px; } .prediction-status { min-width: 0; padding: 5px 8px; font-size: 10px; } .match-number { display: none; } }
+        @media (max-width: 560px) { .predictions-page { padding: 18px 10px 36px; } .prediction-summary { grid-template-columns: 1fr; } .match-day-header { align-items: flex-start; flex-direction: column; gap: 8px; } .prediction-toolbar button { width: 100%; } }
       `}</style>
     </div>
   );
