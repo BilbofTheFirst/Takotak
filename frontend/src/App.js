@@ -13,6 +13,7 @@ import Profile from './pages/Profile';
 import ResetPassword from './pages/ResetPassword';
 import UserAvatar from './components/UserAvatar';
 import './nav-status.css';
+import './mobile-responsive.css';
 
 function Navigation({ user, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
