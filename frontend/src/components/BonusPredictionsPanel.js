@@ -276,7 +276,7 @@ function BonusPredictionsPanel({ matches }) {
         .bonus-card-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
         .bonus-card-title span, .field-label, .semifinalists-title span { display: block; color: #0f766e; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
         .bonus-card-title strong { color: #d97706; font-size: 22px; white-space: nowrap; }
-        .bonus-group-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 9px; }
+        .bonus-group-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
         .group-winner-row { display: grid; grid-template-columns: 34px 32px minmax(0, 1fr); gap: 7px; align-items: center; min-width: 0; }
         .group-badge { width: 31px; height: 31px; border-radius: 10px; display: grid; place-items: center; background: #ecfdf5; color: #047857; font-size: 13px; font-weight: 950; }
         .group-flag, .bonus-flag { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #e2e8f0; overflow: hidden; border: 2px solid white; box-shadow: 0 5px 14px rgba(15,23,42,.14); color: #64748b; font-size: 14px; }
@@ -294,8 +294,8 @@ function BonusPredictionsPanel({ matches }) {
         .semifinalists-title { display: flex; justify-content: space-between; align-items: center; }
         .semifinalists-title strong { color: #0f172a; font-size: 14px; }
         .semifinalist-row { display: grid; grid-template-columns: 32px 34px minmax(0, 1fr); gap: 8px; align-items: center; }
-        @media (max-width: 940px) { .bonus-panel-header { grid-template-columns: 1fr; } .bonus-actions-card { grid-template-columns: 1fr; } .final-picks-grid, .semifinalists-grid { grid-template-columns: 1fr; } }
-        @media (max-width: 640px) { .bonus-progress-row { grid-template-columns: 1fr; } .bonus-group-grid { grid-template-columns: 1fr; } .bonus-panel { padding: 12px; } }
+        @media (max-width: 940px) { .bonus-panel-header { grid-template-columns: 1fr; } .bonus-actions-card { grid-template-columns: 1fr; } .bonus-group-grid, .final-picks-grid, .semifinalists-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 640px) { .bonus-progress-row { grid-template-columns: 1fr; } .bonus-group-grid, .final-picks-grid, .semifinalists-grid { grid-template-columns: 1fr; } .bonus-panel { padding: 12px; } }
       `}</style>
     </section>
   );
