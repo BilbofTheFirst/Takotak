@@ -19,13 +19,16 @@ function Rules() {
 
       <h3 style={sectionStyle}>Pronostics de matchs :</h3>
       <p>
-        Les pronostics portent sur le score à la fin du <strong>temps réglementaire</strong>,
-        temps additionnel inclus. Les prolongations et les tirs au but ne comptent pas dans le score pronostiqué.
+        En phase de groupes, les pronostics portent sur le score à la fin du <strong>temps réglementaire</strong>,
+        temps additionnel inclus.
       </p>
       <p>
-        En phase finale, il est donc possible de pronostiquer un <strong>match nul</strong> : par exemple,
-        si un huitième se termine 1-1 après 90 minutes puis 2-1 après prolongation, le résultat pris en compte
-        pour les pronostics reste 1-1.
+        À partir des matchs à élimination directe, les pronostics portent sur le score à la fin du match,
+        <strong> prolongations éventuelles incluses</strong>, mais <strong>sans tenir compte des tirs au but</strong>.
+      </p>
+      <p>
+        Un match nul reste donc possible dans les pronostics de phase finale uniquement si le match est encore nul
+        après les prolongations et se décide ensuite aux tirs au but.
       </p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -98,7 +101,7 @@ function Rules() {
         <li>Vous pouvez modifier un pronostic de match jusqu'à ce que le match commence.</li>
         <li>Une fois le match commencé, le pronostic du match est bloqué.</li>
         <li>Les matchs nuls sont bien pris en compte dans le barème.</li>
-        <li>Pour les matchs à élimination directe, le score du temps réglementaire est utilisé, pas le vainqueur après tirs au but.</li>
+        <li>Pour les matchs à élimination directe, le score utilisé inclut les prolongations si elles ont lieu, mais jamais les tirs au but.</li>
         <li>Les points sont calculés automatiquement après encodage des résultats officiels.</li>
       </ul>
     </div>
