@@ -23,23 +23,27 @@ function Rankings() {
   if (loading) return <div style={{ textAlign: 'center', padding: '20px' }}>Chargement...</div>;
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', maxWidth: '760px', margin: '0 auto' }}>
       <h1>🏆 Classement</h1>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ background: '#f0f0f0' }}>
             <th style={{ border: '1px solid #ddd', padding: '8px' }}>Rang</th>
             <th style={{ border: '1px solid #ddd', padding: '8px' }}>Joueur</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Points</th>
+            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Total</th>
             <th style={{ border: '1px solid #ddd', padding: '8px' }}>Matchs</th>
+            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Bonus</th>
+            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Pronos</th>
           </tr>
         </thead>
         <tbody>
           {rankings.map((user, idx) => (
             <tr key={user.id}>
-              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{idx + 1}</td>
+              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.rank || idx + 1}</td>
               <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.username}</td>
               <td style={{ border: '1px solid #ddd', padding: '8px' }}><strong>{user.total_points || 0}</strong></td>
+              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.match_points || 0}</td>
+              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.bonus_points || 0}</td>
               <td style={{ border: '1px solid #ddd', padding: '8px' }}>{user.matches_predicted || 0}</td>
             </tr>
           ))}
