@@ -9,6 +9,7 @@ const adminUsersRoutes = require('./routes/adminUsers');
 const matchesRoutes = require('./routes/matches');
 const predictionsRoutes = require('./routes/predictions');
 const bonusPredictionsRoutes = require('./routes/bonusPredictions');
+const specialPredictionsRoutes = require('./routes/specialPredictions');
 const resultsRoutes = require('./routes/results');
 const teamsRoutes = require('./routes/teams');
 
@@ -32,6 +33,7 @@ app.use('/api/admin', adminUsersRoutes);
 app.use('/api/matches', matchesRoutes);
 app.use('/api/predictions', predictionsRoutes);
 app.use('/api/bonus-predictions', bonusPredictionsRoutes);
+app.use('/api/special-predictions', specialPredictionsRoutes);
 app.use('/api/results', resultsRoutes);
 app.use('/api/teams', teamsRoutes);
 
@@ -45,5 +47,5 @@ ensureSchema(pool)
   })
   .catch(error => {
     console.error('Database schema initialization failed:', error);
-    process.exit(1);
+    throw error;
   });
