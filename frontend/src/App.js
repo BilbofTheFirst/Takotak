@@ -142,13 +142,139 @@ function Navigation({ user, onLogout, hasBonusAttention, hasPredictionAttention 
   );
 }
 
+const ADMIN_TABS = [
+  { value: 'monitoring', label: 'Monitoring', icon: '📡' },
+  { value: 'matches', label: 'Matches', icon: '⚽' },
+  { value: 'users', label: 'Utilisateurs', icon: '👥' }
+];
+
 function AdminPanel() {
+  const [activeTab, setActiveTab] = useState('monitoring');
+
   return (
-    <>
-      <AdminMonitoring />
-      <Admin />
-      <AdminUsers />
-    </>
+    <div className="admin-tabs-page">
+      <section className="admin-tabs-hero">
+        <div>
+          <span className="admin-tabs-eyebrow">Administration</span>
+          <h1>⚙️ Panel Admin</h1>
+          <p>Monitoring, encodage des matchs et gestion des utilisateurs au même endroit.</p>
+        </div>
+
+        <div className="admin-tabs-nav" role="tablist" aria-label="Sections admin">
+          {ADMIN_TABS.map(tab => (
+            <button
+              key={tab.value}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.value}
+              className={activeTab === tab.value ? 'active' : ''}
+              onClick={() => setActiveTab(tab.value)}
+            >
+              <span>{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <div className="admin-tab-content">
+        {activeTab === 'monitoring' && <AdminMonitoring />}
+        {activeTab === 'matches' && <Admin />}
+        {activeTab === 'users' && <AdminUsers />}
+      </div>
+
+      <style>{`
+        .admin-tabs-page {
+          min-height: 100vh;
+          padding: 24px 18px 42px;
+          background: radial-gradient(circle at top left, rgba(217,119,6,.13), transparent 32%), radial-gradient(circle at top right, rgba(15,118,110,.16), transparent 32%), linear-gradient(135deg, #071b16 0%, #0f172a 44%, #111827 100%);
+        }
+        .admin-tabs-hero {
+          width: min(1220px, 100%);
+          margin: 0 auto 16px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 18px;
+          align-items: end;
+          color: white;
+        }
+        .admin-tabs-eyebrow {
+          display: inline-flex;
+          padding: 5px 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,.12);
+          border: 1px solid rgba(255,255,255,.18);
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: .08em;
+          color: #fde68a;
+          margin-bottom: 10px;
+        }
+        .admin-tabs-hero h1 {
+          margin: 0 0 7px;
+          font-size: clamp(28px, 3.4vw, 44px);
+          line-height: 1;
+          letter-spacing: -.04em;
+        }
+        .admin-tabs-hero p {
+          margin: 0;
+          color: rgba(255,255,255,.76);
+          font-size: 14px;
+          line-height: 1.5;
+        }
+        .admin-tabs-nav {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          padding: 8px;
+          border-radius: 18px;
+          background: rgba(255,255,255,.1);
+          border: 1px solid rgba(255,255,255,.16);
+          box-shadow: 0 18px 45px rgba(0,0,0,.18);
+          backdrop-filter: blur(10px);
+        }
+        .admin-tabs-nav button {
+          border: 0;
+          border-radius: 999px;
+          padding: 10px 13px;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          color: rgba(255,255,255,.78);
+          background: rgba(255,255,255,.08);
+          font-size: 13px;
+          font-weight: 950;
+          cursor: pointer;
+          transition: transform .15s ease, background .15s ease, color .15s ease;
+        }
+        .admin-tabs-nav button:hover {
+          transform: translateY(-1px);
+          background: rgba(255,255,255,.15);
+          color: white;
+        }
+        .admin-tabs-nav button.active {
+          color: #0f172a;
+          background: white;
+          box-shadow: 0 10px 24px rgba(0,0,0,.18);
+        }
+        .admin-tab-content > .admin-page {
+          min-height: auto;
+          padding: 0;
+          background: transparent;
+        }
+        .admin-tab-content > .admin-page > .admin-hero {
+          display: none;
+        }
+        @media (max-width: 760px) {
+          .admin-tabs-page { padding: 18px 10px 36px; }
+          .admin-tabs-hero { grid-template-columns: 1fr; align-items: start; }
+          .admin-tabs-nav { justify-content: stretch; }
+          .admin-tabs-nav button { flex: 1 1 145px; justify-content: center; }
+        }
+      `}</style>
+    </div>
   );
 }
 
