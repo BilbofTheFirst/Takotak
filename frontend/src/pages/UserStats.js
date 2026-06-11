@@ -39,7 +39,7 @@ function UserStats() {
     { label: 'Bons vainqueurs / bons nuls simples', value: `${stats.correct_winners || 0} × 1 pt`, icon: '✅', className: 'winner' },
     { label: 'Spéciaux première journée', value: `${stats.special_points || 0} pts`, icon: '⚡', className: 'special' },
     { label: 'Bonus compétition', value: `${stats.bonus_points || 0} pts`, icon: '🎁', className: 'bonus' },
-    { label: 'Mauvais pronostics', value: `${stats.wrong_predictions || 0} × 0 pt`, icon: '🧊', className: 'wrong' }
+    { label: 'Mauvais pronostics', value: `${stats.wrong_predictions || 0} × 0 pt`, icon: '💩', className: 'wrong' }
   ];
 
   return (
