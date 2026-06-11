@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { matchesService, predictionsService } from '../services/api';
 import TeamInfoModal from '../components/TeamInfoModal';
 import PublicMatchPredictionsPanel from '../components/PublicMatchPredictionsPanel';
@@ -86,8 +86,6 @@ function Predictions() {
   const [selectedMatchday, setSelectedMatchday] = useState('all');
   const [isMobile, setIsMobile] = useState(() => isMobileViewport());
   const [visibleMobileDayCount, setVisibleMobileDayCount] = useState(MOBILE_INITIAL_DAYS);
-  const dateRefs = useRef({});
-  const hasAutoScrolled = useRef(false);
 
   const mockNowValue = useMemo(() => getMockNowValue(), []);
   const mockResultsEnabled = useMemo(() => isMockResultsEnabled(), []);
@@ -128,6 +126,8 @@ function Predictions() {
   const isKnockoutMatch = (matchId) => Boolean(KNOCKOUT_MATCHES[matchId]);
   const hasResult = (match) => match.team1_goals !== null && match.team1_goals !== undefined && match.team2_goals !== null && match.team2_goals !== undefined;
   const isValidScoreValue = (value) => /^[0-9]{1,2}$/.test(String(value)) && Number(value) >= 0 && Number(value) <= 99;
+
+  const isPastOrClosedMatch = useCallback((match) => new Date(match.start_time) <= currentNow || hasResult(match), [currentNow]);
 
   const getDisplayMatch = useCallback((match) => {
     if (!mockResultsEnabled || hasResult(match) || !match.team1 || !match.team2 || new Date(match.start_time) >= currentNow) {
@@ -190,6 +190,12 @@ function Predictions() {
     const day = Number(selectedMatchday);
     return matches.filter(match => competitionDayByMatch[match.id] === day);
   }, [competitionDayByMatch, matches, selectedMatchday]);
+
+  const visibleMatchesForGroups = useMemo(() => (
+    showPastDays ? filteredMatches : filteredMatches.filter(match => !isPastOrClosedMatch(match))
+  ), [filteredMatches, isPastOrClosedMatch, showPastDays]);
+
+  const hiddenPastMatchesCount = filteredMatches.length - visibleMatchesForGroups.length;
 
   const matchdayCounts = useMemo(() => ({
     all: matches.length,
@@ -351,38 +357,17 @@ function Predictions() {
 
   const dayGroups = useMemo(() => {
     const grouped = new Map();
-    filteredMatches.forEach(match => {
+    visibleMatchesForGroups.forEach(match => {
       const key = getDateKey(match.start_time);
       if (!grouped.has(key)) grouped.set(key, { key, label: formatDateBelge(match.start_time), date: new Date(`${key}T00:00:00`), matches: [] });
       grouped.get(key).matches.push(match);
     });
     return Array.from(grouped.values()).sort((a, b) => a.date - b.date);
-  }, [filteredMatches]);
+  }, [visibleMatchesForGroups]);
 
-  const todayStart = useMemo(() => { const d = new Date(currentNow); d.setHours(0, 0, 0, 0); return d; }, [currentNow]);
-  const isPastGroup = useCallback((group) => group.matches.every(match => new Date(match.start_time) < todayStart), [todayStart]);
-  const hidePastDays = selectedMatchday === 'all' && !showPastDays;
-  const hiddenPastGroupsCount = selectedMatchday === 'all' ? dayGroups.filter(isPastGroup).length : 0;
-  const visibleDayGroups = hidePastDays ? dayGroups.filter(group => !isPastGroup(group)) : dayGroups;
-  const renderedDayGroups = isMobile ? visibleDayGroups.slice(0, visibleMobileDayCount) : visibleDayGroups;
-  const hiddenMobileDayCount = Math.max(visibleDayGroups.length - renderedDayGroups.length, 0);
-
-  const firstRelevantDateKey = useMemo(() => {
-    const nextGroup = dayGroups.find(group => !isPastGroup(group));
-    return nextGroup?.key || dayGroups[0]?.key;
-  }, [dayGroups, isPastGroup]);
-
-  const scrollToRelevantDate = useCallback(() => {
-    const target = dateRefs.current[firstRelevantDateKey];
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [firstRelevantDateKey]);
-
-  useEffect(() => {
-    if (!loading && firstRelevantDateKey && !hasAutoScrolled.current) {
-      hasAutoScrolled.current = true;
-      setTimeout(() => scrollToRelevantDate(), 250);
-    }
-  }, [loading, firstRelevantDateKey, scrollToRelevantDate]);
+  const isPastGroup = useCallback((group) => group.matches.every(isPastOrClosedMatch), [isPastOrClosedMatch]);
+  const renderedDayGroups = isMobile ? dayGroups.slice(0, visibleMobileDayCount) : dayGroups;
+  const hiddenMobileDayCount = Math.max(dayGroups.length - renderedDayGroups.length, 0);
 
   const displayMatches = useMemo(() => filteredMatches.map(getDisplayMatch), [filteredMatches, getDisplayMatch]);
   const totalPredictions = Object.keys(predictions).length;
@@ -460,17 +445,16 @@ function Predictions() {
         {(selectedMatchday === 'all' || selectedMatchday === '1') && <SpecialPredictionsPanel />}
 
         <div className="prediction-toolbar">
-          <button type="button" onClick={scrollToRelevantDate}>🎯 Aller aux prochains matchs</button>
-          {hiddenPastGroupsCount > 0 && <button type="button" onClick={() => setShowPastDays(prev => !prev)}>{showPastDays ? 'Masquer les journées passées' : `Afficher les journées passées (${hiddenPastGroupsCount})`}</button>}
+          {hiddenPastMatchesCount > 0 && <button type="button" onClick={() => setShowPastDays(prev => !prev)}>{showPastDays ? 'Masquer les matchs passés' : `Afficher les matchs passés (${hiddenPastMatchesCount})`}</button>}
           <div className="autosave-inline"><span>💾</span> Sauvegarde en quittant le champ</div>
         </div>
 
         {renderedDayGroups.length === 0 && (
-          <div className="empty-filter-card">Aucun match dans ce filtre.</div>
+          <div className="empty-filter-card">Aucun match à pronostiquer dans ce filtre.</div>
         )}
 
         {renderedDayGroups.map(group => (
-          <section key={group.key} ref={el => { dateRefs.current[group.key] = el; }} className={`match-day-card ${isPastGroup(group) ? 'past-day-card' : ''}`}>
+          <section key={group.key} className={`match-day-card ${isPastGroup(group) ? 'past-day-card' : ''}`}>
             <div className="match-day-header"><div><span>📅 Journée calendrier</span><h2>{group.label}</h2></div><span className="match-count">{group.matches.length} match{group.matches.length > 1 ? 's' : ''}</span></div>
             <div className="match-list">
               {group.matches.map(match => {
