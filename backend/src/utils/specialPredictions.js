@@ -8,7 +8,7 @@ const SPECIAL_PREDICTION_DEFINITIONS = [
   {
     code: SPECIAL_PREDICTION_CODES.TOTAL_GOALS,
     label: 'Nombre total de buts',
-    description: 'Combien de buts seront marqués lors de la première journée ?',
+    description: 'Combien de buts seront marqués lors de la première journée complète (24 matchs) ?',
     max_points: 10,
     point_loss_per_gap: 1,
     unit: 'buts'
@@ -16,7 +16,7 @@ const SPECIAL_PREDICTION_DEFINITIONS = [
   {
     code: SPECIAL_PREDICTION_CODES.DRAW_COUNT,
     label: 'Nombre de matchs nuls',
-    description: 'Combien de matchs nuls y aura-t-il lors de la première journée ?',
+    description: 'Combien de matchs nuls y aura-t-il lors de la première journée complète (24 matchs) ?',
     max_points: 5,
     point_loss_per_gap: 1,
     unit: 'matchs nuls'
@@ -24,7 +24,7 @@ const SPECIAL_PREDICTION_DEFINITIONS = [
   {
     code: SPECIAL_PREDICTION_CODES.CLEAN_SHEET_COUNT,
     label: 'Nombre de clean sheets',
-    description: 'Combien d’équipes termineront leur premier match sans encaisser de but ?',
+    description: 'Combien d’équipes termineront leur premier match sans encaisser de but lors de la première journée complète (24 matchs) ?',
     max_points: 5,
     point_loss_per_gap: 1,
     unit: 'clean sheets'
