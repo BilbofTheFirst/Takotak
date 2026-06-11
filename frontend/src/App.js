@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useCallback, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { bonusPredictionsService, specialPredictionsService } from './services/api';
 import UserAvatar from './components/UserAvatar';
 import TakotakLogo from './components/TakotakLogo';
 import './nav-status.css';
@@ -19,7 +20,40 @@ const Simulation = lazy(() => import('./pages/Simulation'));
 const Profile = lazy(() => import('./pages/Profile'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
-const BONUS_NEON_END_AT = new Date('2026-06-11T00:00:00+02:00');
+const GROUP_CODES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+const BONUS_STATUS_REFRESH_EVENT = 'takotak:bonus-status-refresh';
+
+const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== '';
+
+const hasPendingBonusPredictions = (data) => {
+  if (!data || data.locked) return false;
+
+  const prediction = data.prediction || {};
+  const groupWinners = prediction.group_winners || {};
+  const semifinalists = Array.isArray(prediction.semifinalists)
+    ? prediction.semifinalists.filter(hasValue)
+    : [];
+
+  return (
+    GROUP_CODES.some(group => !hasValue(groupWinners[group])) ||
+    !hasValue(prediction.champion) ||
+    !hasValue(prediction.runner_up) ||
+    semifinalists.length < 4
+  );
+};
+
+const hasPendingSpecialPredictions = (data) => {
+  if (!data || data.locked) return false;
+
+  const definitions = data.definitions || [];
+  const predictions = data.predictions || {};
+
+  return definitions.some(definition => !hasValue(predictions[definition.code]));
+};
+
+export const refreshBonusAttentionStatus = () => {
+  window.dispatchEvent(new Event(BONUS_STATUS_REFRESH_EVENT));
+};
 
 function PageLoader() {
   return (
@@ -48,12 +82,12 @@ function PageLoader() {
   );
 }
 
-function Navigation({ user, onLogout }) {
+function Navigation({ user, onLogout, hasBonusAttention }) {
   const [menuOpen, setMenuOpen] = useState(false);
   if (!user) return null;
 
   const closeMenu = () => setMenuOpen(false);
-  const bonusClassName = new Date() < BONUS_NEON_END_AT ? 'nav-bonus-link' : '';
+  const bonusClassName = hasBonusAttention ? 'nav-bonus-link' : '';
 
   return (
     <nav className={`top-nav ${menuOpen ? 'mobile-open' : ''}`}>
@@ -115,6 +149,7 @@ function AdminPanel() {
 
 function AppContent() {
   const [user, setUser] = useState(null);
+  const [hasBonusAttention, setHasBonusAttention] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -123,6 +158,45 @@ function AppContent() {
       setUser(JSON.parse(storedUser));
     }
   }, []);
+
+  const refreshBonusStatus = useCallback(async () => {
+    if (!localStorage.getItem('token')) {
+      setHasBonusAttention(false);
+      return;
+    }
+
+    const [bonusResult, specialResult] = await Promise.allSettled([
+      bonusPredictionsService.get(),
+      specialPredictionsService.get()
+    ]);
+
+    const pendingBonus = bonusResult.status === 'fulfilled'
+      ? hasPendingBonusPredictions(bonusResult.value.data)
+      : false;
+    const pendingSpecial = specialResult.status === 'fulfilled'
+      ? hasPendingSpecialPredictions(specialResult.value.data)
+      : false;
+
+    setHasBonusAttention(pendingBonus || pendingSpecial);
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setHasBonusAttention(false);
+      return undefined;
+    }
+
+    refreshBonusStatus();
+    const intervalId = window.setInterval(refreshBonusStatus, 60000);
+    window.addEventListener(BONUS_STATUS_REFRESH_EVENT, refreshBonusStatus);
+    window.addEventListener('focus', refreshBonusStatus);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener(BONUS_STATUS_REFRESH_EVENT, refreshBonusStatus);
+      window.removeEventListener('focus', refreshBonusStatus);
+    };
+  }, [user, refreshBonusStatus]);
 
   const handleUserUpdate = useCallback((userData) => {
     setUser(userData);
@@ -138,12 +212,13 @@ function AppContent() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    setHasBonusAttention(false);
     navigate('/');
   };
 
   return (
     <>
-      <Navigation user={user} onLogout={handleLogout} />
+      <Navigation user={user} onLogout={handleLogout} hasBonusAttention={hasBonusAttention} />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
