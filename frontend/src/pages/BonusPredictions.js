@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { matchesService } from '../services/api';
-import SpecialPredictionsPanel from '../components/SpecialPredictionsPanel';
 import BonusPredictionsPanel from '../components/BonusPredictionsPanel';
 import PageLoader from '../components/PageLoader';
 
@@ -24,7 +23,7 @@ function BonusPredictions() {
   }, []);
 
   if (loading) {
-    return <PageLoader title="Chargement des bonus..." icon="🎁" subtitle="Préparation des pronostics spéciaux et grands paris" />;
+    return <PageLoader title="Chargement des bonus..." icon="🎁" subtitle="Préparation des grands paris de compétition" />;
   }
 
   return (
@@ -35,21 +34,21 @@ function BonusPredictions() {
             <span className="bonus-page-eyebrow">Coupe du Monde 2026</span>
             <h1>🎁 Pronostics bonus</h1>
             <p>
-              Tes paris avant le coup d’envoi : spéciaux première journée, vainqueurs de groupes,
+              Tes grands paris avant le coup d’envoi : vainqueurs de groupes,
               demi-finalistes, finaliste perdant et champion du monde.
+              Les pronostics spéciaux de journée se trouvent désormais dans la page Pronostics.
             </p>
           </div>
 
           <div className="bonus-hero-summary">
             <div className="bonus-summary-card">
-              <div><strong>20</strong><span>pts spéciaux</span></div>
               <div><strong>105</strong><span>pts bonus</span></div>
-              <div><strong>125</strong><span>pts max</span></div>
+              <div><strong>12</strong><span>groupes</span></div>
+              <div><strong>1</strong><span>champion</span></div>
             </div>
           </div>
         </section>
 
-        <SpecialPredictionsPanel />
         <BonusPredictionsPanel matches={matches} />
       </div>
       <style>{styles}</style>
