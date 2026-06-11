@@ -28,6 +28,7 @@ function UserStats() {
     { label: 'Points totaux', value: stats.total_points || 0, icon: '🏆', featured: true },
     { label: 'Classement', value: stats.rank ? `#${stats.rank}` : '-', icon: '🥇' },
     { label: 'Points matchs', value: stats.match_points || 0, icon: '⚽' },
+    { label: 'Points spéciaux', value: stats.special_points || 0, icon: '⚡' },
     { label: 'Points bonus', value: stats.bonus_points || 0, icon: '🎁' },
     { label: 'Moyenne / match', value: stats.avg_points_per_match || 0, icon: '📈' }
   ];
@@ -36,6 +37,7 @@ function UserStats() {
     { label: 'Scores exacts', value: `${stats.exact_scores || 0} × 3 pts`, icon: '🎯', className: 'exact' },
     { label: 'Bonnes différences', value: `${stats.correct_differences || 0} × 2 pts`, icon: '⚖️', className: 'difference' },
     { label: 'Bons vainqueurs / bons nuls simples', value: `${stats.correct_winners || 0} × 1 pt`, icon: '✅', className: 'winner' },
+    { label: 'Spéciaux première journée', value: `${stats.special_points || 0} pts`, icon: '⚡', className: 'special' },
     { label: 'Bonus compétition', value: `${stats.bonus_points || 0} pts`, icon: '🎁', className: 'bonus' },
     { label: 'Mauvais pronostics', value: `${stats.wrong_predictions || 0} × 0 pt`, icon: '🧊', className: 'wrong' }
   ];
@@ -47,7 +49,7 @@ function UserStats() {
           <div>
             <span className="stats-eyebrow">Performance personnelle</span>
             <h1>📊 Mes statistiques</h1>
-            <p>Suivi de tes points calculés après encodage des résultats officiels, bonus inclus.</p>
+            <p>Suivi de tes points calculés après encodage des résultats officiels, spéciaux et bonus inclus.</p>
           </div>
           <button className="stats-refresh" onClick={loadStats}>Rafraîchir</button>
         </section>
@@ -127,7 +129,7 @@ const styles = `
   .stats-hero p { margin: 0; max-width: 680px; color: rgba(255,255,255,.76); font-size: 14px; line-height: 1.5; }
   .stats-refresh { border: 0; border-radius: 999px; padding: 10px 14px; color: white; background: linear-gradient(135deg, #0f766e, #d97706); font-weight: 950; cursor: pointer; box-shadow: 0 12px 28px rgba(0,0,0,.18); }
 
-  .stats-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
   .stats-card { background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); border-radius: 18px; padding: 16px; box-shadow: 0 18px 55px rgba(0,0,0,.2); }
   .stat-card { display: grid; gap: 10px; min-height: 128px; }
   .stat-card.featured { color: white; background: linear-gradient(135deg, #0f766e, #d97706); }
@@ -148,9 +150,11 @@ const styles = `
   .precision-row.exact .precision-label em { background: #dcfce7; }
   .precision-row.difference .precision-label em { background: #e0f2fe; }
   .precision-row.winner .precision-label em { background: #ccfbf1; }
+  .precision-row.special .precision-label em { background: #dbeafe; }
   .precision-row.bonus .precision-label em { background: #fef3c7; }
   .precision-row.wrong .precision-label em { background: #fee2e2; }
 
+  @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (max-width: 920px) { .stats-hero { flex-direction: column; } .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 560px) { .stats-page { padding: 18px 10px 36px; } .stats-grid { grid-template-columns: 1fr; } .precision-row { flex-direction: column; align-items: flex-start; } }
 `;

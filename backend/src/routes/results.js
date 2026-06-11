@@ -8,6 +8,10 @@ const {
   saveManualThirdPlaceOrder
 } = require('../utils/knockoutPropagation');
 const { getAllBonusScores } = require('../utils/bonusScoring');
+const {
+  getAllSpecialPredictionScores,
+  recalculateFirstMatchdaySpecialPredictionPoints
+} = require('../utils/specialPredictions');
 
 const router = express.Router();
 let resultExtraColumnsReady = false;
@@ -161,6 +165,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
     }
 
     await propagateKnockoutTeams(client);
+    await recalculateFirstMatchdaySpecialPredictionPoints(client);
 
     await client.query('COMMIT');
     res.json({
@@ -235,6 +240,7 @@ router.delete('/:matchId', authenticateAdmin, async (req, res) => {
     await client.query('DELETE FROM user_scores WHERE match_id = $1', [matchId]);
     await client.query('UPDATE matches SET status = $1 WHERE id = $2', ['scheduled', matchId]);
     await propagateKnockoutTeams(client);
+    await recalculateFirstMatchdaySpecialPredictionPoints(client);
 
     await client.query('COMMIT');
 
@@ -255,8 +261,12 @@ router.delete('/:matchId', authenticateAdmin, async (req, res) => {
 router.get('/user/stats', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { scores: bonusScores } = await getAllBonusScores(pool);
+    const [{ scores: bonusScores }, { scores: specialScores }] = await Promise.all([
+      getAllBonusScores(pool),
+      getAllSpecialPredictionScores(pool)
+    ]);
     const userBonus = bonusScores.get(Number(userId))?.points || 0;
+    const userSpecial = specialScores.get(Number(userId))?.points || 0;
 
     const statsResult = await pool.query(
       `SELECT
@@ -284,17 +294,22 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
     const ranked = rankRows.rows
       .map(row => ({
         id: Number(row.id),
-        total_points: Number(row.match_points || 0) + (bonusScores.get(Number(row.id))?.points || 0)
+        total_points:
+          Number(row.match_points || 0) +
+          (bonusScores.get(Number(row.id))?.points || 0) +
+          (specialScores.get(Number(row.id))?.points || 0)
       }))
       .sort((a, b) => b.total_points - a.total_points || a.id - b.id);
 
     const rank = ranked.findIndex(row => row.id === Number(userId)) + 1;
     const baseStats = statsResult.rows[0];
+    const matchPoints = Number(baseStats.match_points || 0);
 
     res.json({
       ...baseStats,
       bonus_points: userBonus,
-      total_points: Number(baseStats.match_points || 0) + userBonus,
+      special_points: userSpecial,
+      total_points: matchPoints + userBonus + userSpecial,
       rank: rank || null
     });
   } catch (error) {
@@ -307,7 +322,10 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
 router.get('/leaderboard', async (req, res) => {
   try {
     await ensureLeaderboardUserColumns();
-    const { scores: bonusScores } = await getAllBonusScores(pool);
+    const [{ scores: bonusScores }, { scores: specialScores }] = await Promise.all([
+      getAllBonusScores(pool),
+      getAllSpecialPredictionScores(pool)
+    ]);
 
     const result = await pool.query(`
       SELECT
@@ -345,14 +363,18 @@ router.get('/leaderboard', async (req, res) => {
       const id = Number(row.id);
       const matchPoints = Number(row.match_points || 0);
       const bonusPoints = bonusScores.get(id)?.points || 0;
+      const specialPoints = specialScores.get(id)?.points || 0;
       return {
         id,
         username: row.username,
         avatar_url: buildAvatarUrl(row),
         match_points: matchPoints,
         bonus_points: bonusPoints,
-        total_points: matchPoints + bonusPoints,
-        previous_total_points: latestMatchId ? matchPoints - (latestScoreByUser.get(id) || 0) + bonusPoints : matchPoints + bonusPoints,
+        special_points: specialPoints,
+        total_points: matchPoints + bonusPoints + specialPoints,
+        previous_total_points: latestMatchId
+          ? matchPoints - (latestScoreByUser.get(id) || 0) + bonusPoints + specialPoints
+          : matchPoints + bonusPoints + specialPoints,
         matches_predicted: Number(row.matches_predicted || 0)
       };
     });

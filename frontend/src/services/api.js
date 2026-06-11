@@ -4,10 +4,10 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
 export const buildApiAssetUrl = (path) => {
   if (!path) return null;
-  if (/^https?:\/\//i.test(path) || path.startsWith('data:')) return path;
-  const apiRoot = API_URL.replace(/\/api\/?$/, '');
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `${apiRoot}/api${normalizedPath}`;
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+  const apiRoot = API_URL.endsWith('/api') ? API_URL.slice(0, -4) : API_URL;
+  const normalizedPath = path.startsWith('/') ? path : '/' + path;
+  return apiRoot + '/api' + normalizedPath;
 };
 
 const api = axios.create({
@@ -71,6 +71,11 @@ export const predictionsService = {
 export const bonusPredictionsService = {
   get: () => api.get('/bonus-predictions'),
   save: (payload) => api.post('/bonus-predictions', payload)
+};
+
+export const specialPredictionsService = {
+  get: () => api.get('/special-predictions'),
+  save: (payload) => api.post('/special-predictions', payload)
 };
 
 export const resultsService = {
