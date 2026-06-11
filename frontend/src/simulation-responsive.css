@@ -199,3 +199,27 @@
     width: 30px !important;
   }
 }
+
+.compact-bracket-board > .compact-round-title:nth-of-type(4),
+.compact-bracket-board > .compact-round-title:nth-of-type(5),
+.compact-bracket-board > .compact-round-title:nth-of-type(6) {
+  font-size: 0 !important;
+}
+
+.compact-bracket-board > .compact-round-title:nth-of-type(4)::after,
+.compact-bracket-board > .compact-round-title:nth-of-type(5)::after,
+.compact-bracket-board > .compact-round-title:nth-of-type(6)::after {
+  font-size: 10px !important;
+}
+
+.compact-bracket-board > .compact-round-title:nth-of-type(4)::after {
+  content: 'Finale';
+}
+
+.compact-bracket-board > .compact-round-title:nth-of-type(5)::after {
+  content: 'Demies';
+}
+
+.compact-bracket-board > .compact-round-title:nth-of-type(6)::after {
+  content: '3ième';
+}
