@@ -2,6 +2,12 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
 const { calculatePointsDetailed } = require('../utils/scoring');
+const { GROUP_CODES, ensureBonusPredictionTable, getBonusDeadline } = require('../utils/bonusScoring');
+const {
+  SPECIAL_PREDICTION_DEFINITIONS,
+  ensureSpecialPredictionsTable,
+  getFirstMatchdayStatus
+} = require('../utils/specialPredictions');
 
 const router = express.Router();
 
@@ -10,12 +16,154 @@ const isValidScore = (value) => {
   return Number.isInteger(n) && n >= 0 && n <= 99;
 };
 
+const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== '';
+
+const parseJsonValue = (value, fallback) => {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string') {
+    try { return JSON.parse(value); } catch (_) { return fallback; }
+  }
+  return value;
+};
+
 const buildAvatarUrl = (user) => {
   if (!user?.avatar_data) return null;
   const rawVersion = user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : Date.now();
   const version = Number.isNaN(rawVersion) ? Date.now() : rawVersion;
   return `/profile/users/${user.id}/avatar?v=${version}`;
 };
+
+const buildBonusProgress = (row) => {
+  const groupWinners = parseJsonValue(row?.group_winners, {});
+  const parsedSemifinalists = parseJsonValue(row?.semifinalists, []);
+  const semifinalists = Array.isArray(parsedSemifinalists) ? parsedSemifinalists : [];
+  const missing = [];
+
+  GROUP_CODES.forEach(group => {
+    if (!hasValue(groupWinners[group])) missing.push(`Vainqueur groupe ${group}`);
+  });
+
+  if (!hasValue(row?.champion)) missing.push('Champion');
+  if (!hasValue(row?.runner_up)) missing.push('Finaliste perdant');
+
+  const semifinalistsCompleted = semifinalists.filter(hasValue).slice(0, 4).length;
+  for (let i = semifinalistsCompleted; i < 4; i += 1) {
+    missing.push(`Demi-finaliste ${i + 1}`);
+  }
+
+  const total = GROUP_CODES.length + 6;
+  return {
+    completed: total - missing.length,
+    total,
+    missing,
+    missing_count: missing.length,
+    complete: missing.length === 0,
+    updated_at: row?.updated_at || null
+  };
+};
+
+const buildSpecialProgress = (rows = []) => {
+  const valueByCode = new Map(rows.map(row => [row.code, row.predicted_value]));
+  const missing = [];
+
+  SPECIAL_PREDICTION_DEFINITIONS.forEach(definition => {
+    if (!hasValue(valueByCode.get(definition.code))) missing.push(definition.label);
+  });
+
+  return {
+    completed: SPECIAL_PREDICTION_DEFINITIONS.length - missing.length,
+    total: SPECIAL_PREDICTION_DEFINITIONS.length,
+    missing,
+    missing_count: missing.length,
+    complete: missing.length === 0
+  };
+};
+
+// User attention status for next 24h and early bonus reminders
+router.get('/attention-status', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    await Promise.all([
+      ensureBonusPredictionTable(pool),
+      ensureSpecialPredictionsTable(pool)
+    ]);
+
+    const [matchesResult, bonusResult, specialResult, bonusDeadline, firstMatchdayStatus] = await Promise.all([
+      pool.query(
+        `SELECT
+          m.id,
+          to_char(m.start_time, 'YYYY-MM-DD"T"HH24:MI:SS') AS start_time,
+          t1.name AS team1,
+          t2.name AS team2,
+          t1.groupe AS groupe1,
+          p.user_id AS prediction_user_id
+         FROM matches m
+         JOIN teams t1 ON m.team1_id = t1.id
+         JOIN teams t2 ON m.team2_id = t2.id
+         LEFT JOIN predictions p ON p.match_id = m.id AND p.user_id = $1
+         WHERE m.team1_id IS NOT NULL
+           AND m.team2_id IS NOT NULL
+           AND (m.start_time AT TIME ZONE 'Europe/Brussels') > NOW()
+           AND (m.start_time AT TIME ZONE 'Europe/Brussels') <= NOW() + INTERVAL '24 hours'
+         ORDER BY m.start_time ASC, m.id ASC`,
+        [userId]
+      ),
+      pool.query('SELECT * FROM bonus_predictions WHERE user_id = $1', [userId]),
+      pool.query('SELECT * FROM special_predictions WHERE user_id = $1 AND code = ANY($2::varchar[])', [userId, SPECIAL_PREDICTION_DEFINITIONS.map(definition => definition.code)]),
+      getBonusDeadline(pool),
+      getFirstMatchdayStatus(pool)
+    ]);
+
+    const next24Matches = matchesResult.rows.map(match => ({
+      id: Number(match.id),
+      start_time: match.start_time,
+      team1: match.team1,
+      team2: match.team2,
+      group: match.groupe1,
+      predicted: Boolean(match.prediction_user_id)
+    }));
+
+    const missingMatches = next24Matches.filter(match => !match.predicted);
+    const bonusProgress = buildBonusProgress(bonusResult.rows[0]);
+    const specialProgress = buildSpecialProgress(specialResult.rows);
+
+    const bonusUrgent = !bonusDeadline.locked && !bonusProgress.complete;
+    const specialUrgent = !firstMatchdayStatus.locked && !specialProgress.complete;
+
+    const totalMissing = missingMatches.length
+      + (bonusUrgent ? bonusProgress.missing_count : 0)
+      + (specialUrgent ? specialProgress.missing_count : 0);
+
+    res.json({
+      generated_at: new Date().toISOString(),
+      window_hours: 24,
+      has_attention: totalMissing > 0,
+      total_missing: totalMissing,
+      matches: {
+        total: next24Matches.length,
+        completed: next24Matches.length - missingMatches.length,
+        missing_count: missingMatches.length,
+        missing: missingMatches
+      },
+      bonus: {
+        locked: Boolean(bonusDeadline.locked),
+        deadline: bonusDeadline.first_match_time,
+        urgent: bonusUrgent,
+        ...bonusProgress
+      },
+      special: {
+        locked: Boolean(firstMatchdayStatus.locked),
+        deadline: firstMatchdayStatus.deadline,
+        urgent: specialUrgent,
+        ...specialProgress
+      }
+    });
+  } catch (error) {
+    console.error('Get prediction attention status error:', error);
+    res.status(500).json({ error: 'Server error', detail: error.message, code: error.code });
+  }
+});
 
 // Create/Update prediction
 router.post('/', authenticateToken, async (req, res) => {
