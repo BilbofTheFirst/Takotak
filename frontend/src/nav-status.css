@@ -1,3 +1,4 @@
+.nav-links .nav-attention-link,
 .nav-links .nav-bonus-link {
   position: relative;
   color: #fef3c7;
@@ -11,6 +12,7 @@
   animation: bonus-neon-pulse 1.65s ease-in-out infinite;
 }
 
+.nav-links .nav-attention-link:hover,
 .nav-links .nav-bonus-link:hover {
   color: white;
   background: rgba(251, 191, 36, 0.22);
