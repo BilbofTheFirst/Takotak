@@ -83,14 +83,77 @@ const BRACKET_LAYOUT = [
   { id: 100, col: 7, row: 19 }
 ];
 
+const THIRD_PLACE_TOKEN_REGEX = /^3[A-L](\/[A-L])+$/;
+
 const isBracketToken = (value) => {
   if (!value || typeof value !== 'string') return false;
-  return /^[12][A-L]$/.test(value) || /^3[A-L](\/[A-L])+$/.test(value) || /^[VP]\d+$/.test(value);
+  return /^[12][A-L]$/.test(value) || THIRD_PLACE_TOKEN_REGEX.test(value) || /^[VP]\d+$/.test(value);
 };
+
+const getThirdPlaceTokenAllowedGroups = (token) => token.replace('3', '').split('/');
 
 function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, matchSchedule = [] }) {
   const qualifiedThirds = useMemo(() => allThirdPlaces.slice(0, 8), [allThirdPlaces]);
   const scheduleById = useMemo(() => new Map(matchSchedule.map(match => [Number(match.id), match])), [matchSchedule]);
+
+  const thirdPlaceAssignments = useMemo(() => {
+    const tokens = Object.values(KNOCKOUT)
+      .flatMap(config => [config.team1, config.team2])
+      .filter(token => THIRD_PLACE_TOKEN_REGEX.test(token));
+
+    const slots = [...new Set(tokens)].map((token, index) => ({
+      token,
+      index,
+      allowedGroups: getThirdPlaceTokenAllowedGroups(token)
+    }));
+
+    const qualifiedGroups = new Set(qualifiedThirds.map(team => team.group));
+    const orderedSlots = [...slots].sort((a, b) => {
+      const aCandidates = a.allowedGroups.filter(group => qualifiedGroups.has(group)).length;
+      const bCandidates = b.allowedGroups.filter(group => qualifiedGroups.has(group)).length;
+      return aCandidates - bCandidates || a.index - b.index;
+    });
+
+    const assignment = {};
+    const usedGroups = new Set();
+
+    const solve = (slotIndex) => {
+      if (slotIndex >= orderedSlots.length) return true;
+
+      const slot = orderedSlots[slotIndex];
+      const candidates = qualifiedThirds.filter(team => (
+        slot.allowedGroups.includes(team.group) && !usedGroups.has(team.group)
+      ));
+
+      for (const candidate of candidates) {
+        assignment[slot.token] = candidate;
+        usedGroups.add(candidate.group);
+
+        if (solve(slotIndex + 1)) return true;
+
+        usedGroups.delete(candidate.group);
+        delete assignment[slot.token];
+      }
+
+      return false;
+    };
+
+    if (solve(0)) return assignment;
+
+    const fallbackAssignment = {};
+    const fallbackUsedGroups = new Set();
+    slots.forEach(slot => {
+      const candidate = qualifiedThirds.find(team => (
+        slot.allowedGroups.includes(team.group) && !fallbackUsedGroups.has(team.group)
+      ));
+      if (candidate) {
+        fallbackAssignment[slot.token] = candidate;
+        fallbackUsedGroups.add(candidate.group);
+      }
+    });
+
+    return fallbackAssignment;
+  }, [qualifiedThirds]);
 
   const getPlacement = useCallback((token) => {
     if (/^[12][A-L]$/.test(token)) {
@@ -99,14 +162,12 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
       return groupsData[group]?.[rank]?.team || token;
     }
 
-    if (/^3[A-L](\/[A-L])+$/.test(token)) {
-      const allowed = token.replace('3', '').split('/');
-      const resolved = qualifiedThirds.find(team => allowed.includes(team.group));
-      return resolved?.team || token;
+    if (THIRD_PLACE_TOKEN_REGEX.test(token)) {
+      return thirdPlaceAssignments[token]?.team || token;
     }
 
     return token;
-  }, [groupsData, qualifiedThirds]);
+  }, [groupsData, thirdPlaceAssignments]);
 
   const getWinner = useCallback((matchId) => {
     const sim = koSimulations[matchId];
