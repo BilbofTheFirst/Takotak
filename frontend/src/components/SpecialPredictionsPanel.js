@@ -88,7 +88,7 @@ function SpecialPredictionsPanel() {
         <div>
           <span className="special-eyebrow">⚡ Spéciaux première journée</span>
           <h2>Paris globaux sur les premiers matchs</h2>
-          <p>Total de buts, nombre de matchs nuls et clean sheets. Tout est figé au coup d’envoi du premier match concerné.</p>
+          <p>Première journée = le premier match de chaque équipe, donc 24 matchs au total. Ce n’est pas uniquement les matchs du 11 juin.</p>
           {deadline && <small>Verrouillage : {formatDeadline(deadline)}</small>}
         </div>
 
