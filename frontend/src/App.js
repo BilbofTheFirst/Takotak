@@ -1,8 +1,9 @@
 import React, { Suspense, lazy, useCallback, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
-import { bonusPredictionsService, specialPredictionsService } from './services/api';
+import api, { bonusPredictionsService, specialPredictionsService } from './services/api';
 import UserAvatar from './components/UserAvatar';
 import TakotakLogo from './components/TakotakLogo';
+import PredictionReminderModal from './components/PredictionReminderModal';
 import './nav-status.css';
 import './mobile-responsive.css';
 import './simulation-responsive.css';
@@ -23,6 +24,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 const GROUP_CODES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 const BONUS_STATUS_REFRESH_EVENT = 'takotak:bonus-status-refresh';
+const REMINDER_SESSION_KEY = 'takotak:prediction-reminder-shown';
 
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== '';
 
@@ -154,6 +156,8 @@ function AppContent() {
   const [user, setUser] = useState(null);
   const [hasBonusAttention, setHasBonusAttention] = useState(false);
   const [hasPredictionAttention, setHasPredictionAttention] = useState(false);
+  const [reminderStatus, setReminderStatus] = useState(null);
+  const [showReminder, setShowReminder] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -186,14 +190,34 @@ function AppContent() {
     setHasPredictionAttention(pendingSpecial);
   }, []);
 
+  const loadReminderStatus = useCallback(async () => {
+    if (!localStorage.getItem('token') || sessionStorage.getItem(REMINDER_SESSION_KEY) === '1') {
+      return;
+    }
+
+    try {
+      const response = await api.get('/predictions/attention-status');
+      if (response.data?.has_attention) {
+        setReminderStatus(response.data);
+        setShowReminder(true);
+        sessionStorage.setItem(REMINDER_SESSION_KEY, '1');
+      }
+    } catch (error) {
+      console.warn('Prediction reminder status unavailable', error.response?.data || error);
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) {
       setHasBonusAttention(false);
       setHasPredictionAttention(false);
+      setReminderStatus(null);
+      setShowReminder(false);
       return undefined;
     }
 
     refreshBonusStatus();
+    loadReminderStatus();
     const intervalId = window.setInterval(refreshBonusStatus, 60000);
     window.addEventListener(BONUS_STATUS_REFRESH_EVENT, refreshBonusStatus);
     window.addEventListener('focus', refreshBonusStatus);
@@ -203,7 +227,7 @@ function AppContent() {
       window.removeEventListener(BONUS_STATUS_REFRESH_EVENT, refreshBonusStatus);
       window.removeEventListener('focus', refreshBonusStatus);
     };
-  }, [user, refreshBonusStatus]);
+  }, [user, refreshBonusStatus, loadReminderStatus]);
 
   const handleUserUpdate = useCallback((userData) => {
     setUser(userData);
@@ -211,6 +235,7 @@ function AppContent() {
   }, []);
 
   const handleLogin = (userData) => {
+    sessionStorage.removeItem(REMINDER_SESSION_KEY);
     handleUserUpdate(userData);
     navigate('/predictions');
   };
@@ -218,15 +243,19 @@ function AppContent() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    sessionStorage.removeItem(REMINDER_SESSION_KEY);
     setUser(null);
     setHasBonusAttention(false);
     setHasPredictionAttention(false);
+    setReminderStatus(null);
+    setShowReminder(false);
     navigate('/');
   };
 
   return (
     <>
       <Navigation user={user} onLogout={handleLogout} hasBonusAttention={hasBonusAttention} hasPredictionAttention={hasPredictionAttention} />
+      {showReminder && <PredictionReminderModal status={reminderStatus} onClose={() => setShowReminder(false)} />}
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
