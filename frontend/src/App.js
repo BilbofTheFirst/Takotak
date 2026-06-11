@@ -15,6 +15,7 @@ const Rankings = lazy(() => import('./pages/Rankings'));
 const UserStats = lazy(() => import('./pages/UserStats'));
 const Admin = lazy(() => import('./pages/Admin'));
 const AdminUsers = lazy(() => import('./pages/AdminUsers'));
+const AdminMonitoring = lazy(() => import('./pages/AdminMonitoring'));
 const Rules = lazy(() => import('./pages/Rules'));
 const Simulation = lazy(() => import('./pages/Simulation'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -142,6 +143,7 @@ function Navigation({ user, onLogout, hasBonusAttention, hasPredictionAttention 
 function AdminPanel() {
   return (
     <>
+      <AdminMonitoring />
       <Admin />
       <AdminUsers />
     </>
