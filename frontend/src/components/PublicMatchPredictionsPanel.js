@@ -7,7 +7,7 @@ const CATEGORY_CONFIG = {
   correct_difference: { icon: '⚖️', label: 'Bonne différence', className: 'difference' },
   correct_winner: { icon: '✅', label: 'Bon vainqueur', className: 'winner' },
   correct_draw: { icon: '🤝', label: 'Bon nul', className: 'winner' },
-  wrong_prediction: { icon: '🧊', label: 'Raté', className: 'wrong' }
+  wrong_prediction: { icon: '💩', label: 'Raté', className: 'wrong' }
 };
 
 const getPopularPrediction = (predictions) => {
