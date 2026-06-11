@@ -457,7 +457,7 @@ function Predictions() {
           </div>
         </div>
 
-        {selectedMatchday === '1' && <SpecialPredictionsPanel />}
+        {(selectedMatchday === 'all' || selectedMatchday === '1') && <SpecialPredictionsPanel />}
 
         <div className="prediction-toolbar">
           <button type="button" onClick={scrollToRelevantDate}>🎯 Aller aux prochains matchs</button>
