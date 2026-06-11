@@ -82,12 +82,13 @@ function PageLoader() {
   );
 }
 
-function Navigation({ user, onLogout, hasBonusAttention }) {
+function Navigation({ user, onLogout, hasBonusAttention, hasPredictionAttention }) {
   const [menuOpen, setMenuOpen] = useState(false);
   if (!user) return null;
 
   const closeMenu = () => setMenuOpen(false);
-  const bonusClassName = hasBonusAttention ? 'nav-bonus-link' : '';
+  const predictionsClassName = hasPredictionAttention ? 'nav-attention-link' : '';
+  const bonusClassName = hasBonusAttention ? 'nav-attention-link' : '';
 
   return (
     <nav className={`top-nav ${menuOpen ? 'mobile-open' : ''}`}>
@@ -110,7 +111,7 @@ function Navigation({ user, onLogout, hasBonusAttention }) {
       </div>
 
       <div className="nav-links">
-        <Link to="/predictions" onClick={closeMenu}>🎯 Pronostics</Link>
+        <Link to="/predictions" className={predictionsClassName} onClick={closeMenu}>🎯 Pronostics</Link>
         <Link to="/bonus" className={bonusClassName} onClick={closeMenu}>🎁 Bonus</Link>
         <Link to="/rankings" onClick={closeMenu}>🏆 Classement</Link>
         <Link to="/stats" onClick={closeMenu}>📊 Mes Stats</Link>
@@ -150,6 +151,7 @@ function AdminPanel() {
 function AppContent() {
   const [user, setUser] = useState(null);
   const [hasBonusAttention, setHasBonusAttention] = useState(false);
+  const [hasPredictionAttention, setHasPredictionAttention] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -162,6 +164,7 @@ function AppContent() {
   const refreshBonusStatus = useCallback(async () => {
     if (!localStorage.getItem('token')) {
       setHasBonusAttention(false);
+      setHasPredictionAttention(false);
       return;
     }
 
@@ -177,12 +180,14 @@ function AppContent() {
       ? hasPendingSpecialPredictions(specialResult.value.data)
       : false;
 
-    setHasBonusAttention(pendingBonus || pendingSpecial);
+    setHasBonusAttention(pendingBonus);
+    setHasPredictionAttention(pendingSpecial);
   }, []);
 
   useEffect(() => {
     if (!user) {
       setHasBonusAttention(false);
+      setHasPredictionAttention(false);
       return undefined;
     }
 
@@ -213,12 +218,13 @@ function AppContent() {
     localStorage.removeItem('user');
     setUser(null);
     setHasBonusAttention(false);
+    setHasPredictionAttention(false);
     navigate('/');
   };
 
   return (
     <>
-      <Navigation user={user} onLogout={handleLogout} hasBonusAttention={hasBonusAttention} />
+      <Navigation user={user} onLogout={handleLogout} hasBonusAttention={hasBonusAttention} hasPredictionAttention={hasPredictionAttention} />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
