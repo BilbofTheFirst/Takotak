@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { matchesService } from '../services/api';
 import BonusPredictionsPanel from '../components/BonusPredictionsPanel';
+import PublicBonusPredictionsPanel from '../components/PublicBonusPredictionsPanel';
 import SpecialPredictionsPanel from '../components/SpecialPredictionsPanel';
 import PageLoader from '../components/PageLoader';
 
 function BonusPredictions() {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
 
   useEffect(() => {
     const loadMatches = async () => {
@@ -52,6 +54,7 @@ function BonusPredictions() {
 
         <SpecialPredictionsPanel placement="bonus" />
         <BonusPredictionsPanel matches={matches} />
+        <PublicBonusPredictionsPanel currentUserId={currentUser?.id} />
       </div>
       <style>{styles}</style>
     </div>
