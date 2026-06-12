@@ -1,4 +1,5 @@
 const { ensureSpecialPredictionsTable } = require('../utils/specialPredictions');
+const { ensureFifaRankingColumns } = require('../utils/fifaRankings');
 
 async function ensureSchema(pool) {
   await pool.query(`
@@ -9,6 +10,7 @@ async function ensureSchema(pool) {
   `);
 
   await ensureSpecialPredictionsTable(pool);
+  await ensureFifaRankingColumns(pool);
 }
 
 module.exports = { ensureSchema };
