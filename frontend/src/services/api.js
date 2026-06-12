@@ -95,6 +95,10 @@ export const resultsService = {
   getUserStats: () => api.get('/results/user/stats')
 };
 
+export const statsService = {
+  getOverview: () => api.get('/stats/overview')
+};
+
 export const teamsService = {
   getInfo: (teamName) => api.get(`/teams/${encodeURIComponent(teamName)}/info`)
 };
