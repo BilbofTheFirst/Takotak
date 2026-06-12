@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { buildApiAssetUrl } from '../services/api';
 
 function UserAvatar({ user, photoUrl, displayName, size = 36, className = '' }) {
   const resolvedPhotoUrl = buildApiAssetUrl(photoUrl || user?.avatar_url);
   const resolvedDisplayName = displayName || user?.username || 'Utilisateur';
   const fallbackInitial = resolvedDisplayName.trim().charAt(0).toUpperCase() || '👤';
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [resolvedPhotoUrl]);
 
   return (
     <div
@@ -13,8 +18,8 @@ function UserAvatar({ user, photoUrl, displayName, size = 36, className = '' }) 
       title={resolvedDisplayName}
       aria-label={resolvedDisplayName}
     >
-      {resolvedPhotoUrl ? (
-        <img src={resolvedPhotoUrl} alt={resolvedDisplayName} />
+      {resolvedPhotoUrl && !imageFailed ? (
+        <img src={resolvedPhotoUrl} alt={resolvedDisplayName} onError={() => setImageFailed(true)} />
       ) : (
         <span>{fallbackInitial}</span>
       )}
