@@ -10,7 +10,7 @@ const formatDateTime = (value) => {
 const buildReminderText = (users) => {
   const names = users.map(user => user.username).join(', ');
   if (!names) return 'Tout le monde est à jour 🎉';
-  return `Petit rappel Takotak : ${names}, pensez à compléter vos pronostics du jour et surtout les bonus/spéciaux. Il y a beaucoup de points à prendre dès le début 🙂`;
+  return `Petit rappel Takotak : ${names}, pensez à compléter vos pronostics des prochaines 24h${users.some(user => user.bonus.urgent || user.special.urgent) ? ' et les bonus/spéciaux encore ouverts' : ''}. Il y a beaucoup de points à prendre 🙂`;
 };
 
 function AdminMonitoring() {
@@ -75,7 +75,7 @@ function AdminMonitoring() {
         <div>
           <span>📡 Monitoring</span>
           <h2>Pronostics à surveiller</h2>
-          <p>Vue rapide pour relancer les joueurs avant les matchs du jour et les gros bonus de début de compétition.</p>
+          <p>Vue rapide pour relancer les joueurs avant les matchs des prochaines 24h et les bonus encore ouverts.</p>
         </div>
         <div className="monitoring-actions">
           <button type="button" className="button secondary" onClick={loadMonitoring}>Rafraîchir</button>
@@ -86,21 +86,21 @@ function AdminMonitoring() {
       {copied && <div className="monitoring-alert">✅ Message de rappel copié.</div>}
 
       <div className="monitoring-summary-grid">
-        <div><strong>{summary.users_missing_today || 0}</strong><span>joueurs à relancer aujourd’hui</span></div>
+        <div><strong>{summary.users_missing_today || 0}</strong><span>joueurs à relancer 24h</span></div>
         <div><strong>{summary.users_missing_bonus || 0}</strong><span>bonus long terme incomplets</span></div>
         <div><strong>{summary.users_missing_special || 0}</strong><span>spéciaux J1 incomplets</span></div>
-        <div><strong>{summary.today_predictions_done || 0}/{summary.today_predictions_required || 0}</strong><span>pronos matchs du jour</span></div>
+        <div><strong>{summary.today_predictions_done || 0}/{summary.today_predictions_required || 0}</strong><span>pronos matchs 24h</span></div>
       </div>
 
       <div className="monitoring-columns">
         <div className="monitoring-panel">
           <div className="monitoring-subtitle">
-            <span>⚽ Aujourd’hui</span>
+            <span>⚽ Prochaines 24h</span>
             <strong>{todayMatches.length} match{todayMatches.length > 1 ? 's' : ''}</strong>
           </div>
 
           {todayMatches.length === 0 ? (
-            <p className="monitoring-empty">Aucun match prévu aujourd’hui.</p>
+            <p className="monitoring-empty">Aucun match prévu dans les prochaines 24h.</p>
           ) : (
             <div className="today-match-list">
               {todayMatches.map(match => (
@@ -127,7 +127,7 @@ function AdminMonitoring() {
         <div className="monitoring-table">
           <div className="monitoring-header">
             <span>Joueur</span>
-            <span>Matchs du jour</span>
+            <span>Matchs 24h</span>
             <span>Bonus</span>
             <span>Spéciaux J1</span>
             <span>À relancer</span>
@@ -137,16 +137,16 @@ function AdminMonitoring() {
             const needsReminder = user.should_remind;
             const missingItems = [
               ...user.today.missing_matches.map(match => `Match ${match.label}`),
-              ...user.bonus.missing.map(item => `Bonus : ${item}`),
-              ...user.special.missing.map(item => `Spécial : ${item}`)
+              ...(user.bonus.urgent ? user.bonus.missing.map(item => `Bonus : ${item}`) : []),
+              ...(user.special.urgent ? user.special.missing.map(item => `Spécial : ${item}`) : [])
             ];
 
             return (
               <div key={user.id} className={`monitoring-row ${needsReminder ? 'needs-reminder' : 'is-ok'}`}>
                 <strong>{user.username}</strong>
                 <span>{user.today.completed}/{user.today.total}</span>
-                <span>{user.bonus.completed}/{user.bonus.total}</span>
-                <span>{user.special.completed}/{user.special.total}</span>
+                <span>{user.bonus.locked ? '🔒' : `${user.bonus.completed}/${user.bonus.total}`}</span>
+                <span>{user.special.locked ? '🔒' : `${user.special.completed}/${user.special.total}`}</span>
                 <div className="missing-cell">
                   {needsReminder ? (
                     <details>
@@ -164,7 +164,7 @@ function AdminMonitoring() {
       </div>
 
       <p className="monitoring-help">
-        Deadline spéciaux première journée : {formatDateTime(summary.first_matchday_deadline)} · {summary.first_matchday_locked ? 'verrouillés' : 'encore ouverts'}.
+        Bonus long terme : {summary.bonus_locked ? 'verrouillés' : `ouverts jusqu’au ${formatDateTime(summary.bonus_deadline)}`} · Deadline spéciaux première journée : {formatDateTime(summary.first_matchday_deadline)} · {summary.first_matchday_locked ? 'verrouillés' : 'encore ouverts'}.
       </p>
 
       <style>{styles}</style>
