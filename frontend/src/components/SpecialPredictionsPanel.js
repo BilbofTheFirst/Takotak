@@ -6,7 +6,14 @@ const formatDeadline = (deadline) => {
   return `${deadline.substring(8, 10)}/${deadline.substring(5, 7)} à ${deadline.substring(11, 16)}`;
 };
 
-function SpecialPredictionsPanel() {
+const getAutoPlacement = () => {
+  if (typeof window === 'undefined') return 'always';
+  if (window.location.pathname.startsWith('/bonus')) return 'bonus';
+  if (window.location.pathname.startsWith('/predictions')) return 'predictions';
+  return 'always';
+};
+
+function SpecialPredictionsPanel({ placement = 'auto' }) {
   const [definitions, setDefinitions] = useState([]);
   const [predictions, setPredictions] = useState({});
   const [actual, setActual] = useState({});
@@ -16,6 +23,8 @@ function SpecialPredictionsPanel() {
   const [deadline, setDeadline] = useState(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('idle');
+
+  const effectivePlacement = placement === 'auto' ? getAutoPlacement() : placement;
 
   const applyPayload = (payload = {}) => {
     setDefinitions(payload.definitions || []);
@@ -79,16 +88,26 @@ function SpecialPredictionsPanel() {
   };
 
   if (loading) {
+    if (effectivePlacement === 'bonus') return null;
     return <section className="special-panel special-loading">Chargement des pronostics spéciaux...</section>;
   }
 
+  if (effectivePlacement === 'bonus' && !locked) return null;
+  if (effectivePlacement === 'predictions' && locked) return null;
+
+  const isBonusPlacement = effectivePlacement === 'bonus';
+
   return (
-    <section className={`special-panel ${locked ? 'is-locked' : ''}`}>
+    <section className={`special-panel ${locked ? 'is-locked' : ''} ${isBonusPlacement ? 'in-bonus-page' : ''}`}>
       <div className="special-header">
         <div>
           <span className="special-eyebrow">⚡ Spéciaux première journée</span>
-          <h2>Paris globaux sur les premiers matchs</h2>
-          <p>Première journée = le premier match de chaque équipe, donc 24 matchs au total. Ce n’est pas uniquement les matchs du 11 juin.</p>
+          <h2>{isBonusPlacement ? 'Résultat des spéciaux première journée' : 'Paris globaux sur les premiers matchs'}</h2>
+          <p>
+            {isBonusPlacement
+              ? 'Les spéciaux sont maintenant verrouillés et ont rejoint les bonus. Tu peux suivre ton score dès que les résultats sont calculés.'
+              : 'Première journée = le premier match de chaque équipe, donc 24 matchs au total. Ce n’est pas uniquement les matchs du 11 juin.'}
+          </p>
           {deadline && <small>Verrouillage : {formatDeadline(deadline)}</small>}
         </div>
 
