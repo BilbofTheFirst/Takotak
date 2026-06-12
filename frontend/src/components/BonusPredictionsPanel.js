@@ -294,7 +294,8 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
         .bonus-card-title span, .field-label, .semifinalists-title span { display: block; color: #0f766e; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
         .bonus-card-title strong { color: #d97706; font-size: 22px; white-space: nowrap; }
         .bonus-group-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-        .group-winner-box, .final-pick-box { display: grid; gap: 4px; min-width: 0; align-content: start; }
+        .group-winner-box, .final-pick-box { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; min-width: 0; align-items: center; position: relative; }
+        .group-winner-box > .bonus-public-toggle-shell, .final-pick-box > .bonus-public-toggle-shell { grid-column: 2; grid-row: 1; }
         .group-winner-row { display: grid; grid-template-columns: 34px 32px minmax(0, 1fr); gap: 7px; align-items: center; min-width: 0; }
         .group-badge { width: 31px; height: 31px; border-radius: 10px; display: grid; place-items: center; background: #ecfdf5; color: #047857; font-size: 13px; font-weight: 950; }
         .group-flag, .bonus-flag { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #e2e8f0; overflow: hidden; border: 2px solid white; box-shadow: 0 5px 14px rgba(15,23,42,.14); color: #64748b; font-size: 14px; }
@@ -307,7 +308,8 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
         .final-picks-grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 10px; }
         .final-pick-row { display: grid; grid-template-columns: 32px 34px minmax(0, 1fr); gap: 8px; align-items: center; }
         .pick-points { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: #fff7ed; color: #c2410c; font-size: 13px; font-weight: 950; }
-        .semifinalists-box { display: grid; gap: 8px; padding-top: 6px; border-top: 1px solid #e2e8f0; }
+        .semifinalists-box { display: grid; gap: 8px; padding-top: 6px; border-top: 1px solid #e2e8f0; position: relative; }
+        .semifinalists-box > .bonus-public-toggle-shell { justify-self: start; }
         .semifinalists-grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 9px; }
         .semifinalists-title { display: flex; justify-content: space-between; align-items: center; }
         .semifinalists-title strong { color: #0f172a; font-size: 14px; }
