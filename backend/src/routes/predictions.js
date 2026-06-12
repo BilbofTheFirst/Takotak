@@ -28,9 +28,11 @@ const parseJsonValue = (value, fallback) => {
 
 const buildAvatarUrl = (user) => {
   if (!user?.avatar_data) return null;
+  const userId = user.id || user.user_id;
+  if (!userId) return null;
   const rawVersion = user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : Date.now();
   const version = Number.isNaN(rawVersion) ? Date.now() : rawVersion;
-  return `/profile/users/${user.id}/avatar?v=${version}`;
+  return `/profile/users/${userId}/avatar?v=${version}`;
 };
 
 const buildBonusProgress = (row) => {
