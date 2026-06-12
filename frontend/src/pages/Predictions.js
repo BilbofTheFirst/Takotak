@@ -195,7 +195,11 @@ function Predictions() {
     showPastDays ? filteredMatches : filteredMatches.filter(match => !isPastOrClosedMatch(match))
   ), [filteredMatches, isPastOrClosedMatch, showPastDays]);
 
-  const hiddenPastMatchesCount = filteredMatches.length - visibleMatchesForGroups.length;
+  const pastMatchesCount = useMemo(() => filteredMatches.filter(isPastOrClosedMatch).length,
+	[filteredMatches, isPastOrClosedMatch]
+	);
+
+  const hiddenPastMatchesCount = showPastDays ? 0 : pastMatchesCount;
 
   const matchdayCounts = useMemo(() => ({
     all: matches.length,
@@ -445,7 +449,13 @@ function Predictions() {
         {(selectedMatchday === 'all' || selectedMatchday === '1') && <SpecialPredictionsPanel />}
 
         <div className="prediction-toolbar">
-          {hiddenPastMatchesCount > 0 && <button type="button" onClick={() => setShowPastDays(prev => !prev)}>{showPastDays ? 'Masquer les matchs passés' : `Afficher les matchs passés (${hiddenPastMatchesCount})`}</button>}
+          {pastMatchesCount > 0 && (
+			<button type="button" onClick={() => setShowPastDays(prev => !prev)}>
+				{showPastDays
+				? 'Masquer les matchs passés'
+				: `Afficher les matchs passés (${hiddenPastMatchesCount})`}
+			</button>
+		)}
           <div className="autosave-inline"><span>💾</span> Sauvegarde en quittant le champ</div>
         </div>
 
