@@ -11,6 +11,7 @@ const predictionsRoutes = require('./routes/predictions');
 const bonusPredictionsRoutes = require('./routes/bonusPredictions');
 const specialPredictionsRoutes = require('./routes/specialPredictions');
 const resultsRoutes = require('./routes/results');
+const statsRoutes = require('./routes/stats');
 const teamsRoutes = require('./routes/teams');
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/predictions', predictionsRoutes);
 app.use('/api/bonus-predictions', bonusPredictionsRoutes);
 app.use('/api/special-predictions', specialPredictionsRoutes);
 app.use('/api/results', resultsRoutes);
+app.use('/api/stats', statsRoutes);
 app.use('/api/teams', teamsRoutes);
 
 const PORT = process.env.PORT || 3001;
