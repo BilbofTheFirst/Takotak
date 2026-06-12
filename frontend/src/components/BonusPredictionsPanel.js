@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { bonusPredictionsService } from '../services/api';
 import { getFlag } from '../utils/countryFlags';
-import PublicBonusPredictionsPanel from './PublicBonusPredictionsPanel';
+import PublicBonusPredictionsTable from './PublicBonusPredictionsTable';
 
 const GROUP_CODES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 const EMPTY_BONUS = {
@@ -170,15 +170,16 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
 
       {locked && (
         <div className="bonus-locked-banner">
-          🔒 Les pronostics bonus sont verrouillés car la compétition a commencé. Tu peux maintenant consulter les pronos du groupe bonus par bonus.
+          🔒 Les pronostics bonus sont verrouillés car la compétition a commencé. Tu peux maintenant consulter les pronos du groupe par catégorie.
         </div>
       )}
 
       <div className="bonus-grid">
         <div className="bonus-card bonus-groups-card">
-          <div className="bonus-card-title">
+          <div className="bonus-card-title has-public-table">
             <div><span>12 × 5 pts</span><h3>Vainqueurs de groupes</h3></div>
             <strong>{completedGroupWinners}/12</strong>
+            <PublicBonusPredictionsTable type="groups" locked={locked} currentUserId={currentUserId} />
           </div>
           <div className="bonus-group-grid">
             {GROUP_CODES.map(group => {
@@ -193,13 +194,6 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
                       {(groupTeams[group] || []).map(renderTeamOption)}
                     </select>
                   </label>
-                  <PublicBonusPredictionsPanel
-                    locked={locked}
-                    currentUserId={currentUserId}
-                    kind="group_winner"
-                    group={group}
-                    title={`Vainqueur groupe ${group}`}
-                  />
                 </div>
               );
             })}
@@ -207,9 +201,10 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
         </div>
 
         <div className="bonus-card bonus-final-card">
-          <div className="bonus-card-title">
+          <div className="bonus-card-title has-public-table">
             <div><span>Tableau final</span><h3>Grands paris</h3></div>
             <strong>45 pts</strong>
+            <PublicBonusPredictionsTable type="final" locked={locked} currentUserId={currentUserId} />
           </div>
 
           <div className="final-picks-grid">
@@ -225,7 +220,6 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
                   </select>
                 </div>
               </label>
-              <PublicBonusPredictionsPanel locked={locked} currentUserId={currentUserId} kind="champion" title="Champion du monde" />
             </div>
 
             <div className="final-pick-box">
@@ -240,7 +234,6 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
                   </select>
                 </div>
               </label>
-              <PublicBonusPredictionsPanel locked={locked} currentUserId={currentUserId} kind="runner_up" title="Finaliste perdant" />
             </div>
           </div>
 
@@ -258,7 +251,6 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
                 </label>
               ))}
             </div>
-            <PublicBonusPredictionsPanel locked={locked} currentUserId={currentUserId} kind="semifinalists" title="Demi-finalistes" />
           </div>
         </div>
       </div>
@@ -290,12 +282,11 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
         .bonus-locked-banner { margin-bottom: 14px; padding: 10px 12px; border-radius: 14px; color: #713f12; background: #fef3c7; border: 1px solid rgba(251,191,36,.5); font-size: 12px; font-weight: 900; }
         .bonus-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
         .bonus-card { border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 18px; padding: 14px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.55); }
-        .bonus-card-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .bonus-card-title { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; margin-bottom: 12px; }
         .bonus-card-title span, .field-label, .semifinalists-title span { display: block; color: #0f766e; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
         .bonus-card-title strong { color: #d97706; font-size: 22px; white-space: nowrap; }
-        .bonus-group-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-        .group-winner-box, .final-pick-box { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; min-width: 0; align-items: center; position: relative; }
-        .group-winner-box > .bonus-public-toggle-shell, .final-pick-box > .bonus-public-toggle-shell { grid-column: 2; grid-row: 1; }
+        .bonus-group-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: start; }
+        .group-winner-box, .final-pick-box { display: grid; gap: 6px; min-width: 0; align-items: start; }
         .group-winner-row { display: grid; grid-template-columns: 34px 32px minmax(0, 1fr); gap: 7px; align-items: center; min-width: 0; }
         .group-badge { width: 31px; height: 31px; border-radius: 10px; display: grid; place-items: center; background: #ecfdf5; color: #047857; font-size: 13px; font-weight: 950; }
         .group-flag, .bonus-flag { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #e2e8f0; overflow: hidden; border: 2px solid white; box-shadow: 0 5px 14px rgba(15,23,42,.14); color: #64748b; font-size: 14px; }
@@ -308,14 +299,13 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
         .final-picks-grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 10px; }
         .final-pick-row { display: grid; grid-template-columns: 32px 34px minmax(0, 1fr); gap: 8px; align-items: center; }
         .pick-points { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: #fff7ed; color: #c2410c; font-size: 13px; font-weight: 950; }
-        .semifinalists-box { display: grid; gap: 8px; padding-top: 6px; border-top: 1px solid #e2e8f0; position: relative; }
-        .semifinalists-box > .bonus-public-toggle-shell { justify-self: start; }
+        .semifinalists-box { display: grid; gap: 8px; padding-top: 6px; border-top: 1px solid #e2e8f0; }
         .semifinalists-grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 9px; }
         .semifinalists-title { display: flex; justify-content: space-between; align-items: center; }
         .semifinalists-title strong { color: #0f172a; font-size: 14px; }
         .semifinalist-row { display: grid; grid-template-columns: 32px 34px minmax(0, 1fr); gap: 8px; align-items: center; }
         @media (max-width: 940px) { .bonus-panel-header { grid-template-columns: 1fr; } .bonus-actions-card { grid-template-columns: 1fr; } .bonus-group-grid, .final-picks-grid, .semifinalists-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 640px) { .bonus-progress-row { grid-template-columns: 1fr; } .bonus-group-grid, .final-picks-grid, .semifinalists-grid { grid-template-columns: 1fr; } .bonus-panel { padding: 12px; } }
+        @media (max-width: 640px) { .bonus-progress-row { grid-template-columns: 1fr; } .bonus-card-title { grid-template-columns: minmax(0, 1fr) auto; } .bonus-card-title .public-bonus-table-shell { grid-column: 1 / -1; } .bonus-group-grid, .final-picks-grid, .semifinalists-grid { grid-template-columns: 1fr; } .bonus-panel { padding: 12px; } }
       `}</style>
     </section>
   );
