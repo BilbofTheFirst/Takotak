@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { specialPredictionsService } from '../services/api';
-import PublicBonusPredictionsPanel from './PublicBonusPredictionsPanel';
+import PublicSpecialPredictionsTable from './PublicSpecialPredictionsTable';
 
 const formatDeadline = (deadline) => {
   if (!deadline) return null;
@@ -18,6 +18,7 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
   const [definitions, setDefinitions] = useState([]);
   const [predictions, setPredictions] = useState({});
   const [actual, setActual] = useState({});
+  const [currentActual, setCurrentActual] = useState({});
   const [scoring, setScoring] = useState(null);
   const [locked, setLocked] = useState(false);
   const [complete, setComplete] = useState(false);
@@ -31,6 +32,7 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
     setDefinitions(payload.definitions || []);
     setPredictions(payload.predictions || {});
     setActual(payload.actual || {});
+    setCurrentActual(payload.current_actual || payload.actual || {});
     setScoring(payload.scoring || null);
     setLocked(Boolean(payload.locked));
     setComplete(Boolean(payload.complete));
@@ -129,26 +131,22 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
         <div><strong>{complete ? 'Oui' : 'Non'}</strong><span>résultats complets</span></div>
       </div>
 
-      {locked && <div className="special-lock">🔒 Les pronostics spéciaux sont verrouillés. Tu peux maintenant consulter les pronos du groupe spécial par spécial.</div>}
+      {locked && <div className="special-lock">🔒 Les pronostics spéciaux sont verrouillés. Tu peux maintenant consulter les pronos du groupe dans un tableau global.</div>}
+      {locked && <PublicSpecialPredictionsTable locked={locked} currentUserId={currentUserId} />}
 
       <div className="special-grid">
         {definitions.map(definition => {
           const detail = scoring?.details?.[definition.code];
           const actualValue = actual?.[definition.code];
+          const currentValue = currentActual?.[definition.code];
           return (
             <article className="special-card" key={definition.code}>
               <div className="special-title"><div><span>{definition.max_points} pts max</span><h3>{definition.label}</h3></div><strong>{detail?.points ?? '-'}</strong></div>
               <p>{definition.description}</p>
               <label><span>Ton prono</span><input type="number" min="0" max="300" inputMode="numeric" disabled={locked} value={predictions[definition.code] ?? ''} onChange={(event) => updatePrediction(definition.code, event.target.value)} placeholder="0" /></label>
               <div className="special-result"><span>Résultat réel</span><strong>{actualValue ?? 'En attente'}</strong></div>
+              {locked && <div className="special-result current"><span>Résultat actuel</span><strong>{currentValue ?? 'En attente'}</strong></div>}
               <small>Tout pile = {definition.max_points} pts, puis -{definition.point_loss_per_gap} par écart.</small>
-              <PublicBonusPredictionsPanel
-                type="special"
-                locked={locked}
-                currentUserId={currentUserId}
-                code={definition.code}
-                title={definition.label}
-              />
             </article>
           );
         })}
@@ -184,7 +182,9 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
         .special-card input { width: 100%; box-sizing: border-box; border: 1.5px solid #cbd5e1; border-radius: 13px; background: white; color: #0f172a; padding: 10px 11px; font-size: 18px; font-weight: 950; }
         .special-card input:disabled { color: #94a3b8; background: #f1f5f9; }
         .special-result { display: flex; justify-content: space-between; gap: 10px; padding: 9px 10px; border-radius: 13px; background: white; border: 1px solid #e2e8f0; }
+        .special-result.current { margin-top: 7px; background: #ecfdf5; border-color: #bbf7d0; }
         .special-result strong { color: #d97706; }
+        .special-result.current strong { color: #047857; }
         @media (max-width: 940px) { .special-header, .special-grid { grid-template-columns: 1fr; } }
         @media (max-width: 640px) { .special-progress { grid-template-columns: 1fr; } .special-panel { padding: 12px; } }
       `}</style>
