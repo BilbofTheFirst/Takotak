@@ -117,7 +117,7 @@ function Navigation({ user, onLogout, hasBonusAttention, hasPredictionAttention 
         <Link to="/predictions" className={predictionsClassName} onClick={closeMenu}>🎯 Pronostics</Link>
         <Link to="/bonus" className={bonusClassName} onClick={closeMenu}>🎁 Bonus</Link>
         <Link to="/rankings" onClick={closeMenu}>🏆 Classement</Link>
-        <Link to="/stats" onClick={closeMenu}>📊 Mes Stats</Link>
+        <Link to="/stats" onClick={closeMenu}>📊 Stats</Link>
         <Link to="/simulation" onClick={closeMenu}>🎮 Simulation</Link>
         <Link to="/rules" onClick={closeMenu}>📋 Règles</Link>
         {user?.is_admin && <Link to="/admin" onClick={closeMenu}>⚙️ Admin</Link>}
