@@ -171,6 +171,40 @@
     flex-direction: column;
     align-items: stretch;
   }
+
+  .predictions-page .prediction-summary,
+  .rankings-page .rankings-summary,
+  .rules-page .rules-summary {
+    width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .predictions-page .prediction-summary div,
+  .rankings-page .rankings-summary div,
+  .rules-page .rules-summary div {
+    min-width: 0 !important;
+    padding: 9px 7px !important;
+    text-align: center !important;
+    border-radius: 13px !important;
+  }
+
+  .predictions-page .prediction-summary strong,
+  .rankings-page .rankings-summary strong,
+  .rules-page .rules-summary strong {
+    font-size: 22px !important;
+  }
+
+  .predictions-page .prediction-summary span,
+  .rankings-page .rankings-summary span,
+  .rules-page .rules-summary span {
+    margin-top: 5px !important;
+    font-size: 8.5px !important;
+    line-height: 1.12 !important;
+    letter-spacing: .02em !important;
+    white-space: normal !important;
+  }
 }
 
 @media (min-width: 761px) {
@@ -194,5 +228,29 @@
 
   .ranking-locked-card h1 {
     font-size: 28px;
+  }
+
+  .predictions-page .prediction-summary,
+  .rankings-page .rankings-summary,
+  .rules-page .rules-summary {
+    gap: 5px !important;
+  }
+
+  .predictions-page .prediction-summary div,
+  .rankings-page .rankings-summary div,
+  .rules-page .rules-summary div {
+    padding: 8px 5px !important;
+  }
+
+  .predictions-page .prediction-summary strong,
+  .rankings-page .rankings-summary strong,
+  .rules-page .rules-summary strong {
+    font-size: 20px !important;
+  }
+
+  .predictions-page .prediction-summary span,
+  .rankings-page .rankings-summary span,
+  .rules-page .rules-summary span {
+    font-size: 8px !important;
   }
 }
