@@ -135,16 +135,9 @@ const isMatchResultEncoded = (match) => (
   match.team2_goals !== undefined
 );
 
-const calculateActualValuesFromMatches = (matches) => {
-  const complete = matches.length > 0 && matches.every(isMatchResultEncoded);
+const EMPTY_ACTUAL_VALUES = Object.fromEntries(SPECIAL_PREDICTION_DEFINITIONS.map(definition => [definition.code, null]));
 
-  if (!complete) {
-    return {
-      complete: false,
-      values: Object.fromEntries(SPECIAL_PREDICTION_DEFINITIONS.map(definition => [definition.code, null]))
-    };
-  }
-
+const calculateValuesFromEncodedMatches = (matches) => {
   let totalGoals = 0;
   let drawCount = 0;
   let cleanSheetCount = 0;
@@ -169,12 +162,23 @@ const calculateActualValuesFromMatches = (matches) => {
   });
 
   return {
-    complete: true,
-    values: {
-      [SPECIAL_PREDICTION_CODES.TOTAL_GOALS]: totalGoals,
-      [SPECIAL_PREDICTION_CODES.DRAW_COUNT]: drawCount,
-      [SPECIAL_PREDICTION_CODES.CLEAN_SHEET_COUNT]: cleanSheetCount
-    }
+    [SPECIAL_PREDICTION_CODES.TOTAL_GOALS]: totalGoals,
+    [SPECIAL_PREDICTION_CODES.DRAW_COUNT]: drawCount,
+    [SPECIAL_PREDICTION_CODES.CLEAN_SHEET_COUNT]: cleanSheetCount
+  };
+};
+
+const calculateActualValuesFromMatches = (matches) => {
+  const encodedMatches = matches.filter(isMatchResultEncoded);
+  const complete = matches.length > 0 && encodedMatches.length === matches.length;
+  const currentValues = calculateValuesFromEncodedMatches(encodedMatches);
+
+  return {
+    complete,
+    values: complete ? currentValues : EMPTY_ACTUAL_VALUES,
+    current_values: currentValues,
+    completed_matches: encodedMatches.length,
+    total_matches: matches.length
   };
 };
 
@@ -190,7 +194,10 @@ const getFirstMatchdayStatus = async (clientOrPool) => {
     deadline: deadline.first_match_time,
     locked: deadline.locked,
     complete: actual.complete,
-    actual: actual.values
+    actual: actual.values,
+    current_actual: actual.current_values,
+    completed_matches: actual.completed_matches,
+    total_matches: actual.total_matches
   };
 };
 
@@ -248,7 +255,7 @@ const recalculateFirstMatchdaySpecialPredictionPoints = async (clientOrPool) => 
       'UPDATE special_predictions SET points = NULL WHERE code = ANY($1::varchar[])',
       [codes]
     );
-    return { complete: false, actual: status.actual, updated: 0 };
+    return { complete: false, actual: status.actual, current_actual: status.current_actual, updated: 0 };
   }
 
   const predictionResult = await clientOrPool.query(
@@ -277,7 +284,7 @@ const recalculateFirstMatchdaySpecialPredictionPoints = async (clientOrPool) => 
     updated += 1;
   }
 
-  return { complete: true, actual: status.actual, updated };
+  return { complete: true, actual: status.actual, current_actual: status.current_actual, updated };
 };
 
 const normalizeSpecialPredictionValue = (value) => {
@@ -308,7 +315,7 @@ const getAllSpecialPredictionScores = async (clientOrPool) => {
     scores.set(userId, buildSpecialPredictionScoring(rows, status.actual));
   });
 
-  return { actual: status.actual, complete: status.complete, scores };
+  return { actual: status.actual, current_actual: status.current_actual, complete: status.complete, scores };
 };
 
 module.exports = {
