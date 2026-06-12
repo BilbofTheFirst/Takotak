@@ -70,11 +70,13 @@ export const predictionsService = {
 
 export const bonusPredictionsService = {
   get: () => api.get('/bonus-predictions'),
+  getPublic: () => api.get('/bonus-predictions/public'),
   save: (payload) => api.post('/bonus-predictions', payload)
 };
 
 export const specialPredictionsService = {
   get: () => api.get('/special-predictions'),
+  getPublic: () => api.get('/special-predictions/public'),
   save: (payload) => api.post('/special-predictions', payload)
 };
 
