@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { matchesService } from '../services/api';
 import BonusPredictionsPanel from '../components/BonusPredictionsPanel';
-import PublicBonusPredictionsPanel from '../components/PublicBonusPredictionsPanel';
 import SpecialPredictionsPanel from '../components/SpecialPredictionsPanel';
 import PageLoader from '../components/PageLoader';
 
@@ -52,9 +51,8 @@ function BonusPredictions() {
           </div>
         </section>
 
-        <SpecialPredictionsPanel placement="bonus" />
-        <BonusPredictionsPanel matches={matches} />
-        <PublicBonusPredictionsPanel currentUserId={currentUser?.id} />
+        <SpecialPredictionsPanel placement="bonus" currentUserId={currentUser?.id} />
+        <BonusPredictionsPanel matches={matches} currentUserId={currentUser?.id} />
       </div>
       <style>{styles}</style>
     </div>
