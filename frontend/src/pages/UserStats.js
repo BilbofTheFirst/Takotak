@@ -30,7 +30,7 @@ const RANKING_CONFIGS = [
 ];
 
 const BADGE_DEFINITIONS = [
-  { code: 'sniper', icon: '🎯', title: 'Sniper', description: 'Au moins 3 scores exacts.' },
+  { code: 'sniper', icon: '🎯', title: 'Sniper', description: '3 scores exacts consécutifs.' },
   { code: 'hot_streak', icon: '🔥', title: 'Série chaude', description: 'Au moins 3 matchs consécutifs avec points.' },
   { code: 'draw_king', icon: '🤝', title: 'Roi du nul', description: 'Au moins 2 matchs nuls bien lus.' },
   { code: 'assidu', icon: '🧱', title: 'Assidu', description: 'Présent sur tous les matchs scorés.' },
@@ -228,9 +228,13 @@ function UserStats() {
           <section className="stats-layout">
             <div className="main-column">
               <section className="stats-card">
+                <div className="stats-card-title"><div><span>Règles</span><h2>Comment lire les badges ?</h2></div></div>
+                <p className="badge-note">Les badges affichés ici sont des <strong>badges actuels</strong>, recalculés après chaque résultat. Certains peuvent donc être gagnés ou perdus selon les séries et le classement. Des trophées définitifs pourront être ajoutés plus tard avec un historique dédié.</p>
+              </section>
+              <section className="stats-card">
                 <div className="stats-card-title"><div><span>Catalogue</span><h2>Badges disponibles</h2></div></div>
                 <div className="badge-catalog">
-                  {badgeCatalog.map(badge => <div key={badge.code} className={`badge-chip ${badge.count === 0 ? 'is-locked' : ''}`} title={badge.description}><span>{badge.icon}</span><strong>{badge.title}</strong><em>{badge.count > 0 ? `${badge.count} joueur${badge.count > 1 ? 's' : ''}` : '0 joueur'}</em></div>)}
+                  {badgeCatalog.map(badge => <div key={badge.code} className={`badge-chip ${badge.count === 0 ? 'is-locked' : ''}`} title={badge.description}><span>{badge.icon}</span><strong>{badge.title}</strong><em>{badge.description} · {badge.count > 0 ? `${badge.count} joueur${badge.count > 1 ? 's' : ''}` : '0 joueur'}</em></div>)}
                 </div>
               </section>
             </div>
@@ -246,7 +250,7 @@ function UserStats() {
         )}
 
         {activeTab === 'community' && (
-          <section className="stats-layout">
+          <section className="stats-layout community-layout">
             <div className="main-column">
               <section className="stats-card">
                 <div className="stats-card-title"><div><span>Stats fun</span><h2>La communauté en chiffres</h2></div></div>
@@ -279,7 +283,7 @@ function UserStats() {
                 <div className="insight-list">{(me?.insights || []).map(insight => <div key={insight.title} className={`insight-row ${insight.type}`}><span>{insight.icon}</span><div><strong>{insight.title}</strong><em>{insight.text}</em></div></div>)}</div>
               </section>
             </div>
-            <aside className="side-column single"><section className="stats-card"><div className="stats-card-title"><div><span>Mes badges</span><h2>Collection</h2></div></div><div className="badge-catalog">{me?.badges?.length ? me.badges.map(badge => <div key={badge.code} className="badge-chip"><span>{badge.icon}</span><strong>{badge.title}</strong><em>{badge.description}</em></div>) : <p className="empty-note">Aucun badge pour le moment.</p>}</div></section></aside>
+            <aside className="side-column single"><section className="stats-card"><div className="stats-card-title"><div><span>Mes badges</span><h2>Collection actuelle</h2></div></div><div className="badge-catalog">{me?.badges?.length ? me.badges.map(badge => <div key={badge.code} className="badge-chip"><span>{badge.icon}</span><strong>{badge.title}</strong><em>{badge.description}</em></div>) : <p className="empty-note">Aucun badge pour le moment.</p>}</div></section></aside>
           </section>
         )}
       </div>
@@ -309,15 +313,16 @@ const styles = `
   .stat-pill > span, .fun-card > span { width: 38px; height: 38px; border-radius: 14px; display: grid; place-items: center; background: #f1f5f9; font-size: 21px; flex: 0 0 auto; }
   .stat-pill strong { display: block; color: ${DARK}; font-size: 25px; line-height: 1; letter-spacing: -.04em; }
   .stat-pill em { display: block; margin-top: 5px; color: #64748b; font-style: normal; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
-  .fun-card { min-width: 0; }
+  .fun-card { min-width: 0; align-items: flex-start; min-height: 122px; }
   .fun-card em { display: block; color: #64748b; font-style: normal; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
-  .fun-card strong { display: block; margin-top: 4px; color: ${DARK}; font-size: 18px; line-height: 1.05; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-  .fun-card small { display: block; margin-top: 5px; color: ${SECONDARY}; font-size: 11px; font-weight: 950; }
+  .fun-card strong { display: block; margin-top: 5px; color: ${DARK}; font-size: 18px; line-height: 1.12; white-space: normal; overflow: visible; text-overflow: clip; }
+  .fun-card small { display: block; margin-top: 6px; color: ${SECONDARY}; font-size: 11px; font-weight: 950; line-height: 1.25; }
   .stat-pill.featured { color: white; background: ${GRADIENT}; }
   .stat-pill.featured > span { background: rgba(255,255,255,.16); }
   .stat-pill.featured strong { color: white; }
   .stat-pill.featured em { color: rgba(255,255,255,.76); }
   .stats-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+  .stats-layout.community-layout { grid-template-columns: 1fr; }
   .main-column, .side-column { display: grid; gap: 16px; }
   .side-column.single { grid-template-columns: 1fr; }
   .stats-card { padding: 16px; }
@@ -346,15 +351,16 @@ const styles = `
   .mini-ranking-row > span { display: grid; place-items: center; min-width: 38px; padding: 5px 7px; border-radius: 999px; background: #e2e8f0; color: #334155; font-size: 11px; font-weight: 950; }
   .mini-ranking-row strong, .community-row strong, .player-badges-row strong, .insight-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${DARK}; font-size: 13px; }
   .mini-ranking-row em, .community-row em, .player-badges-row em, .insight-row em { color: ${PRIMARY}; font-style: normal; font-size: 12px; font-weight: 900; }
-  .fun-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .fun-grid { display: grid; grid-template-columns: repeat(3, minmax(230px, 1fr)); gap: 12px; }
   .community-row { grid-template-columns: minmax(0, 1fr) auto; }
   .community-row span { display: block; color: #64748b; font-size: 11px; font-weight: 850; margin-top: 2px; }
+  .badge-note { margin: 0; color: #334155; font-size: 13px; font-weight: 850; line-height: 1.55; }
   .badge-catalog { display: flex; flex-wrap: wrap; gap: 10px; }
-  .badge-chip { display: inline-grid; grid-template-columns: 34px minmax(0, 1fr); gap: 2px 9px; align-items: center; padding: 10px 12px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; min-width: 190px; }
+  .badge-chip { display: inline-grid; grid-template-columns: 34px minmax(0, 1fr); gap: 2px 9px; align-items: center; padding: 10px 12px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; min-width: 220px; }
   .badge-chip.is-locked { opacity: .68; background: #f1f5f9; }
   .badge-chip > span { grid-row: span 2; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 12px; background: white; font-size: 18px; }
   .badge-chip strong { color: ${DARK}; font-size: 13px; }
-  .badge-chip em { color: #64748b; font-style: normal; font-size: 11px; font-weight: 850; }
+  .badge-chip em { color: #64748b; font-style: normal; font-size: 11px; font-weight: 850; line-height: 1.25; }
   .player-badges-row { grid-template-columns: 34px minmax(0, 1fr) auto; }
   .player-badges-row div { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
   .player-badges-row div span { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 999px; background: #fff7ed; border: 1px solid #fed7aa; }
