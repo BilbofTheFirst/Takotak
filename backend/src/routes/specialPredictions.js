@@ -44,6 +44,9 @@ const buildPayload = async (clientOrPool, userId) => {
     deadline: status.deadline,
     complete: status.complete,
     actual: status.actual,
+    current_actual: status.current_actual,
+    completed_matches: status.completed_matches,
+    total_matches: status.total_matches,
     scoring: buildSpecialPredictionScoring(predictionRows, status.actual)
   };
 };
@@ -69,6 +72,9 @@ router.get('/public', authenticateToken, async (req, res) => {
         deadline: status.deadline,
         definitions: SPECIAL_PREDICTION_DEFINITIONS,
         actual: null,
+        current_actual: status.current_actual,
+        completed_matches: status.completed_matches,
+        total_matches: status.total_matches,
         predictions: []
       });
     }
@@ -127,6 +133,9 @@ router.get('/public', authenticateToken, async (req, res) => {
       deadline: status.deadline,
       definitions: SPECIAL_PREDICTION_DEFINITIONS,
       actual: status.actual,
+      current_actual: status.current_actual,
+      completed_matches: status.completed_matches,
+      total_matches: status.total_matches,
       complete: status.complete,
       predictions
     });
