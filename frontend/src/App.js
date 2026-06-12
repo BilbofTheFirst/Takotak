@@ -300,10 +300,22 @@ function AppContent() {
       return;
     }
 
-    const [bonusResult, specialResult] = await Promise.allSettled([
+    const [attentionResult, bonusResult, specialResult] = await Promise.allSettled([
+      api.get('/predictions/attention-status'),
       bonusPredictionsService.get(),
       specialPredictionsService.get()
     ]);
+
+    if (attentionResult.status === 'fulfilled') {
+      const attention = attentionResult.value.data || {};
+      const pendingMatchPredictions = Number(attention.matches?.missing_count || 0) > 0;
+      const pendingSpecial = Boolean(attention.special?.urgent);
+      const pendingBonus = Boolean(attention.bonus?.urgent);
+
+      setHasBonusAttention(pendingBonus);
+      setHasPredictionAttention(pendingMatchPredictions || pendingSpecial);
+      return;
+    }
 
     const pendingBonus = bonusResult.status === 'fulfilled'
       ? hasPendingBonusPredictions(bonusResult.value.data)
