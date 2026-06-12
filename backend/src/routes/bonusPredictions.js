@@ -14,6 +14,13 @@ const router = express.Router();
 
 const normalizeTeam = (value) => String(value || '').trim();
 
+const buildAvatarUrl = (user) => {
+  if (!user?.avatar_data) return null;
+  const rawVersion = user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : Date.now();
+  const version = Number.isNaN(rawVersion) ? Date.now() : rawVersion;
+  return `/profile/users/${user.user_id || user.id}/avatar?v=${version}`;
+};
+
 const normalizePayload = (payload = {}) => {
   const groupWinners = {};
   GROUP_CODES.forEach(group => {
@@ -56,6 +63,60 @@ router.get('/', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get bonus predictions error:', error);
     res.status(500).json({ error: 'Server error', detail: error.message, code: error.code });
+  }
+});
+
+router.get('/public', authenticateToken, async (req, res) => {
+  try {
+    await ensureBonusPredictionTable(pool);
+
+    const [deadline, actual] = await Promise.all([
+      getBonusDeadline(pool),
+      buildActualBonusAnswers(pool)
+    ]);
+
+    if (!deadline.locked) {
+      return res.json({
+        locked: false,
+        deadline: deadline.first_match_time,
+        actual: null,
+        predictions: []
+      });
+    }
+
+    const result = await pool.query(`
+      SELECT
+        u.id AS user_id,
+        u.username,
+        u.avatar_data,
+        u.avatar_updated_at,
+        bp.group_winners,
+        bp.champion,
+        bp.runner_up,
+        bp.semifinalists,
+        bp.updated_at
+      FROM users u
+      LEFT JOIN bonus_predictions bp ON bp.user_id = u.id
+      ORDER BY LOWER(u.username), LOWER(u.email)
+    `);
+
+    const predictions = result.rows.map(row => ({
+      user_id: Number(row.user_id),
+      username: row.username,
+      avatar_url: buildAvatarUrl(row),
+      prediction: normalizeBonusPrediction(row),
+      scoring: calculateBonusPoints(row, actual)
+    }));
+
+    return res.json({
+      locked: true,
+      deadline: deadline.first_match_time,
+      actual,
+      predictions
+    });
+  } catch (error) {
+    console.error('Get public bonus predictions error:', error);
+    return res.status(500).json({ error: 'Server error', detail: error.message, code: error.code });
   }
 });
 
