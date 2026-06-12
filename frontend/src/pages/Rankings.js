@@ -28,26 +28,33 @@ const buildProgressionTicks = (values) => {
 
 const formatProgressionTick = (value) => Number(value) === 0 ? 'Départ' : `M${value}`;
 
-function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMode, setChartMode, selectedUserIds, toggleChartUser, clearSelectedUsers }) {
+const getDefaultChartUsers = (rankedUsers, chartMode, currentUserId) => {
+  const base = chartMode === 'all' ? rankedUsers : rankedUsers.slice(0, chartMode === 'top5' ? 5 : 8);
+  const merged = [...base];
+
+  if (currentUserId && !merged.some(item => Number(item.id) === currentUserId)) {
+    const me = rankedUsers.find(user => Number(user.id) === currentUserId);
+    if (me) merged.push(me);
+  }
+
+  return merged;
+};
+
+function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMode, setChartMode, selectedUserIds, hiddenUserIds, toggleChartUser, clearChartOverrides }) {
   const usersById = useMemo(() => new Map((progression?.users || []).map(user => [Number(user.id), user])), [progression]);
   const currentUserId = Number(currentUser?.id || 0);
+  const hiddenIds = useMemo(() => new Set(hiddenUserIds.map(Number)), [hiddenUserIds]);
 
   const chartUsers = useMemo(() => {
     const selected = rankedUsers.filter(user => selectedUserIds.includes(Number(user.id)));
-    const base = chartMode === 'all' ? rankedUsers : rankedUsers.slice(0, chartMode === 'top5' ? 5 : 8);
-    const merged = [...base];
+    const merged = getDefaultChartUsers(rankedUsers, chartMode, currentUserId);
 
     selected.forEach(user => {
       if (!merged.some(item => Number(item.id) === Number(user.id))) merged.push(user);
     });
 
-    if (currentUserId && !merged.some(item => Number(item.id) === currentUserId)) {
-      const me = rankedUsers.find(user => Number(user.id) === currentUserId);
-      if (me) merged.push(me);
-    }
-
-    return merged;
-  }, [rankedUsers, selectedUserIds, chartMode, currentUserId]);
+    return merged.filter(user => !hiddenIds.has(Number(user.id)));
+  }, [rankedUsers, selectedUserIds, hiddenIds, chartMode, currentUserId]);
 
   const series = chartUsers
     .map((user, index) => ({
@@ -81,6 +88,7 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
 
   const xFor = (value) => padLeft + (Number(value || 0) / maxX) * chartWidth;
   const yFor = (value) => padTop + chartHeight - (Number(value || 0) / maxY) * chartHeight;
+  const hasOverrides = selectedUserIds.length > 0 || hiddenUserIds.length > 0;
 
   if (!series.length) {
     return <div className="empty-chart">Le graphique apparaîtra dès que des résultats seront encodés.</div>;
@@ -93,14 +101,14 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
           <span>📈 Progression</span>
           <h2>Évolution des scores</h2>
         </div>
-        <p>{series.length} courbe{series.length > 1 ? 's' : ''} affichée{series.length > 1 ? 's' : ''} · clique sur un joueur du tableau pour l’ajouter ou le retirer.</p>
+        <p>{series.length} courbe{series.length > 1 ? 's' : ''} affichée{series.length > 1 ? 's' : ''}. Les lignes surlignées du tableau correspondent aux joueurs visibles dans le graphique.</p>
       </div>
 
       <div className="chart-controls">
         <button type="button" className={chartMode === 'top5' ? 'active' : ''} onClick={() => setChartMode('top5')}>Top 5</button>
         <button type="button" className={chartMode === 'top8' ? 'active' : ''} onClick={() => setChartMode('top8')}>Top 8</button>
         <button type="button" className={chartMode === 'all' ? 'active' : ''} onClick={() => setChartMode('all')}>Tous</button>
-        {selectedUserIds.length > 0 && <button type="button" className="ghost" onClick={clearSelectedUsers}>Réinitialiser la sélection</button>}
+        {hasOverrides && <button type="button" className="ghost" onClick={clearChartOverrides}>Réinitialiser l’affichage</button>}
       </div>
 
       <div className="chart-scroll">
@@ -143,7 +151,7 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
 
       <div className="chart-legend">
         {series.map(user => (
-          <button key={user.id} type="button" className={`legend-item ${user.isMe ? 'is-me' : ''}`} onClick={() => toggleChartUser(user.id)}>
+          <button key={user.id} type="button" className={`legend-item ${user.isMe ? 'is-me' : ''}`} onClick={() => toggleChartUser(user.id)} title="Retirer du graphique">
             <span style={{ background: user.color }} />
             <strong>{user.username}{user.isMe ? ' · moi' : ''}</strong>
           </button>
@@ -176,6 +184,8 @@ function Rankings({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [chartMode, setChartMode] = useState('top8');
   const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [hiddenUserIds, setHiddenUserIds] = useState([]);
+  const currentUserId = Number(currentUser?.id || 0);
 
   useEffect(() => { loadRankings(); }, []);
 
@@ -191,9 +201,46 @@ function Rankings({ currentUser }) {
     }
   };
 
+  const defaultChartUserIds = useMemo(() => new Set(
+    getDefaultChartUsers(rankings, chartMode, currentUserId).map(user => Number(user.id))
+  ), [rankings, chartMode, currentUserId]);
+
+  const visibleChartUserIds = useMemo(() => {
+    const hidden = new Set(hiddenUserIds.map(Number));
+    const visible = new Set([...defaultChartUserIds].filter(id => !hidden.has(id)));
+
+    selectedUserIds.forEach(id => {
+      const numericId = Number(id);
+      if (!hidden.has(numericId)) visible.add(numericId);
+    });
+
+    return visible;
+  }, [defaultChartUserIds, selectedUserIds, hiddenUserIds]);
+
   const toggleChartUser = (userId) => {
     const id = Number(userId);
-    setSelectedUserIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+
+    if (hiddenUserIds.includes(id)) {
+      setHiddenUserIds(prev => prev.filter(item => item !== id));
+      return;
+    }
+
+    if (selectedUserIds.includes(id)) {
+      setSelectedUserIds(prev => prev.filter(item => item !== id));
+      return;
+    }
+
+    if (defaultChartUserIds.has(id)) {
+      setHiddenUserIds(prev => [...prev, id]);
+      return;
+    }
+
+    setSelectedUserIds(prev => [...prev, id]);
+  };
+
+  const clearChartOverrides = () => {
+    setSelectedUserIds([]);
+    setHiddenUserIds([]);
   };
 
   const topThree = rankings.slice(0, 3);
@@ -201,7 +248,6 @@ function Rankings({ currentUser }) {
   const totalPlayers = rankings.length;
   const totalPredictions = rankings.reduce((sum, user) => sum + Number(user.matches_predicted || 0), 0);
   const totalPoints = rankings.reduce((sum, user) => sum + Number(user.total_points || 0), 0);
-  const currentUserId = Number(currentUser?.id || 0);
 
   if (loading) return <PageLoader title="Chargement du classement..." icon="🏆" subtitle="Calcul des points et des bonus" />;
 
@@ -211,9 +257,9 @@ function Rankings({ currentUser }) {
 
       <section className="podium-card"><div className="podium-title"><span>🎖️ Top 3</span><h2>{leader ? `${leader.username} mène la danse` : 'Le podium arrive bientôt'}</h2></div><div className="podium-stage"><PodiumPerson user={topThree[1]} place={2} /><PodiumPerson user={topThree[0]} place={1} /><PodiumPerson user={topThree[2]} place={3} /></div></section>
 
-      <section className="ranking-table-card"><div className="table-title"><div><span>📋 Tous les joueurs</span><h2>Classement détaillé</h2></div><p>Tendance calculée par rapport au classement avant le dernier match encodé. Clique sur une ligne pour ajouter/retirer le joueur du graphique.</p></div><div className="ranking-table-wrap"><table className="ranking-table"><thead><tr><th>Rang</th><th>Tendance</th><th>Joueur</th><th>Total</th><th>Matchs</th><th>Bonus</th><th>Pronos</th></tr></thead><tbody>{rankings.map((user, idx) => { const trend = getTrendConfig(Number(user.trend || 0)); const isSelected = selectedUserIds.includes(Number(user.id)); const isMe = Number(user.id) === currentUserId; return <tr key={user.id} className={`${idx < 3 ? `top-row top-${idx + 1}` : ''} ${isSelected ? 'chart-selected-row' : ''} ${isMe ? 'me-row' : ''}`} onClick={() => toggleChartUser(user.id)} title="Ajouter/retirer du graphique"><td><span className="rank-pill">#{user.rank || idx + 1}</span></td><td><span className={`trend-pill ${trend.className}`}><b>{trend.icon}</b>{trend.label}</span></td><td><div className="player-cell"><UserAvatar user={user} size={38} /><div><strong>{user.username}{isMe ? ' · moi' : ''}</strong><span>{isSelected ? 'Affiché dans le graphique' : idx === 0 ? 'Leader provisoire' : `Ancien rang #${user.previous_rank || user.rank || idx + 1}`}</span></div></div></td><td><strong className="total-score">{user.total_points || 0}</strong></td><td>{user.match_points || 0}</td><td>{user.bonus_points || 0}</td><td>{user.matches_predicted || 0}</td></tr>; })}</tbody></table></div></section>
+      <section className="ranking-table-card"><div className="table-title"><div><span>📋 Tous les joueurs</span><h2>Classement détaillé</h2></div><p>Les lignes surlignées sont affichées dans le graphique. Clique sur une ligne pour ajouter ou retirer sa courbe.</p></div><div className="ranking-table-wrap"><table className="ranking-table"><thead><tr><th>Rang</th><th>Tendance</th><th>Joueur</th><th>Total</th><th>Matchs</th><th>Bonus</th><th>Pronos</th></tr></thead><tbody>{rankings.map((user, idx) => { const trend = getTrendConfig(Number(user.trend || 0)); const userId = Number(user.id); const isDisplayedInChart = visibleChartUserIds.has(userId); const isHiddenFromChart = hiddenUserIds.includes(userId); const isMe = userId === currentUserId; return <tr key={user.id} className={`${idx < 3 ? `top-row top-${idx + 1}` : ''} ${isDisplayedInChart ? 'chart-selected-row' : ''} ${isHiddenFromChart ? 'chart-hidden-row' : ''} ${isMe ? 'me-row' : ''}`} onClick={() => toggleChartUser(user.id)} title={isDisplayedInChart ? 'Retirer du graphique' : 'Ajouter au graphique'}><td><span className="rank-pill">#{user.rank || idx + 1}</span></td><td><span className={`trend-pill ${trend.className}`}><b>{trend.icon}</b>{trend.label}</span></td><td><div className="player-cell"><UserAvatar user={user} size={38} /><div><strong>{user.username}{isMe ? ' · moi' : ''}</strong><span>{isDisplayedInChart ? 'Affiché dans le graphique' : isHiddenFromChart ? 'Masqué du graphique' : 'Cliquer pour afficher'}</span></div></div></td><td><strong className="total-score">{user.total_points || 0}</strong></td><td>{user.match_points || 0}</td><td>{user.bonus_points || 0}</td><td>{user.matches_predicted || 0}</td></tr>; })}</tbody></table></div></section>
 
-      <ScoreProgressionChart progression={progression} rankedUsers={rankings} currentUser={currentUser} chartMode={chartMode} setChartMode={setChartMode} selectedUserIds={selectedUserIds} toggleChartUser={toggleChartUser} clearSelectedUsers={() => setSelectedUserIds([])} />
+      <ScoreProgressionChart progression={progression} rankedUsers={rankings} currentUser={currentUser} chartMode={chartMode} setChartMode={setChartMode} selectedUserIds={selectedUserIds} hiddenUserIds={hiddenUserIds} toggleChartUser={toggleChartUser} clearChartOverrides={clearChartOverrides} />
     </div><style>{styles}</style></div>
   );
 }
@@ -258,7 +304,9 @@ const styles = `
   .ranking-table tr { cursor: pointer; transition: background .15s ease, box-shadow .15s ease; }
   .ranking-table tr:hover td { background: #f8fafc; }
   .top-row { background: linear-gradient(90deg, rgba(254,243,199,.55), rgba(255,255,255,.95)); }
-  .chart-selected-row td { background: #ecfdf5 !important; }
+  .chart-selected-row td { background: #ccfbf1 !important; box-shadow: inset 0 -1px 0 rgba(15,118,110,.22); }
+  .chart-selected-row .player-cell strong::after { content: ' ✓'; color: #0f766e; font-weight: 950; }
+  .chart-hidden-row td { opacity: .62; background: #f8fafc !important; }
   .me-row td { box-shadow: inset 3px 0 0 #0f766e; }
   .rank-pill { display: inline-flex; min-width: 44px; justify-content: center; padding: 6px 8px; border-radius: 999px; background: #e2e8f0; color: #334155; font-weight: 950; }
   .top-1 .rank-pill { background: #fef3c7; color: #92400e; } .top-2 .rank-pill { background: #e0f2fe; color: #0369a1; } .top-3 .rank-pill { background: #ffedd5; color: #c2410c; }
