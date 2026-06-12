@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { bonusPredictionsService } from '../services/api';
 import { getFlag } from '../utils/countryFlags';
+import PublicBonusPredictionsPanel from './PublicBonusPredictionsPanel';
 
 const GROUP_CODES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 const EMPTY_BONUS = {
@@ -10,7 +11,7 @@ const EMPTY_BONUS = {
   semifinalists: ['', '', '', '']
 };
 
-function BonusPredictionsPanel({ matches }) {
+function BonusPredictionsPanel({ matches, currentUserId }) {
   const [bonus, setBonus] = useState(EMPTY_BONUS);
   const [locked, setLocked] = useState(false);
   const [deadline, setDeadline] = useState(null);
@@ -169,7 +170,7 @@ function BonusPredictionsPanel({ matches }) {
 
       {locked && (
         <div className="bonus-locked-banner">
-          🔒 Les pronostics bonus sont verrouillés car la compétition a commencé.
+          🔒 Les pronostics bonus sont verrouillés car la compétition a commencé. Tu peux maintenant consulter les pronos du groupe bonus par bonus.
         </div>
       )}
 
@@ -183,14 +184,23 @@ function BonusPredictionsPanel({ matches }) {
             {GROUP_CODES.map(group => {
               const selected = bonus.group_winners?.[group] || '';
               return (
-                <label key={group} className="group-winner-row">
-                  <span className="group-badge">{group}</span>
-                  <span className="group-flag">{renderSelectedFlag(selected)}</span>
-                  <select disabled={locked} value={selected} onChange={(event) => updateGroupWinner(group, event.target.value)}>
-                    {renderTeamOption('')}
-                    {(groupTeams[group] || []).map(renderTeamOption)}
-                  </select>
-                </label>
+                <div key={group} className="group-winner-box">
+                  <label className="group-winner-row">
+                    <span className="group-badge">{group}</span>
+                    <span className="group-flag">{renderSelectedFlag(selected)}</span>
+                    <select disabled={locked} value={selected} onChange={(event) => updateGroupWinner(group, event.target.value)}>
+                      {renderTeamOption('')}
+                      {(groupTeams[group] || []).map(renderTeamOption)}
+                    </select>
+                  </label>
+                  <PublicBonusPredictionsPanel
+                    locked={locked}
+                    currentUserId={currentUserId}
+                    kind="group_winner"
+                    group={group}
+                    title={`Vainqueur groupe ${group}`}
+                  />
+                </div>
               );
             })}
           </div>
@@ -203,29 +213,35 @@ function BonusPredictionsPanel({ matches }) {
           </div>
 
           <div className="final-picks-grid">
-            <label className="final-pick-row">
-              <span className="pick-points">15</span>
-              <span className="bonus-flag">{renderSelectedFlag(bonus.champion)}</span>
-              <div>
-                <span className="field-label">Champion du monde</span>
-                <select disabled={locked} value={bonus.champion} onChange={(event) => updateField('champion', event.target.value)}>
-                  {renderTeamOption('')}
-                  {allTeams.map(renderTeamOption)}
-                </select>
-              </div>
-            </label>
+            <div className="final-pick-box">
+              <label className="final-pick-row">
+                <span className="pick-points">15</span>
+                <span className="bonus-flag">{renderSelectedFlag(bonus.champion)}</span>
+                <div>
+                  <span className="field-label">Champion du monde</span>
+                  <select disabled={locked} value={bonus.champion} onChange={(event) => updateField('champion', event.target.value)}>
+                    {renderTeamOption('')}
+                    {allTeams.map(renderTeamOption)}
+                  </select>
+                </div>
+              </label>
+              <PublicBonusPredictionsPanel locked={locked} currentUserId={currentUserId} kind="champion" title="Champion du monde" />
+            </div>
 
-            <label className="final-pick-row">
-              <span className="pick-points">10</span>
-              <span className="bonus-flag">{renderSelectedFlag(bonus.runner_up)}</span>
-              <div>
-                <span className="field-label">Finaliste perdant</span>
-                <select disabled={locked} value={bonus.runner_up} onChange={(event) => updateField('runner_up', event.target.value)}>
-                  {renderTeamOption('')}
-                  {allTeams.map(renderTeamOption)}
-                </select>
-              </div>
-            </label>
+            <div className="final-pick-box">
+              <label className="final-pick-row">
+                <span className="pick-points">10</span>
+                <span className="bonus-flag">{renderSelectedFlag(bonus.runner_up)}</span>
+                <div>
+                  <span className="field-label">Finaliste perdant</span>
+                  <select disabled={locked} value={bonus.runner_up} onChange={(event) => updateField('runner_up', event.target.value)}>
+                    {renderTeamOption('')}
+                    {allTeams.map(renderTeamOption)}
+                  </select>
+                </div>
+              </label>
+              <PublicBonusPredictionsPanel locked={locked} currentUserId={currentUserId} kind="runner_up" title="Finaliste perdant" />
+            </div>
           </div>
 
           <div className="semifinalists-box">
@@ -242,6 +258,7 @@ function BonusPredictionsPanel({ matches }) {
                 </label>
               ))}
             </div>
+            <PublicBonusPredictionsPanel locked={locked} currentUserId={currentUserId} kind="semifinalists" title="Demi-finalistes" />
           </div>
         </div>
       </div>
@@ -277,6 +294,7 @@ function BonusPredictionsPanel({ matches }) {
         .bonus-card-title span, .field-label, .semifinalists-title span { display: block; color: #0f766e; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
         .bonus-card-title strong { color: #d97706; font-size: 22px; white-space: nowrap; }
         .bonus-group-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+        .group-winner-box, .final-pick-box { display: grid; gap: 4px; min-width: 0; align-content: start; }
         .group-winner-row { display: grid; grid-template-columns: 34px 32px minmax(0, 1fr); gap: 7px; align-items: center; min-width: 0; }
         .group-badge { width: 31px; height: 31px; border-radius: 10px; display: grid; place-items: center; background: #ecfdf5; color: #047857; font-size: 13px; font-weight: 950; }
         .group-flag, .bonus-flag { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #e2e8f0; overflow: hidden; border: 2px solid white; box-shadow: 0 5px 14px rgba(15,23,42,.14); color: #64748b; font-size: 14px; }
