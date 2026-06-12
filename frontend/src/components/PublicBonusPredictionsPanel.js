@@ -7,9 +7,8 @@ const TeamPill = ({ team }) => {
   if (!team) return <span className="bonus-public-value empty">—</span>;
   const flag = getFlag(team);
   return (
-    <span className="bonus-public-team-pill">
-      {flag ? <img src={flag} alt="" /> : <span>⚽</span>}
-      <span>{team}</span>
+    <span className="bonus-public-team-pill" title={team} aria-label={team}>
+      {flag ? <img src={flag} alt={team} /> : <span>⚽</span>}
     </span>
   );
 };
@@ -51,6 +50,7 @@ function PublicBonusPredictionsPanel({
         username: item.username,
         avatar_url: item.avatar_url,
         value: item.predictions?.[code] ?? null,
+        actual: payload.actual?.[code] ?? null,
         unit: definition?.unit || '',
         points: item.scoring?.details?.[code]?.points ?? null
       }));
@@ -104,12 +104,18 @@ function PublicBonusPredictionsPanel({
 
   return (
     <div className="bonus-public-toggle-shell">
-      <button type="button" className="bonus-public-toggle" onClick={toggleOpen}>
-        {open ? '🙈 Masquer les pronos' : '👀 Voir les pronos du groupe'}
+      <button
+        type="button"
+        className={`bonus-public-toggle ${open ? 'is-open' : ''}`}
+        onClick={toggleOpen}
+        title={open ? 'Masquer les pronos du groupe' : 'Voir les pronos du groupe'}
+        aria-label={open ? 'Masquer les pronos du groupe' : 'Voir les pronos du groupe'}
+      >
+        {open ? '🙈' : '👀'}
       </button>
 
       {open && (
-        <div className="bonus-public-panel">
+        <div className={`bonus-public-panel ${type === 'special' ? 'is-special' : ''}`}>
           <div className="bonus-public-panel-title">
             <strong>{panelTitle}</strong>
             {popular && <span>🔥 {popular[0]} · {popular[1]} joueur{popular[1] > 1 ? 's' : ''}</span>}
@@ -121,10 +127,18 @@ function PublicBonusPredictionsPanel({
 
           {!loading && !error && payload?.locked && (
             <div className="bonus-public-list">
+              {type === 'special' && (
+                <div className="bonus-public-row bonus-public-head">
+                  <span>Joueur</span>
+                  <span>Prono</span>
+                  <span>Actuel</span>
+                  <span>Pts</span>
+                </div>
+              )}
               {rows.length === 0 ? (
                 <div className="bonus-public-state">Aucun prono trouvé.</div>
               ) : rows.map(row => (
-                <div key={row.user_id} className={`bonus-public-row ${Number(currentUserId) === Number(row.user_id) ? 'is-current-user' : ''}`}>
+                <div key={row.user_id} className={`bonus-public-row ${type === 'special' ? 'is-special' : ''} ${Number(currentUserId) === Number(row.user_id) ? 'is-current-user' : ''}`}>
                   <UserAvatar user={row} size={30} />
                   <strong>{row.username}</strong>
                   <div className="bonus-public-pick">
@@ -138,6 +152,7 @@ function PublicBonusPredictionsPanel({
                       <TeamPill team={row.value} />
                     )}
                   </div>
+                  {type === 'special' && <span className="bonus-public-actual">{row.actual ?? 'En attente'} {row.actual !== null && row.unit ? row.unit : ''}</span>}
                   {type === 'special' && <span className="bonus-public-points">{row.points ?? '-'} pt{Number(row.points) > 1 ? 's' : ''}</span>}
                 </div>
               ))}
@@ -147,27 +162,31 @@ function PublicBonusPredictionsPanel({
       )}
 
       <style>{`
-        .bonus-public-toggle-shell { grid-column: 1 / -1; min-width: 0; margin-top: 6px; }
-        .bonus-public-toggle { border: 0; border-radius: 999px; padding: 7px 11px; color: white; background: linear-gradient(135deg, #0f766e, #d97706); font-size: 11px; font-weight: 950; cursor: pointer; box-shadow: 0 8px 18px rgba(15,118,110,.16); }
-        .bonus-public-panel { margin-top: 9px; padding: 12px; border-radius: 16px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.7); }
+        .bonus-public-toggle-shell { min-width: 0; margin: 0; position: relative; align-self: center; }
+        .bonus-public-toggle { width: 30px; height: 30px; display: inline-grid; place-items: center; border: 1px solid #fed7aa; border-radius: 999px; padding: 0; color: #92400e; background: #fff7ed; font-size: 14px; font-weight: 950; cursor: pointer; box-shadow: 0 6px 14px rgba(217,119,6,.12); }
+        .bonus-public-toggle:hover, .bonus-public-toggle.is-open { transform: translateY(-1px); background: #ffedd5; border-color: #fb923c; }
+        .bonus-public-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; width: min(390px, calc(100vw - 34px)); margin-top: 0; padding: 12px; border-radius: 16px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 18px 45px rgba(15,23,42,.22); }
+        .bonus-public-panel.is-special { width: min(520px, calc(100vw - 34px)); }
         .bonus-public-panel-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
         .bonus-public-panel-title strong { color: #0f172a; font-size: 13px; }
         .bonus-public-panel-title span { color: #92400e; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 999px; padding: 5px 8px; font-size: 10px; font-weight: 950; white-space: nowrap; }
-        .bonus-public-list { display: grid; gap: 6px; }
-        .bonus-public-row { display: grid; grid-template-columns: 30px minmax(110px, .75fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px; border-radius: 13px; background: #f8fafc; border: 1px solid #e2e8f0; }
+        .bonus-public-list { display: grid; gap: 6px; max-height: 360px; overflow: auto; padding-right: 2px; }
+        .bonus-public-row { display: grid; grid-template-columns: 30px minmax(95px, .75fr) minmax(0, 1fr); gap: 8px; align-items: center; padding: 8px; border-radius: 13px; background: #f8fafc; border: 1px solid #e2e8f0; }
+        .bonus-public-row.is-special { grid-template-columns: 30px minmax(88px, .8fr) minmax(82px, 1fr) minmax(82px, 1fr) auto; }
         .bonus-public-row.is-current-user { background: #fff7ed; border-color: #f59e0b; }
+        .bonus-public-row.bonus-public-head { grid-template-columns: minmax(118px, .9fr) minmax(82px, 1fr) minmax(82px, 1fr) auto; padding: 6px 8px; background: #f1f5f9; color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
         .bonus-public-row strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #0f172a; font-size: 12px; }
         .bonus-public-pick { min-width: 0; }
-        .bonus-public-team-pill { min-width: 0; max-width: 100%; display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 999px; background: white; border: 1px solid #e2e8f0; color: #0f172a; font-size: 11px; font-weight: 900; }
-        .bonus-public-team-pill img { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
-        .bonus-public-team-pill span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bonus-public-team-pill { width: 28px; height: 28px; min-width: 28px; display: inline-grid; place-items: center; border-radius: 999px; background: white; border: 1px solid #e2e8f0; color: #0f172a; font-size: 12px; font-weight: 900; box-shadow: 0 5px 12px rgba(15,23,42,.08); }
+        .bonus-public-team-pill img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
         .bonus-public-team-list { display: flex; flex-wrap: wrap; gap: 5px; }
         .bonus-public-value.empty { color: #94a3b8; font-weight: 950; }
-        .bonus-public-number { color: #0f172a; font-size: 12px; font-weight: 950; }
+        .bonus-public-number, .bonus-public-actual { color: #0f172a; font-size: 12px; font-weight: 950; }
+        .bonus-public-actual { color: #0f766e; }
         .bonus-public-points { justify-self: end; padding: 5px 8px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: 10px; font-weight: 950; white-space: nowrap; }
         .bonus-public-state { color: #64748b; font-size: 12px; font-weight: 850; }
         .bonus-public-state.error { color: #b91c1c; }
-        @media (max-width: 760px) { .bonus-public-panel-title { align-items: flex-start; flex-direction: column; } .bonus-public-row { grid-template-columns: 30px minmax(0, 1fr); } .bonus-public-pick, .bonus-public-points { grid-column: 2 / -1; justify-self: start; } }
+        @media (max-width: 760px) { .bonus-public-panel { right: auto; left: 50%; transform: translateX(-50%); } .bonus-public-panel-title { align-items: flex-start; flex-direction: column; } .bonus-public-row, .bonus-public-row.is-special { grid-template-columns: 30px minmax(0, 1fr); } .bonus-public-row.bonus-public-head { display: none; } .bonus-public-pick, .bonus-public-actual, .bonus-public-points { grid-column: 2 / -1; justify-self: start; } }
       `}</style>
     </div>
   );
