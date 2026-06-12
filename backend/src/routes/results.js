@@ -12,10 +12,18 @@ const {
   getAllSpecialPredictionScores,
   recalculateFirstMatchdaySpecialPredictionPoints
 } = require('../utils/specialPredictions');
+const { invalidateStatsOverviewCache, warmStatsOverviewCache } = require('../utils/statsOverview');
 
 const router = express.Router();
 let resultExtraColumnsReady = false;
 let leaderboardUserColumnsReady = false;
+
+const refreshStatsOverviewCache = () => {
+  invalidateStatsOverviewCache();
+  warmStatsOverviewCache(pool).catch(error => {
+    console.warn('Stats overview cache warm failed:', error.message || error);
+  });
+};
 
 const isValidScore = (value) => {
   const n = Number(value);
@@ -168,6 +176,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
     await recalculateFirstMatchdaySpecialPredictionPoints(client);
 
     await client.query('COMMIT');
+    refreshStatsOverviewCache();
     res.json({
       message: 'Result saved and points calculated',
       result: result.rows[0],
@@ -243,6 +252,7 @@ router.delete('/:matchId', authenticateAdmin, async (req, res) => {
     await recalculateFirstMatchdaySpecialPredictionPoints(client);
 
     await client.query('COMMIT');
+    refreshStatsOverviewCache();
 
     res.json({
       message: 'Result deleted and points cleared',
