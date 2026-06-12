@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "db:init": "node db/init.js"
+    "db:init": "node db/init.js",
+    "rankings:fifa:update": "node scripts/apply-fifa-rankings.js"
   },
   "dependencies": {
     "express": "^4.18.2",
