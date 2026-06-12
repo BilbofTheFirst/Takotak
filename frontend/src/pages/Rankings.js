@@ -15,6 +15,19 @@ const getTrendConfig = (trend) => {
   return { label: '0', icon: '•', className: 'trend-flat' };
 };
 
+const getUniqueNumbers = (values) => [...new Set(values)].sort((a, b) => a - b);
+
+const buildProgressionTicks = (values) => {
+  const uniqueValues = getUniqueNumbers(values);
+  if (uniqueValues.length <= 9) return uniqueValues;
+
+  const lastIndex = uniqueValues.length - 1;
+  const sampledIndexes = getUniqueNumbers([0, 0.25, 0.5, 0.75, 1].map(ratio => Math.round(lastIndex * ratio)));
+  return sampledIndexes.map(index => uniqueValues[index]);
+};
+
+const formatProgressionTick = (value) => Number(value) === 0 ? 'Départ' : `M${value}`;
+
 function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMode, setChartMode, selectedUserIds, toggleChartUser, clearSelectedUsers }) {
   const usersById = useMemo(() => new Map((progression?.users || []).map(user => [Number(user.id), user])), [progression]);
   const currentUserId = Number(currentUser?.id || 0);
@@ -45,7 +58,17 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
     }))
     .filter(user => user.data.length > 0);
 
-  const maxX = Math.max(1, ...(progression?.matches || []).map(match => Number(match.match_number || 0)));
+  const xValues = useMemo(() => {
+    const matchNumbers = (progression?.matches || [])
+      .map(match => Number(match.match_number))
+      .filter(value => Number.isFinite(value));
+
+    return getUniqueNumbers([0, ...matchNumbers]);
+  }, [progression]);
+
+  const xAxisTicks = useMemo(() => buildProgressionTicks(xValues), [xValues]);
+
+  const maxX = Math.max(1, ...xValues);
   const maxY = Math.max(3, ...series.flatMap(user => user.data.map(point => Number(point.points || 0))));
   const width = 880;
   const height = 310;
@@ -92,13 +115,12 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
               </g>
             );
           })}
-          {[0, 0.25, 0.5, 0.75, 1].map(ratio => {
-            const x = padLeft + ratio * chartWidth;
-            const value = Math.round(maxX * ratio);
+          {xAxisTicks.map(matchNumber => {
+            const x = xFor(matchNumber);
             return (
-              <g key={`x-${ratio}`}>
+              <g key={`x-${matchNumber}`}>
                 <line x1={x} y1={padTop} x2={x} y2={padTop + chartHeight} className="chart-grid soft" />
-                <text x={x} y={height - 12} className="chart-axis-label" textAnchor="middle">{value}</text>
+                <text x={x} y={height - 12} className="chart-axis-label" textAnchor="middle">{formatProgressionTick(matchNumber)}</text>
               </g>
             );
           })}
