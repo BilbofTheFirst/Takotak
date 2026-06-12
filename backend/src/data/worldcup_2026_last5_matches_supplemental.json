@@ -1,0 +1,98 @@
+{
+  "generatedAt": "2026-06-12",
+  "description": "Compléments manuels pour les fiches de forme absentes ou incomplètes dans worldcup_2026_last5_matches.json.",
+  "notes": [
+    "Utilisé en complément du JSON principal et des résultats de Coupe du Monde encodés dans Takotak.",
+    "Ne remplace pas les données principales: les doublons sont supprimés par la route teams.js.",
+    "Le match Algérie - Bolivie du 2026-06-10 est à ajouter dès que son score est confirmé."
+  ],
+  "teams": [
+    {
+      "team": "Switzerland",
+      "sourceTeamName": "Switzerland",
+      "sourceUrl": "https://www.reuters.com/sports/soccer/more-minutes-lukaku-belgium-thump-tunisia-final-world-cup-warm-up-2026-06-06/",
+      "lastMatches": [
+        {
+          "date": "2026-06-06",
+          "competition": "Friendly",
+          "homeTeam": "Australia",
+          "awayTeam": "Switzerland",
+          "score": {
+            "home": 1,
+            "away": 1
+          },
+          "resultForTeam": "D"
+        },
+        {
+          "date": "2026-05-31",
+          "competition": "Friendly",
+          "homeTeam": "Switzerland",
+          "awayTeam": "Jordan",
+          "score": {
+            "home": 4,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        },
+        {
+          "date": "2026-03-27",
+          "competition": "Friendly",
+          "homeTeam": "Switzerland",
+          "awayTeam": "Germany",
+          "score": {
+            "home": 3,
+            "away": 4
+          },
+          "resultForTeam": "L"
+        }
+      ]
+    },
+    {
+      "team": "DR Congo",
+      "sourceTeamName": "DR Congo",
+      "sourceUrl": "https://www.reuters.com/world/africa/dr-congo-lose-chile-ebola-concerns-force-venue-switch-2026-06-09/",
+      "lastMatches": [
+        {
+          "date": "2026-06-09",
+          "competition": "Friendly",
+          "homeTeam": "Chile",
+          "awayTeam": "DR Congo",
+          "score": {
+            "home": 2,
+            "away": 1
+          },
+          "resultForTeam": "L"
+        },
+        {
+          "date": "2026-03-31",
+          "competition": "World Cup qualification playoff",
+          "homeTeam": "DR Congo",
+          "awayTeam": "Jamaica",
+          "score": {
+            "home": 1,
+            "away": 0
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    },
+    {
+      "team": "Algeria",
+      "sourceTeamName": "Algeria",
+      "sourceUrl": "https://www.reuters.com/sports/soccer/algeria-score-late-upset-dutch-with-surprise-away-win-2026-06-03/",
+      "lastMatches": [
+        {
+          "date": "2026-06-03",
+          "competition": "Friendly",
+          "homeTeam": "Netherlands",
+          "awayTeam": "Algeria",
+          "score": {
+            "home": 0,
+            "away": 1
+          },
+          "resultForTeam": "W"
+        }
+      ]
+    }
+  ]
+}
