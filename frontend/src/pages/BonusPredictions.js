@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { matchesService } from '../services/api';
 import BonusPredictionsPanel from '../components/BonusPredictionsPanel';
+import SpecialPredictionsPanel from '../components/SpecialPredictionsPanel';
 import PageLoader from '../components/PageLoader';
 
 function BonusPredictions() {
@@ -36,7 +37,7 @@ function BonusPredictions() {
             <p>
               Tes grands paris avant le coup d’envoi : vainqueurs de groupes,
               demi-finalistes, finaliste perdant et champion du monde.
-              Les pronostics spéciaux de journée se trouvent désormais dans la page Pronostics.
+              Les spéciaux de première journée rejoignent automatiquement cette page après leur verrouillage.
             </p>
           </div>
 
@@ -49,6 +50,7 @@ function BonusPredictions() {
           </div>
         </section>
 
+        <SpecialPredictionsPanel placement="bonus" />
         <BonusPredictionsPanel matches={matches} />
       </div>
       <style>{styles}</style>
