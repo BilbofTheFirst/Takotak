@@ -12,6 +12,13 @@ const {
 
 const router = express.Router();
 
+const buildAvatarUrl = (user) => {
+  if (!user?.avatar_data) return null;
+  const rawVersion = user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : Date.now();
+  const version = Number.isNaN(rawVersion) ? Date.now() : rawVersion;
+  return `/profile/users/${user.user_id || user.id}/avatar?v=${version}`;
+};
+
 const buildPayload = async (clientOrPool, userId) => {
   await ensureSpecialPredictionsTable(clientOrPool);
   const status = await getFirstMatchdayStatus(clientOrPool);
@@ -47,6 +54,85 @@ router.get('/', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get special predictions error:', error);
     res.status(500).json({ error: 'Server error', detail: error.message, code: error.code });
+  }
+});
+
+router.get('/public', authenticateToken, async (req, res) => {
+  try {
+    await ensureSpecialPredictionsTable(pool);
+    const status = await getFirstMatchdayStatus(pool);
+    const codes = SPECIAL_PREDICTION_DEFINITIONS.map(definition => definition.code);
+
+    if (!status.locked) {
+      return res.json({
+        locked: false,
+        deadline: status.deadline,
+        definitions: SPECIAL_PREDICTION_DEFINITIONS,
+        actual: null,
+        predictions: []
+      });
+    }
+
+    const result = await pool.query(
+      `SELECT
+        u.id AS user_id,
+        u.username,
+        u.avatar_data,
+        u.avatar_updated_at,
+        sp.code,
+        sp.predicted_value,
+        sp.points,
+        sp.updated_at
+       FROM users u
+       LEFT JOIN special_predictions sp
+         ON sp.user_id = u.id
+        AND sp.code = ANY($1::varchar[])
+       ORDER BY LOWER(u.username), LOWER(u.email), sp.code`,
+      [codes]
+    );
+
+    const rowsByUser = new Map();
+    result.rows.forEach(row => {
+      const userId = Number(row.user_id);
+      if (!rowsByUser.has(userId)) {
+        rowsByUser.set(userId, {
+          user_id: userId,
+          username: row.username,
+          avatar_url: buildAvatarUrl(row),
+          rows: []
+        });
+      }
+
+      if (row.code) rowsByUser.get(userId).rows.push(row);
+    });
+
+    const predictions = Array.from(rowsByUser.values()).map(user => {
+      const rowByCode = new Map(user.rows.map(row => [row.code, row]));
+      return {
+        user_id: user.user_id,
+        username: user.username,
+        avatar_url: user.avatar_url,
+        predictions: Object.fromEntries(
+          SPECIAL_PREDICTION_DEFINITIONS.map(definition => [
+            definition.code,
+            rowByCode.get(definition.code)?.predicted_value ?? null
+          ])
+        ),
+        scoring: buildSpecialPredictionScoring(user.rows, status.actual)
+      };
+    });
+
+    return res.json({
+      locked: true,
+      deadline: status.deadline,
+      definitions: SPECIAL_PREDICTION_DEFINITIONS,
+      actual: status.actual,
+      complete: status.complete,
+      predictions
+    });
+  } catch (error) {
+    console.error('Get public special predictions error:', error);
+    return res.status(500).json({ error: 'Server error', detail: error.message, code: error.code });
   }
 });
 
