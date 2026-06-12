@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken, authenticateAdmin } = require('../middleware/auth');
 const worldCupForm = require('../data/worldcup_2026_last5_matches.json');
+const supplementalWorldCupForm = require('../data/worldcup_2026_last5_matches_supplemental.json');
 
 const router = express.Router();
 
@@ -31,6 +32,7 @@ const TEAM_NAME_MAPPING = {
   'Tunisie': 'Tunisia',
   'Cap-Vert': 'Cape Verde',
   'Belgique': 'Belgium',
+  'Suisse': 'Switzerland',
   'Égypte': 'Egypt',
   'Iran': 'Iran',
   'Nouvelle-Zélande': 'New Zealand',
@@ -45,7 +47,8 @@ const TEAM_NAME_MAPPING = {
   'Autriche': 'Austria',
   'Jordanie': 'Jordan',
   'Portugal': 'Portugal',
-  'RD Congo': 'Democratic Republic of the Congo',
+  'RD Congo': 'DR Congo',
+  'Congo': 'DR Congo',
   'Ouzbékistan': 'Uzbekistan',
   'Colombie': 'Colombia',
   'Angleterre': 'England',
@@ -53,6 +56,8 @@ const TEAM_NAME_MAPPING = {
   'Ghana': 'Ghana',
   'Panama': 'Panama'
 };
+
+const FORM_SOURCES = [worldCupForm, supplementalWorldCupForm];
 
 const normalize = (value) =>
   (value || '')
@@ -69,15 +74,48 @@ const toComparableDate = (value) => {
 
 const getTeamNameCandidates = (teamName) => {
   const englishTeamName = TEAM_NAME_MAPPING[teamName] || teamName;
-  return [...new Set([teamName, englishTeamName].map(normalize).filter(Boolean))];
+  const alternateCongoleseName = normalize(englishTeamName) === 'dr congo'
+    ? 'democratic republic of the congo'
+    : null;
+
+  return [...new Set([teamName, englishTeamName, alternateCongoleseName].map(normalize).filter(Boolean))];
 };
+
+const entryMatchesTeam = (entry, candidates) => (
+  candidates.includes(normalize(entry.team)) ||
+  candidates.includes(normalize(entry.sourceTeamName))
+);
+
+const matchInvolvesTeam = (match, candidates) => (
+  candidates.includes(normalize(match.homeTeam)) ||
+  candidates.includes(normalize(match.awayTeam))
+);
 
 const findTeamForm = (teamName) => {
   const candidates = getTeamNameCandidates(teamName);
 
-  return worldCupForm.teams.find((entry) =>
-    candidates.includes(normalize(entry.team)) ||
-    candidates.includes(normalize(entry.sourceTeamName))
+  for (const source of FORM_SOURCES) {
+    const entry = source.teams.find((teamEntry) => entryMatchesTeam(teamEntry, candidates));
+    if (entry) return entry;
+  }
+
+  return null;
+};
+
+const getHistoricalMatches = (teamName) => {
+  const candidates = getTeamNameCandidates(teamName);
+
+  return FORM_SOURCES.flatMap((source) =>
+    source.teams.flatMap((entry) => {
+      const directTeamMatch = entryMatchesTeam(entry, candidates);
+      const matches = entry.lastMatches || [];
+
+      if (directTeamMatch) return matches;
+
+      // Some teams are missing as top-level entries in the original JSON, but still appear as opponents.
+      // Reuse those opponent appearances so teams like Switzerland are not shown as empty.
+      return matches.filter((match) => matchInvolvesTeam(match, candidates));
+    })
   );
 };
 
@@ -137,8 +175,7 @@ const getFinishedWorldCupMatchesForTeam = async (clientOrPool, teamName) => {
 };
 
 const buildLastMatches = async (clientOrPool, teamName) => {
-  const teamForm = findTeamForm(teamName);
-  const historicalMatches = teamForm?.lastMatches || [];
+  const historicalMatches = getHistoricalMatches(teamName);
   const worldCupMatches = await getFinishedWorldCupMatchesForTeam(clientOrPool, teamName);
   const seen = new Set();
 
@@ -182,20 +219,21 @@ const formatLastMatchesForUi = (lastMatches, teamName) => {
   });
 };
 
-// Admin endpoint: rebuild the current form for every team from historical JSON + finished World Cup matches.
+// Admin endpoint: rebuild the current form for every team from historical JSON + supplemental data + finished World Cup matches.
 // Nothing is persisted because the public endpoint now computes the up-to-date form from the database.
 router.get('/admin/forms/rebuild', authenticateAdmin, async (req, res) => {
   try {
     const teamsResult = await pool.query('SELECT id, name FROM teams ORDER BY name');
     const teams = await Promise.all(teamsResult.rows.map(async (team) => {
       const teamForm = findTeamForm(team.name);
+      const historicalMatches = getHistoricalMatches(team.name);
       const lastMatches = await buildLastMatches(pool, team.name);
 
       return {
         id: team.id,
         name: team.name,
         sourceName: teamForm?.team || null,
-        historicalMatchesCount: teamForm?.lastMatches?.length || 0,
+        historicalMatchesCount: historicalMatches.length,
         currentMatchesCount: lastMatches.length,
         lastMatches: formatLastMatchesForUi(lastMatches, team.name)
       };
@@ -236,7 +274,8 @@ router.get('/:teamName/info', authenticateToken, async (req, res) => {
       lastMatches: formatLastMatchesForUi(lastMatches, teamName),
       dataSource: {
         generatedAt: worldCupForm.generatedAt,
-        matchDataSource: `${worldCupForm.matchDataSource} + résultats Coupe du Monde encodés dans Takotak`,
+        supplementalGeneratedAt: supplementalWorldCupForm.generatedAt,
+        matchDataSource: `${worldCupForm.matchDataSource} + compléments manuels + résultats Coupe du Monde encodés dans Takotak`,
         includesFinishedWorldCupMatches: true
       }
     });
