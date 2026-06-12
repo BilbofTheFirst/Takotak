@@ -29,6 +29,16 @@ const RANKING_CONFIGS = [
   { key: 'total_predictions', title: 'Assiduité', value: 'total_predictions', suffix: 'pronos' }
 ];
 
+const BADGE_DEFINITIONS = [
+  { code: 'sniper', icon: '🎯', title: 'Sniper', description: 'Au moins 3 scores exacts.' },
+  { code: 'hot_streak', icon: '🔥', title: 'Série chaude', description: 'Au moins 3 matchs consécutifs avec points.' },
+  { code: 'draw_king', icon: '🤝', title: 'Roi du nul', description: 'Au moins 2 matchs nuls bien lus.' },
+  { code: 'assidu', icon: '🧱', title: 'Assidu', description: 'Présent sur tous les matchs scorés.' },
+  { code: 'strategist', icon: '🎁', title: 'Stratège', description: 'Des points marqués via les bonus.' },
+  { code: 'specialist', icon: '⚡', title: 'Spécialiste', description: 'Des points marqués sur les pronostics spéciaux.' },
+  { code: 'podium', icon: '🏆', title: 'Podium', description: 'Dans le top 3 du classement général.' }
+];
+
 const number = (value) => Number(value || 0);
 const pct = (value, total) => total > 0 ? Math.round((number(value) / total) * 100) : 0;
 const formatValue = (value) => Number(value || 0).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
@@ -40,6 +50,19 @@ function StatPill({ label, value, icon, featured }) {
       <div>
         <strong>{value}</strong>
         <em>{label}</em>
+      </div>
+    </article>
+  );
+}
+
+function FunCard({ icon, label, value, detail }) {
+  return (
+    <article className="fun-card">
+      <span>{icon}</span>
+      <div>
+        <em>{label}</em>
+        <strong title={value}>{value}</strong>
+        {detail && <small>{detail}</small>}
       </div>
     </article>
   );
@@ -116,7 +139,11 @@ function UserStats() {
   const rankings = data?.rankings || {};
   const community = data?.community || {};
   const badgeUsers = data?.badges?.users || [];
-  const badgeCatalog = data?.badges?.catalog || [];
+  const rawBadgeCatalog = data?.badges?.catalog || [];
+  const badgeCatalog = BADGE_DEFINITIONS.map(definition => {
+    const earned = rawBadgeCatalog.find(badge => badge.code === definition.code);
+    return { ...definition, ...(earned || {}), count: earned?.count || 0 };
+  });
   const topFive = rankings.total_points?.slice(0, 5) || [];
   const distributionTotal = number(overview.total_match_points) + number(overview.total_special_points) + number(overview.total_bonus_points);
 
@@ -201,9 +228,9 @@ function UserStats() {
           <section className="stats-layout">
             <div className="main-column">
               <section className="stats-card">
-                <div className="stats-card-title"><div><span>Catalogue</span><h2>Badges distribués</h2></div></div>
+                <div className="stats-card-title"><div><span>Catalogue</span><h2>Badges disponibles</h2></div></div>
                 <div className="badge-catalog">
-                  {badgeCatalog.length ? badgeCatalog.map(badge => <div key={badge.code} className="badge-chip"><span>{badge.icon}</span><strong>{badge.title}</strong><em>{badge.count} joueur{badge.count > 1 ? 's' : ''}</em></div>) : <p className="empty-note">Aucun badge distribué pour le moment.</p>}
+                  {badgeCatalog.map(badge => <div key={badge.code} className={`badge-chip ${badge.count === 0 ? 'is-locked' : ''}`} title={badge.description}><span>{badge.icon}</span><strong>{badge.title}</strong><em>{badge.count > 0 ? `${badge.count} joueur${badge.count > 1 ? 's' : ''}` : '0 joueur'}</em></div>)}
                 </div>
               </section>
             </div>
@@ -224,16 +251,15 @@ function UserStats() {
               <section className="stats-card">
                 <div className="stats-card-title"><div><span>Stats fun</span><h2>La communauté en chiffres</h2></div></div>
                 <div className="fun-grid">
-                  <StatPill label="Score le plus joué" value={community.most_predicted_score?.score || '-'} icon="🔮" />
-                  <StatPill label="Fois pronostiqué" value={community.most_predicted_score?.count || 0} icon="📌" />
-                  <StatPill label="Match le plus dur" value={community.hardest_match?.average_points ?? '-'} icon="💀" />
-                  <StatPill label="Match le plus facile" value={community.easiest_match?.average_points ?? '-'} icon="😎" />
+                  <FunCard icon="🔮" label="Score le plus joué" value={community.most_predicted_score?.score || '-'} detail={community.most_predicted_score ? `${community.most_predicted_score.count} fois pronostiqué` : 'Aucun prono analysé'} />
+                  <FunCard icon="💀" label="Match le plus dur" value={community.hardest_match?.label || '-'} detail={community.hardest_match ? `${formatValue(community.hardest_match.average_points)} pt de moyenne · résultat ${community.hardest_match.result}` : 'Aucun match terminé'} />
+                  <FunCard icon="😎" label="Match le plus facile" value={community.easiest_match?.label || '-'} detail={community.easiest_match ? `${formatValue(community.easiest_match.average_points)} pt de moyenne · résultat ${community.easiest_match.result}` : 'Aucun match terminé'} />
                 </div>
               </section>
               <section className="stats-card">
                 <div className="stats-card-title"><div><span>Par match</span><h2>Réactions de la communauté</h2></div></div>
                 <div className="community-list">
-                  {(community.recent_matches || []).map(match => <div key={match.match_id} className="community-row"><div><strong>{match.label}</strong><span>Résultat {match.result} · {match.total_predictions} pronos</span></div><em>{match.exact_count} exacts · {match.average_points} pt moy.</em></div>)}
+                  {(community.recent_matches || []).map(match => <div key={match.match_id} className="community-row"><div><strong>{match.label}</strong><span>Résultat {match.result} · {match.total_predictions} pronos · score le plus joué : {match.most_predicted_score?.score || '-'}</span></div><em>{match.exact_count} exacts · {match.average_points} pt moy.</em></div>)}
                 </div>
               </section>
             </div>
@@ -274,15 +300,19 @@ const styles = `
   .stats-tabs button { border: 0; border-radius: 999px; padding: 9px 12px; display: inline-flex; gap: 7px; align-items: center; color: rgba(255,255,255,.78); background: rgba(255,255,255,.08); font-size: 12px; font-weight: 950; cursor: pointer; }
   .stats-tabs button.active { color: #0f172a; background: white; box-shadow: 0 10px 24px rgba(0,0,0,.18); }
   .game-overview { display: grid; grid-template-columns: 1.45fr repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
-  .leader-card, .stat-pill, .stats-card { background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); border-radius: 20px; box-shadow: 0 18px 55px rgba(0,0,0,.2); }
+  .leader-card, .stat-pill, .fun-card, .stats-card { background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); border-radius: 20px; box-shadow: 0 18px 55px rgba(0,0,0,.2); }
   .leader-card { display: flex; align-items: center; gap: 13px; padding: 15px; min-width: 0; }
   .leader-label, .stats-card-title span, .my-card-header span { display: block; color: ${PRIMARY}; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .07em; }
   .leader-card strong, .my-card-header strong { display: block; margin-top: 3px; color: ${DARK}; font-size: 19px; line-height: 1.05; }
   .leader-card em, .award-user em, .award-tie em { display: block; margin-top: 4px; color: ${SECONDARY}; font-style: normal; font-size: 12px; font-weight: 950; }
-  .stat-pill { display: flex; gap: 10px; align-items: center; padding: 14px; min-height: 90px; }
-  .stat-pill > span { width: 38px; height: 38px; border-radius: 14px; display: grid; place-items: center; background: #f1f5f9; font-size: 21px; flex: 0 0 auto; }
+  .stat-pill, .fun-card { display: flex; gap: 10px; align-items: center; padding: 14px; min-height: 90px; }
+  .stat-pill > span, .fun-card > span { width: 38px; height: 38px; border-radius: 14px; display: grid; place-items: center; background: #f1f5f9; font-size: 21px; flex: 0 0 auto; }
   .stat-pill strong { display: block; color: ${DARK}; font-size: 25px; line-height: 1; letter-spacing: -.04em; }
   .stat-pill em { display: block; margin-top: 5px; color: #64748b; font-style: normal; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
+  .fun-card { min-width: 0; }
+  .fun-card em { display: block; color: #64748b; font-style: normal; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
+  .fun-card strong { display: block; margin-top: 4px; color: ${DARK}; font-size: 18px; line-height: 1.05; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .fun-card small { display: block; margin-top: 5px; color: ${SECONDARY}; font-size: 11px; font-weight: 950; }
   .stat-pill.featured { color: white; background: ${GRADIENT}; }
   .stat-pill.featured > span { background: rgba(255,255,255,.16); }
   .stat-pill.featured strong { color: white; }
@@ -316,11 +346,12 @@ const styles = `
   .mini-ranking-row > span { display: grid; place-items: center; min-width: 38px; padding: 5px 7px; border-radius: 999px; background: #e2e8f0; color: #334155; font-size: 11px; font-weight: 950; }
   .mini-ranking-row strong, .community-row strong, .player-badges-row strong, .insight-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${DARK}; font-size: 13px; }
   .mini-ranking-row em, .community-row em, .player-badges-row em, .insight-row em { color: ${PRIMARY}; font-style: normal; font-size: 12px; font-weight: 900; }
-  .fun-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .fun-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .community-row { grid-template-columns: minmax(0, 1fr) auto; }
   .community-row span { display: block; color: #64748b; font-size: 11px; font-weight: 850; margin-top: 2px; }
   .badge-catalog { display: flex; flex-wrap: wrap; gap: 10px; }
   .badge-chip { display: inline-grid; grid-template-columns: 34px minmax(0, 1fr); gap: 2px 9px; align-items: center; padding: 10px 12px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; min-width: 190px; }
+  .badge-chip.is-locked { opacity: .68; background: #f1f5f9; }
   .badge-chip > span { grid-row: span 2; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 12px; background: white; font-size: 18px; }
   .badge-chip strong { color: ${DARK}; font-size: 13px; }
   .badge-chip em { color: #64748b; font-style: normal; font-size: 11px; font-weight: 850; }
