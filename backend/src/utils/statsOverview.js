@@ -73,13 +73,25 @@ const computeStreaks = (users, orderedMatches, scoreRows) => {
   users.forEach(user => {
     let current = 0;
     let best = 0;
+    let currentExact = 0;
+    let bestExact = 0;
+
     orderedMatches.forEach(match => {
-      const gainedPoint = number(points.get(`${user.id}:${match.id}`)) > 0;
+      const score = number(points.get(`${user.id}:${match.id}`));
+      const gainedPoint = score > 0;
+      const exactScore = score === 3;
+
       current = gainedPoint ? current + 1 : 0;
       best = Math.max(best, current);
+
+      currentExact = exactScore ? currentExact + 1 : 0;
+      bestExact = Math.max(bestExact, currentExact);
     });
+
     user.current_streak = current;
     user.best_streak = best;
+    user.current_exact_streak = currentExact;
+    user.best_exact_streak = bestExact;
   });
 };
 
@@ -146,7 +158,7 @@ const buildCommunityMatches = (finishedMatches, predictionRows, scoreRows) => {
 
 const buildBadges = (user, context) => {
   const badges = [];
-  if (number(user.exact_scores) >= 3) badges.push({ code: 'sniper', icon: '🎯', title: 'Sniper', description: 'Au moins 3 scores exacts.' });
+  if (number(user.best_exact_streak) >= 3) badges.push({ code: 'sniper', icon: '🎯', title: 'Sniper', description: '3 scores exacts consécutifs.' });
   if (number(user.best_streak) >= 3) badges.push({ code: 'hot_streak', icon: '🔥', title: 'Série chaude', description: `Points sur ${user.best_streak} matchs d’affilée.` });
   if (number(user.draw_hits) >= 2) badges.push({ code: 'draw_king', icon: '🤝', title: 'Roi du nul', description: 'Plusieurs matchs nuls bien lus.' });
   if (context.finishedMatches > 0 && number(user.scored_predictions) >= context.finishedMatches) badges.push({ code: 'assidu', icon: '🧱', title: 'Assidu', description: 'Présent sur tous les matchs scorés.' });
@@ -163,6 +175,7 @@ const buildInsights = (user, context) => {
   const wrongRate = number(user.wrong_predictions) / played;
   const insights = [];
 
+  if (number(user.best_exact_streak) >= 2) insights.push({ type: 'good', icon: '🎯', title: 'Précision en série', text: `Tu as déjà enchaîné ${user.best_exact_streak} scores exacts.` });
   if (exactRate >= 0.2) insights.push({ type: 'good', icon: '🎯', title: 'Très précis', text: 'Tu transformes pas mal de pronos en scores exacts.' });
   if (number(user.correct_winners) > number(user.exact_scores) + number(user.correct_differences)) insights.push({ type: 'good', icon: '✅', title: 'Bon lecteur de vainqueur', text: 'Tu sécurises souvent au moins le bon résultat.' });
   if (number(user.best_streak) >= 3) insights.push({ type: 'good', icon: '🔥', title: 'Bonne série', text: `Ta meilleure série est de ${user.best_streak} matchs avec points.` });
