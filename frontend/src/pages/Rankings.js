@@ -40,6 +40,40 @@ const getDefaultChartUsers = (rankedUsers, chartMode, currentUserId) => {
   return merged;
 };
 
+const buildAvatarMarkerItems = (series) => {
+  const groupedByFinalPosition = new Map();
+
+  series.forEach(user => {
+    const lastPoint = user.data[user.data.length - 1];
+    if (!lastPoint) return;
+
+    const key = `${Number(lastPoint.match_number || 0)}:${Number(lastPoint.points || 0)}`;
+    if (!groupedByFinalPosition.has(key)) groupedByFinalPosition.set(key, []);
+    groupedByFinalPosition.get(key).push({ user, lastPoint });
+  });
+
+  return Array.from(groupedByFinalPosition.values()).flatMap(group => {
+    const maxPerRow = 4;
+    const spacing = 30;
+    const rowSpacing = 30;
+
+    return group.map((item, index) => {
+      const row = Math.floor(index / maxPerRow);
+      const rowStart = row * maxPerRow;
+      const itemsInRow = Math.min(maxPerRow, group.length - rowStart);
+      const positionInRow = index - rowStart;
+
+      return {
+        ...item,
+        offset: {
+          x: (positionInRow - (itemsInRow - 1) / 2) * spacing,
+          y: row * rowSpacing
+        }
+      };
+    });
+  });
+};
+
 function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMode, setChartMode, selectedUserIds, hiddenUserIds, toggleChartUser, clearChartOverrides }) {
   const usersById = useMemo(() => new Map((progression?.users || []).map(user => [Number(user.id), user])), [progression]);
   const currentUserId = Number(currentUser?.id || 0);
@@ -77,10 +111,10 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
 
   const maxX = Math.max(1, ...xValues);
   const maxY = Math.max(3, ...series.flatMap(user => user.data.map(point => Number(point.points || 0))));
-  const width = 910;
-  const height = 320;
+  const width = 950;
+  const height = 340;
   const padLeft = 44;
-  const padRight = 64;
+  const padRight = 108;
   const padTop = 24;
   const padBottom = 42;
   const chartWidth = width - padLeft - padRight;
@@ -89,12 +123,13 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
   const xFor = (value) => padLeft + (Number(value || 0) / maxX) * chartWidth;
   const yFor = (value) => padTop + chartHeight - (Number(value || 0) / maxY) * chartHeight;
   const hasOverrides = selectedUserIds.length > 0 || hiddenUserIds.length > 0;
+  const avatarMarkerItems = buildAvatarMarkerItems(series);
 
-  const renderAvatarMarker = (user, lastPoint) => {
+  const renderAvatarMarker = (user, lastPoint, offset = { x: 0, y: 0 }) => {
     if (!lastPoint) return null;
 
-    const cx = xFor(lastPoint.match_number);
-    const cy = yFor(lastPoint.points);
+    const cx = xFor(lastPoint.match_number) + offset.x;
+    const cy = yFor(lastPoint.points) + offset.y;
     const size = user.isMe ? 30 : 26;
     const radius = size / 2;
     const avatarUrl = buildApiAssetUrl(user.avatar_url);
@@ -146,7 +181,7 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
           <span>📈 Progression</span>
           <h2>Évolution des scores</h2>
         </div>
-        <p>{series.length} courbe{series.length > 1 ? 's' : ''} affichée{series.length > 1 ? 's' : ''}. Les avatars en bout de ligne identifient les joueurs visibles.</p>
+        <p>{series.length} courbe{series.length > 1 ? 's' : ''} affichée{series.length > 1 ? 's' : ''}. En cas d’égalité, les avatars en bout de ligne sont affichés côte à côte.</p>
       </div>
 
       <div className="chart-controls">
@@ -190,7 +225,7 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
             );
           })}
 
-          {series.map(user => renderAvatarMarker(user, user.data[user.data.length - 1]))}
+          {avatarMarkerItems.map(({ user, lastPoint, offset }) => renderAvatarMarker(user, lastPoint, offset))}
         </svg>
       </div>
 
@@ -367,7 +402,7 @@ const styles = `
   .chart-controls button.ghost { margin-left: auto; color: #b91c1c; border-color: #fecaca; background: #fff1f2; }
   .chart-card { padding-bottom: 16px; }
   .chart-scroll { overflow-x: auto; padding: 12px 18px 4px; }
-  .progression-chart { width: 100%; min-width: 740px; display: block; overflow: visible; }
+  .progression-chart { width: 100%; min-width: 760px; display: block; overflow: visible; }
   .chart-grid { stroke: #e2e8f0; stroke-width: 1; } .chart-grid.soft { stroke: #f1f5f9; } .chart-axis { stroke: #94a3b8; stroke-width: 1.2; } .chart-axis-label { fill: #64748b; font-size: 10px; font-weight: 800; }
   .chart-avatar-marker { filter: drop-shadow(0 4px 8px rgba(15,23,42,.24)); pointer-events: none; }
   .my-chart-line { filter: drop-shadow(0 3px 6px rgba(15,118,110,.28)); }
