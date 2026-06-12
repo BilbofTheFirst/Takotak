@@ -67,6 +67,36 @@ function Rules() {
           </div>
         </section>
 
+        <section className="rules-card site-card">
+          <div className="rules-card-title"><span>Fonctionnement du site</span><h2>À savoir</h2></div>
+          <div className="site-rules-grid">
+            <div>
+              <strong>Pronostics officiels</strong>
+              <p>Les vrais pronostics se font dans la page Pronostics. La page Simulation sert uniquement à tester des scénarios.</p>
+            </div>
+            <div>
+              <strong>Sauvegarde</strong>
+              <p>Sur la page Pronostics, les scores sont sauvegardés automatiquement quand tu quittes le champ de score.</p>
+            </div>
+            <div>
+              <strong>Historique équipe</strong>
+              <p>Tu peux cliquer sur le nom d’une équipe pour voir ses 5 derniers matchs.</p>
+            </div>
+            <div>
+              <strong>Pronostics visibles</strong>
+              <p>Les pronostics des autres joueurs deviennent visibles une fois le match commencé.</p>
+            </div>
+            <div>
+              <strong>Simulation phase finale</strong>
+              <p>Dans la simulation, en cas d’égalité sur un match à élimination directe, clique sur une équipe pour la sélectionner comme vainqueur.</p>
+            </div>
+            <div>
+              <strong>Menu éclairé</strong>
+              <p>Le menu Pronostics s’éclaire s’il manque un prono sur les prochaines 24h ou un spécial J1 encore ouvert. Le menu Bonus s’éclaire si les bonus long terme sont incomplets et encore ouverts.</p>
+            </div>
+          </div>
+        </section>
+
         <section className="rules-card important-card">
           <div className="rules-card-title"><span>Important</span><h2>À retenir</h2></div>
           <ul>
@@ -75,6 +105,7 @@ function Rules() {
             <li>Les matchs nuls sont bien pris en compte dans le barème.</li>
             <li>Pour les matchs à élimination directe, le score utilisé inclut les prolongations si elles ont lieu, mais jamais les tirs au but.</li>
             <li>Les points sont calculés automatiquement après encodage des résultats officiels.</li>
+            <li>Les spéciaux J1 sont affichés dans Pronostics avant verrouillage, puis dans Bonus après verrouillage.</li>
           </ul>
         </section>
       </div>
@@ -145,9 +176,12 @@ const styles = `
   .rule-note.orange { background: #fff7ed; border-color: #fed7aa; }
   .rule-note.neutral { background: #f8fafc; }
 
-  .scoring-grid, .bonus-rules-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-  .scoring-row, .bonus-rules-grid div { display: grid; gap: 7px; padding: 13px; border-radius: 15px; background: #f8fafc; border: 1px solid #e2e8f0; }
+  .scoring-grid, .bonus-rules-grid, .site-rules-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .site-rules-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .scoring-row, .bonus-rules-grid div, .site-rules-grid div { display: grid; gap: 7px; padding: 13px; border-radius: 15px; background: #f8fafc; border: 1px solid #e2e8f0; }
   .scoring-row span, .bonus-rules-grid span { color: #0f172a; font-weight: 950; }
+  .site-rules-grid strong { color: #0f172a; font-weight: 950; }
+  .site-rules-grid p { margin: 0; color: #475569; font-size: 13px; line-height: 1.42; font-weight: 750; }
   .scoring-row em { color: #64748b; font-size: 12px; font-style: normal; line-height: 1.35; }
   .scoring-row strong, .bonus-rules-grid strong { color: #d97706; font-size: 20px; }
   .scoring-row.exact { background: #ecfdf5; border-color: #bbf7d0; }
@@ -157,8 +191,8 @@ const styles = `
   .bonus-intro { margin: 0 0 12px; color: #475569; font-weight: 800; }
   .important-card ul { margin: 0; padding-left: 20px; color: #334155; line-height: 1.6; font-weight: 800; }
 
-  @media (max-width: 920px) { .rules-hero { flex-direction: column; } .rules-summary, .rules-grid, .scoring-grid, .bonus-rules-grid { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 560px) { .rules-page { padding: 18px 10px 36px; } .rules-summary, .rules-grid, .scoring-grid, .bonus-rules-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 920px) { .rules-hero { flex-direction: column; } .rules-summary, .rules-grid, .scoring-grid, .bonus-rules-grid, .site-rules-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .rules-page { padding: 18px 10px 36px; } .rules-summary, .rules-grid, .scoring-grid, .bonus-rules-grid, .site-rules-grid { grid-template-columns: 1fr; } }
 `;
 
 export default Rules;
