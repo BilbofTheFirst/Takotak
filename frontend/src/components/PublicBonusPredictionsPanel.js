@@ -50,7 +50,6 @@ function PublicBonusPredictionsPanel({
         username: item.username,
         avatar_url: item.avatar_url,
         value: item.predictions?.[code] ?? null,
-        actual: payload.actual?.[code] ?? null,
         unit: definition?.unit || '',
         points: item.scoring?.details?.[code]?.points ?? null
       }));
@@ -76,11 +75,12 @@ function PublicBonusPredictionsPanel({
   }, [rows]);
 
   const specialActual = useMemo(() => {
-    if (type !== 'special' || !rows.length) return null;
-    const firstRow = rows[0];
-    if (firstRow.actual === null || firstRow.actual === undefined) return 'Actuel : en attente';
-    return `Actuel : ${firstRow.actual}${firstRow.unit ? ` ${firstRow.unit}` : ''}`;
-  }, [rows, type]);
+    if (type !== 'special' || !payload?.locked) return null;
+    const definition = (payload.definitions || []).find(item => item.code === code);
+    const currentValue = payload.current_actual?.[code];
+    if (currentValue === null || currentValue === undefined) return 'Actuel : en attente';
+    return `Actuel : ${currentValue}${definition?.unit ? ` ${definition.unit}` : ''}`;
+  }, [payload, type, code]);
 
   if (!locked) return null;
 
