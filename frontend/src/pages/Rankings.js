@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { resultsService } from '../services/api';
+import { buildApiAssetUrl, resultsService } from '../services/api';
 import PageLoader from '../components/PageLoader';
 import UserAvatar from '../components/UserAvatar';
 
@@ -77,18 +77,63 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
 
   const maxX = Math.max(1, ...xValues);
   const maxY = Math.max(3, ...series.flatMap(user => user.data.map(point => Number(point.points || 0))));
-  const width = 880;
-  const height = 310;
+  const width = 910;
+  const height = 320;
   const padLeft = 44;
-  const padRight = 18;
-  const padTop = 18;
-  const padBottom = 38;
+  const padRight = 64;
+  const padTop = 24;
+  const padBottom = 42;
   const chartWidth = width - padLeft - padRight;
   const chartHeight = height - padTop - padBottom;
 
   const xFor = (value) => padLeft + (Number(value || 0) / maxX) * chartWidth;
   const yFor = (value) => padTop + chartHeight - (Number(value || 0) / maxY) * chartHeight;
   const hasOverrides = selectedUserIds.length > 0 || hiddenUserIds.length > 0;
+
+  const renderAvatarMarker = (user, lastPoint) => {
+    if (!lastPoint) return null;
+
+    const cx = xFor(lastPoint.match_number);
+    const cy = yFor(lastPoint.points);
+    const size = user.isMe ? 30 : 26;
+    const radius = size / 2;
+    const avatarUrl = buildApiAssetUrl(user.avatar_url);
+    const initials = (user.username || '?').trim().slice(0, 2).toUpperCase();
+    const clipId = `progression-avatar-clip-${user.id}`;
+
+    return (
+      <g key={`avatar-${user.id}`} className="chart-avatar-marker">
+        <title>{user.username}</title>
+        <circle cx={cx} cy={cy} r={radius + 5} fill="white" opacity="0.98" />
+        <circle cx={cx} cy={cy} r={radius + 2} fill="white" stroke={user.color} strokeWidth="3" />
+        {avatarUrl ? (
+          <>
+            <defs>
+              <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
+                <circle cx={cx} cy={cy} r={radius} />
+              </clipPath>
+            </defs>
+            <image
+              href={avatarUrl}
+              x={cx - radius}
+              y={cy - radius}
+              width={size}
+              height={size}
+              clipPath={`url(#${clipId})`}
+              preserveAspectRatio="xMidYMid slice"
+            />
+          </>
+        ) : (
+          <>
+            <circle cx={cx} cy={cy} r={radius} fill="#e2e8f0" />
+            <text x={cx} y={cy + 3.5} textAnchor="middle" fontSize="9" fontWeight="900" fill="#0f172a">
+              {initials}
+            </text>
+          </>
+        )}
+      </g>
+    );
+  };
 
   if (!series.length) {
     return <div className="empty-chart">Le graphique apparaîtra dès que des résultats seront encodés.</div>;
@@ -101,7 +146,7 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
           <span>📈 Progression</span>
           <h2>Évolution des scores</h2>
         </div>
-        <p>{series.length} courbe{series.length > 1 ? 's' : ''} affichée{series.length > 1 ? 's' : ''}. Les lignes surlignées du tableau correspondent aux joueurs visibles dans le graphique.</p>
+        <p>{series.length} courbe{series.length > 1 ? 's' : ''} affichée{series.length > 1 ? 's' : ''}. Les avatars en bout de ligne identifient les joueurs visibles.</p>
       </div>
 
       <div className="chart-controls">
@@ -128,7 +173,7 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
             return (
               <g key={`x-${matchNumber}`}>
                 <line x1={x} y1={padTop} x2={x} y2={padTop + chartHeight} className="chart-grid soft" />
-                <text x={x} y={height - 12} className="chart-axis-label" textAnchor="middle">{formatProgressionTick(matchNumber)}</text>
+                <text x={x} y={height - 14} className="chart-axis-label" textAnchor="middle">{formatProgressionTick(matchNumber)}</text>
               </g>
             );
           })}
@@ -138,14 +183,14 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
 
           {series.map(user => {
             const points = user.data.map(point => `${xFor(point.match_number)},${yFor(point.points)}`).join(' ');
-            const lastPoint = user.data[user.data.length - 1];
             return (
               <g key={user.id} className={user.isMe ? 'my-chart-line' : ''}>
                 <polyline points={points} fill="none" stroke={user.color} strokeWidth={user.isMe ? '5.5' : '3.5'} strokeLinecap="round" strokeLinejoin="round" opacity={user.isMe ? '1' : '.82'} />
-                {lastPoint && <circle cx={xFor(lastPoint.match_number)} cy={yFor(lastPoint.points)} r={user.isMe ? '6.5' : '4.5'} fill={user.color} />}
               </g>
             );
           })}
+
+          {series.map(user => renderAvatarMarker(user, user.data[user.data.length - 1]))}
         </svg>
       </div>
 
@@ -322,8 +367,9 @@ const styles = `
   .chart-controls button.ghost { margin-left: auto; color: #b91c1c; border-color: #fecaca; background: #fff1f2; }
   .chart-card { padding-bottom: 16px; }
   .chart-scroll { overflow-x: auto; padding: 12px 18px 4px; }
-  .progression-chart { width: 100%; min-width: 720px; display: block; }
+  .progression-chart { width: 100%; min-width: 740px; display: block; overflow: visible; }
   .chart-grid { stroke: #e2e8f0; stroke-width: 1; } .chart-grid.soft { stroke: #f1f5f9; } .chart-axis { stroke: #94a3b8; stroke-width: 1.2; } .chart-axis-label { fill: #64748b; font-size: 10px; font-weight: 800; }
+  .chart-avatar-marker { filter: drop-shadow(0 4px 8px rgba(15,23,42,.24)); pointer-events: none; }
   .my-chart-line { filter: drop-shadow(0 3px 6px rgba(15,118,110,.28)); }
   .chart-legend { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 18px; }
   .legend-item { display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; border-radius: 999px; background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; font-size: 11px; cursor: pointer; }
