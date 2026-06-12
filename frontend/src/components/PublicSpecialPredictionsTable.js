@@ -109,15 +109,15 @@ function PublicSpecialPredictionsTable({ locked, currentUserId }) {
       )}
 
       <style>{`
-        .public-special-table-shell { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; margin-bottom: 14px; }
+        .public-special-table-shell { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; margin-bottom: 14px; width: 100%; min-width: 0; max-width: 100%; }
         .public-special-toggle { grid-column: 2; justify-self: end; border: 1px solid #fed7aa; border-radius: 999px; padding: 7px 11px; color: #92400e; background: #fff7ed; font-size: 11px; font-weight: 950; cursor: pointer; box-shadow: 0 6px 14px rgba(217,119,6,.12); white-space: nowrap; }
         .public-special-toggle:hover, .public-special-toggle.is-open { transform: translateY(-1px); background: #ffedd5; border-color: #fb923c; }
-        .public-special-panel { grid-column: 1 / -1; width: 100%; padding: 12px; border-radius: 16px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.7); }
+        .public-special-panel { grid-column: 1 / -1; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden; padding: 12px; border-radius: 16px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.7); }
         .public-special-panel-title { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 10px; }
         .public-special-panel-title strong { color: #0f172a; font-size: 13px; }
         .public-special-panel-title span { color: #92400e; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 999px; padding: 5px 8px; font-size: 10px; font-weight: 950; white-space: nowrap; }
-        .public-special-table-wrap { overflow-x: auto; }
-        .public-special-table { min-width: 760px; display: grid; gap: 6px; }
+        .public-special-table-wrap { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; padding-bottom: 8px; }
+        .public-special-table { width: max-content; min-width: 760px; display: grid; gap: 6px; }
         .public-special-row { display: grid; grid-template-columns: minmax(150px, .9fr) repeat(3, minmax(130px, 1fr)) auto; gap: 8px; align-items: center; padding: 8px; border-radius: 13px; background: #f8fafc; border: 1px solid #e2e8f0; }
         .public-special-row.is-current-user { background: #fff7ed; border-color: #f59e0b; }
         .public-special-head { background: #f1f5f9; color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
@@ -130,7 +130,7 @@ function PublicSpecialPredictionsTable({ locked, currentUserId }) {
         .public-special-points { justify-self: end; padding: 5px 8px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: 10px; font-weight: 950; white-space: nowrap; }
         .public-special-state { color: #64748b; font-size: 12px; font-weight: 850; }
         .public-special-state.error { color: #b91c1c; }
-        @media (max-width: 760px) { .public-special-table-shell { grid-template-columns: 1fr; } .public-special-toggle { grid-column: 1; justify-self: start; } .public-special-panel-title { align-items: flex-start; flex-direction: column; } }
+        @media (max-width: 760px) { .public-special-table-shell { grid-template-columns: 1fr; } .public-special-toggle { grid-column: 1; justify-self: start; } .public-special-panel { padding: 10px; } .public-special-panel-title { align-items: flex-start; flex-direction: column; } .public-special-table-wrap { max-width: calc(100vw - 44px); margin: 0 -4px; padding: 0 4px 10px; } .public-special-table { min-width: 720px; } }
       `}</style>
     </div>
   );
