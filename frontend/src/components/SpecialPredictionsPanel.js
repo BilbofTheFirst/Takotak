@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { specialPredictionsService } from '../services/api';
+import PublicBonusPredictionsPanel from './PublicBonusPredictionsPanel';
 
 const formatDeadline = (deadline) => {
   if (!deadline) return null;
@@ -13,7 +14,7 @@ const getAutoPlacement = () => {
   return 'always';
 };
 
-function SpecialPredictionsPanel({ placement = 'auto' }) {
+function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
   const [definitions, setDefinitions] = useState([]);
   const [predictions, setPredictions] = useState({});
   const [actual, setActual] = useState({});
@@ -128,7 +129,7 @@ function SpecialPredictionsPanel({ placement = 'auto' }) {
         <div><strong>{complete ? 'Oui' : 'Non'}</strong><span>résultats complets</span></div>
       </div>
 
-      {locked && <div className="special-lock">🔒 Les pronostics spéciaux sont verrouillés. Les points seront calculés quand tous les premiers matchs seront encodés.</div>}
+      {locked && <div className="special-lock">🔒 Les pronostics spéciaux sont verrouillés. Tu peux maintenant consulter les pronos du groupe spécial par spécial.</div>}
 
       <div className="special-grid">
         {definitions.map(definition => {
@@ -141,6 +142,13 @@ function SpecialPredictionsPanel({ placement = 'auto' }) {
               <label><span>Ton prono</span><input type="number" min="0" max="300" inputMode="numeric" disabled={locked} value={predictions[definition.code] ?? ''} onChange={(event) => updatePrediction(definition.code, event.target.value)} placeholder="0" /></label>
               <div className="special-result"><span>Résultat réel</span><strong>{actualValue ?? 'En attente'}</strong></div>
               <small>Tout pile = {definition.max_points} pts, puis -{definition.point_loss_per_gap} par écart.</small>
+              <PublicBonusPredictionsPanel
+                type="special"
+                locked={locked}
+                currentUserId={currentUserId}
+                code={definition.code}
+                title={definition.label}
+              />
             </article>
           );
         })}
