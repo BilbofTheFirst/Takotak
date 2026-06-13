@@ -37,6 +37,7 @@ function AdminMonitoring() {
   }, []);
 
   const usersToRemind = useMemo(() => (data?.users || []).filter(user => user.should_remind), [data]);
+  const bonusIncompleteUsers = useMemo(() => data?.bonus_incomplete_users || (data?.users || []).filter(user => !user.bonus.complete), [data]);
   const reminderText = useMemo(() => buildReminderText(usersToRemind), [usersToRemind]);
 
   const copyReminder = async () => {
@@ -75,7 +76,7 @@ function AdminMonitoring() {
         <div>
           <span>📡 Monitoring</span>
           <h2>Pronostics à surveiller</h2>
-          <p>Vue rapide pour relancer les joueurs avant les matchs des prochaines 24h et les bonus encore ouverts.</p>
+          <p>Vue rapide pour relancer les joueurs avant les matchs des prochaines 24h, et contrôler les bonus incomplets même après verrouillage.</p>
         </div>
         <div className="monitoring-actions">
           <button type="button" className="button secondary" onClick={loadMonitoring}>Rafraîchir</button>
@@ -123,6 +124,32 @@ function AdminMonitoring() {
         </div>
       </div>
 
+      <div className="monitoring-panel bonus-admin-panel">
+        <div className="monitoring-subtitle">
+          <span>🎁 Bonus incomplets</span>
+          <strong>{bonusIncompleteUsers.length} joueur{bonusIncompleteUsers.length > 1 ? 's' : ''}</strong>
+        </div>
+        <p className="monitoring-empty bonus-note">
+          Cette liste reste visible pour l’admin même si les bonus sont verrouillés et ne doivent plus déclencher de relance automatique.
+        </p>
+        {bonusIncompleteUsers.length === 0 ? (
+          <p className="monitoring-empty">Tous les joueurs ont complété les pronostics bonus.</p>
+        ) : (
+          <div className="bonus-missing-list">
+            {bonusIncompleteUsers.map(user => (
+              <details key={user.id} className="bonus-missing-row">
+                <summary>
+                  <strong>{user.username}</strong>
+                  <span>{user.bonus.completed}/{user.bonus.total}</span>
+                  {user.bonus.locked && <em>Verrouillé</em>}
+                </summary>
+                <ul>{user.bonus.missing.map((item, index) => <li key={`${user.id}-bonus-${index}`}>{item}</li>)}</ul>
+              </details>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="monitoring-table-wrap">
         <div className="monitoring-table">
           <div className="monitoring-header">
@@ -145,8 +172,8 @@ function AdminMonitoring() {
               <div key={user.id} className={`monitoring-row ${needsReminder ? 'needs-reminder' : 'is-ok'}`}>
                 <strong>{user.username}</strong>
                 <span>{user.today.completed}/{user.today.total}</span>
-                <span>{user.bonus.locked ? '🔒' : `${user.bonus.completed}/${user.bonus.total}`}</span>
-                <span>{user.special.locked ? '🔒' : `${user.special.completed}/${user.special.total}`}</span>
+                <span className={user.bonus.complete ? '' : 'incomplete-value'}>{user.bonus.completed}/{user.bonus.total}{user.bonus.locked ? ' 🔒' : ''}</span>
+                <span className={user.special.complete ? '' : 'incomplete-value'}>{user.special.completed}/{user.special.total}{user.special.locked ? ' 🔒' : ''}</span>
                 <div className="missing-cell">
                   {needsReminder ? (
                     <details>
@@ -154,7 +181,7 @@ function AdminMonitoring() {
                       <ul>{missingItems.map((item, index) => <li key={`${user.id}-${index}`}>{item}</li>)}</ul>
                     </details>
                   ) : (
-                    <span className="ok-pill">OK</span>
+                    <span className="ok-pill">Pas de relance</span>
                   )}
                 </div>
               </div>
@@ -189,14 +216,22 @@ const styles = `
   .monitoring-summary-grid span { display: block; margin-top: 7px; color: #475569; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
   .monitoring-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
   .monitoring-panel { border: 1px solid #e2e8f0; border-radius: 16px; padding: 13px; background: #f8fafc; }
+  .bonus-admin-panel { margin-bottom: 14px; background: #fff7ed; border-color: #fed7aa; }
   .monitoring-subtitle { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 10px; }
   .monitoring-subtitle strong { color: #0f172a; font-size: 13px; }
   .monitoring-empty { margin: 0; color: #64748b; font-size: 13px; font-weight: 800; }
-  .today-match-list { display: grid; gap: 7px; }
+  .bonus-note { margin-bottom: 10px; color: #9a3412; }
+  .today-match-list, .bonus-missing-list { display: grid; gap: 7px; }
   .today-match-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; background: white; border: 1px solid #e2e8f0; font-size: 12px; }
   .today-match-row strong { color: #0f766e; }
   .today-match-row span { color: #0f172a; font-weight: 850; }
   .today-match-row em { font-style: normal; color: #92400e; font-weight: 950; white-space: nowrap; }
+  .bonus-missing-row { border-radius: 12px; background: white; border: 1px solid #fed7aa; padding: 8px 10px; }
+  .bonus-missing-row summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; cursor: pointer; color: #7c2d12; }
+  .bonus-missing-row summary strong { color: #0f172a; }
+  .bonus-missing-row summary span { color: #b45309; font-weight: 950; }
+  .bonus-missing-row summary em { padding: 3px 7px; border-radius: 999px; background: #fee2e2; color: #991b1b; font-size: 10px; font-style: normal; font-weight: 950; text-transform: uppercase; }
+  .bonus-missing-row ul { margin: 8px 0 0; padding-left: 18px; color: #7c2d12; font-size: 12px; line-height: 1.35; }
   .reminder-panel textarea { width: 100%; min-height: 108px; box-sizing: border-box; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 11px; color: #0f172a; background: white; resize: vertical; font-size: 13px; line-height: 1.45; font-weight: 750; }
   .monitoring-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 16px; }
   .monitoring-table { min-width: 860px; }
@@ -206,13 +241,14 @@ const styles = `
   .monitoring-row strong { color: #0f172a; }
   .monitoring-row.needs-reminder { background: #fff7ed; }
   .monitoring-row.is-ok { background: #f0fdf4; }
+  .incomplete-value { color: #b45309; font-weight: 950; }
   .missing-cell summary { cursor: pointer; color: #b45309; font-weight: 950; }
   .missing-cell ul { margin: 8px 0 0; padding-left: 18px; color: #7c2d12; font-size: 12px; line-height: 1.35; }
   .ok-pill { display: inline-flex; padding: 5px 9px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 950; }
   .monitoring-help { margin: 12px 0 0; color: #64748b; font-size: 12px; font-weight: 800; }
   .monitoring-error-card p { margin: 0; color: #991b1b; font-weight: 900; }
   @media (max-width: 920px) { .monitoring-title, .monitoring-columns { grid-template-columns: 1fr; display: grid; } .monitoring-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 560px) { .admin-monitoring-card { padding: 12px; } .monitoring-summary-grid { grid-template-columns: 1fr; } .today-match-row { grid-template-columns: 1fr; } .monitoring-actions .button { width: 100%; } }
+  @media (max-width: 560px) { .admin-monitoring-card { padding: 12px; } .monitoring-summary-grid { grid-template-columns: 1fr; } .today-match-row, .bonus-missing-row summary { grid-template-columns: 1fr; } .monitoring-actions .button { width: 100%; } }
 `;
 
 export default AdminMonitoring;
