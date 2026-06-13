@@ -2,7 +2,13 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticateAdmin } = require('../middleware/auth');
 const { hashPassword } = require('../utils/password');
-const { GROUP_CODES, ensureBonusPredictionTable, getBonusDeadline } = require('../utils/bonusScoring');
+const {
+  GROUP_CODES,
+  ensureBonusPredictionTable,
+  getBonusDeadline,
+  getBonusUnlocks,
+  setBonusUnlockForUser
+} = require('../utils/bonusScoring');
 const {
   SPECIAL_PREDICTION_DEFINITIONS,
   ensureSpecialPredictionsTable,
@@ -30,7 +36,7 @@ const buildPublicUser = (user) => ({
   created_at: user.created_at
 });
 
-const buildBonusProgress = (row, locked = false) => {
+const buildBonusProgress = (row, globalLocked = false, adminUnlocked = false) => {
   const groupWinners = parseJsonValue(row?.group_winners, {});
   const semifinalists = Array.isArray(parseJsonValue(row?.semifinalists, []))
     ? parseJsonValue(row?.semifinalists, [])
@@ -60,12 +66,16 @@ const buildBonusProgress = (row, locked = false) => {
   }
 
   const total = GROUP_CODES.length + 6;
+  const locked = Boolean(globalLocked && !adminUnlocked);
+
   return {
     completed,
     total,
     missing,
     missing_count: missing.length,
     complete: missing.length === 0,
+    global_locked: Boolean(globalLocked),
+    admin_unlocked: Boolean(adminUnlocked),
     locked,
     urgent: !locked && missing.length > 0,
     updated_at: row?.updated_at || null
@@ -103,7 +113,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       ensureSpecialPredictionsTable(pool)
     ]);
 
-    const [usersResult, nextMatchesResult, bonusResult, specialResult, bonusDeadline, firstMatchdayStatus] = await Promise.all([
+    const [usersResult, nextMatchesResult, bonusResult, specialResult, bonusDeadline, bonusUnlocks, firstMatchdayStatus] = await Promise.all([
       pool.query(`
         SELECT id, username, email, is_admin, created_at
         FROM users
@@ -134,6 +144,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       pool.query('SELECT * FROM bonus_predictions'),
       pool.query('SELECT * FROM special_predictions WHERE code = ANY($1::varchar[])', [SPECIAL_PREDICTION_DEFINITIONS.map(definition => definition.code)]),
       getBonusDeadline(pool),
+      getBonusUnlocks(pool),
       getFirstMatchdayStatus(pool)
     ]);
 
@@ -184,7 +195,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
           group: match.groupe
         }));
 
-      const bonus = buildBonusProgress(bonusByUser.get(user.id), bonusLocked);
+      const bonus = buildBonusProgress(bonusByUser.get(user.id), bonusLocked, bonusUnlocks.has(Number(user.id)));
       const special = buildSpecialProgress(specialRowsByUser.get(user.id), specialLocked);
       const urgent_missing_count = missingMatches.length
         + (bonus.urgent ? bonus.missing.length : 0)
@@ -218,6 +229,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       users_complete_bonus: userMonitoring.filter(user => user.bonus.complete).length,
       users_missing_bonus: bonusIncompleteUsers.length,
       users_missing_bonus_urgent: bonusIncompleteUsers.filter(user => user.bonus.urgent).length,
+      users_bonus_unlocked: userMonitoring.filter(user => user.bonus.admin_unlocked).length,
       users_complete_special: userMonitoring.filter(user => user.special.complete).length,
       users_missing_special: specialIncompleteUsers.length,
       users_missing_special_urgent: specialIncompleteUsers.filter(user => user.special.urgent).length,
@@ -234,6 +246,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       today_matches: nextMatches,
       users: userMonitoring,
       bonus_incomplete_users: bonusIncompleteUsers,
+      bonus_unlocked_users: userMonitoring.filter(user => user.bonus.admin_unlocked),
       special_incomplete_users: specialIncompleteUsers
     });
   } catch (error) {
@@ -253,6 +266,36 @@ router.get('/users', authenticateAdmin, async (req, res) => {
     res.json(result.rows.map(buildPublicUser));
   } catch (error) {
     console.error('Admin users list error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.patch('/users/:userId/bonus-unlock', authenticateAdmin, async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(400).json({ error: 'Invalid user id' });
+    }
+
+    const existingUser = await pool.query(
+      'SELECT id, username, email, is_admin, created_at FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (existingUser.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const unlocked = Boolean(req.body?.unlocked);
+    const bonusUnlock = await setBonusUnlockForUser(pool, userId, unlocked, req.user?.id || null);
+
+    res.json({
+      user: buildPublicUser(existingUser.rows[0]),
+      bonus_unlock: bonusUnlock,
+      message: unlocked ? 'Pronostics bonus long terme réouverts pour ce joueur.' : 'Pronostics bonus long terme refermés pour ce joueur.'
+    });
+  } catch (error) {
+    console.error('Admin bonus unlock error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
