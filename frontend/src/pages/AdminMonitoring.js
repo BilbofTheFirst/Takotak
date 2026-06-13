@@ -18,6 +18,7 @@ function AdminMonitoring() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [unlockSavingUserId, setUnlockSavingUserId] = useState(null);
 
   const loadMonitoring = async () => {
     try {
@@ -38,6 +39,7 @@ function AdminMonitoring() {
 
   const usersToRemind = useMemo(() => (data?.users || []).filter(user => user.should_remind), [data]);
   const bonusIncompleteUsers = useMemo(() => data?.bonus_incomplete_users || (data?.users || []).filter(user => !user.bonus.complete), [data]);
+  const bonusAdminUsers = useMemo(() => data?.users || [], [data]);
   const reminderText = useMemo(() => buildReminderText(usersToRemind), [usersToRemind]);
 
   const copyReminder = async () => {
@@ -46,6 +48,19 @@ function AdminMonitoring() {
       setCopied(true);
     } catch {
       prompt('Copie le message de rappel :', reminderText);
+    }
+  };
+
+  const toggleBonusUnlock = async (user) => {
+    const nextUnlocked = !user.bonus.admin_unlocked;
+    try {
+      setUnlockSavingUserId(user.id);
+      await api.patch(`/admin/users/${user.id}/bonus-unlock`, { unlocked: nextUnlocked });
+      await loadMonitoring();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur lors de la modification de la réouverture bonus');
+    } finally {
+      setUnlockSavingUserId(null);
     }
   };
 
@@ -76,7 +91,7 @@ function AdminMonitoring() {
         <div>
           <span>📡 Monitoring</span>
           <h2>Pronostics à surveiller</h2>
-          <p>Vue rapide pour relancer les joueurs avant les matchs des prochaines 24h, et contrôler les bonus incomplets même après verrouillage.</p>
+          <p>Vue rapide pour relancer les joueurs avant les matchs des prochaines 24h, et gérer les bonus long terme même après verrouillage.</p>
         </div>
         <div className="monitoring-actions">
           <button type="button" className="button secondary" onClick={loadMonitoring}>Rafraîchir</button>
@@ -89,7 +104,7 @@ function AdminMonitoring() {
       <div className="monitoring-summary-grid">
         <div><strong>{summary.users_missing_today || 0}</strong><span>joueurs à relancer 24h</span></div>
         <div><strong>{summary.users_missing_bonus || 0}</strong><span>bonus long terme incomplets</span></div>
-        <div><strong>{summary.users_missing_special || 0}</strong><span>spéciaux J1 incomplets</span></div>
+        <div><strong>{summary.users_bonus_unlocked || 0}</strong><span>bonus réouverts admin</span></div>
         <div><strong>{summary.today_predictions_done || 0}/{summary.today_predictions_required || 0}</strong><span>pronos matchs 24h</span></div>
       </div>
 
@@ -126,28 +141,39 @@ function AdminMonitoring() {
 
       <div className="monitoring-panel bonus-admin-panel">
         <div className="monitoring-subtitle">
-          <span>🎁 Bonus incomplets</span>
-          <strong>{bonusIncompleteUsers.length} joueur{bonusIncompleteUsers.length > 1 ? 's' : ''}</strong>
+          <span>🎁 Bonus long terme par joueur</span>
+          <strong>{bonusIncompleteUsers.length} incomplet{bonusIncompleteUsers.length > 1 ? 's' : ''}</strong>
         </div>
         <p className="monitoring-empty bonus-note">
-          Cette liste reste visible pour l’admin même si les bonus sont verrouillés et ne doivent plus déclencher de relance automatique.
+          Le toggle réouvre uniquement les pronostics bonus long terme pour le joueur choisi. Les spéciaux de première journée ne sont pas concernés.
         </p>
-        {bonusIncompleteUsers.length === 0 ? (
-          <p className="monitoring-empty">Tous les joueurs ont complété les pronostics bonus.</p>
-        ) : (
-          <div className="bonus-missing-list">
-            {bonusIncompleteUsers.map(user => (
-              <details key={user.id} className="bonus-missing-row">
-                <summary>
-                  <strong>{user.username}</strong>
-                  <span>{user.bonus.completed}/{user.bonus.total}</span>
-                  {user.bonus.locked && <em>Verrouillé</em>}
-                </summary>
-                <ul>{user.bonus.missing.map((item, index) => <li key={`${user.id}-bonus-${index}`}>{item}</li>)}</ul>
-              </details>
-            ))}
-          </div>
-        )}
+        <div className="bonus-missing-list">
+          {bonusAdminUsers.map(user => (
+            <div key={user.id} className={`bonus-missing-row ${user.bonus.complete ? 'bonus-complete-row' : 'bonus-incomplete-row'} ${user.bonus.admin_unlocked ? 'bonus-unlocked-row' : ''}`}>
+              <div className="bonus-missing-summary">
+                <strong>{user.username}</strong>
+                <span>{user.bonus.completed}/{user.bonus.total}</span>
+                {user.bonus.admin_unlocked ? <em className="unlock-pill">Réouvert</em> : user.bonus.locked ? <em>Verrouillé</em> : <em className="open-pill">Ouvert</em>}
+                <button
+                  type="button"
+                  className={`bonus-unlock-toggle ${user.bonus.admin_unlocked ? 'is-on' : ''}`}
+                  disabled={unlockSavingUserId === user.id}
+                  onClick={() => toggleBonusUnlock(user)}
+                >
+                  {unlockSavingUserId === user.id ? '...' : user.bonus.admin_unlocked ? 'Refermer' : 'Réouvrir'}
+                </button>
+              </div>
+              {user.bonus.missing.length > 0 ? (
+                <details className="bonus-missing-details">
+                  <summary>{user.bonus.missing.length} champ{user.bonus.missing.length > 1 ? 's' : ''} manquant{user.bonus.missing.length > 1 ? 's' : ''}</summary>
+                  <ul>{user.bonus.missing.map((item, index) => <li key={`${user.id}-bonus-${index}`}>{item}</li>)}</ul>
+                </details>
+              ) : (
+                <p className="bonus-complete-note">Complet</p>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="monitoring-table-wrap">
@@ -172,7 +198,7 @@ function AdminMonitoring() {
               <div key={user.id} className={`monitoring-row ${needsReminder ? 'needs-reminder' : 'is-ok'}`}>
                 <strong>{user.username}</strong>
                 <span>{user.today.completed}/{user.today.total}</span>
-                <span className={user.bonus.complete ? '' : 'incomplete-value'}>{user.bonus.completed}/{user.bonus.total}{user.bonus.locked ? ' 🔒' : ''}</span>
+                <span className={user.bonus.complete ? '' : 'incomplete-value'}>{user.bonus.completed}/{user.bonus.total}{user.bonus.admin_unlocked ? ' 🔓' : user.bonus.locked ? ' 🔒' : ''}</span>
                 <span className={user.special.complete ? '' : 'incomplete-value'}>{user.special.completed}/{user.special.total}{user.special.locked ? ' 🔒' : ''}</span>
                 <div className="missing-cell">
                   {needsReminder ? (
@@ -191,7 +217,7 @@ function AdminMonitoring() {
       </div>
 
       <p className="monitoring-help">
-        Bonus long terme : {summary.bonus_locked ? 'verrouillés' : `ouverts jusqu’au ${formatDateTime(summary.bonus_deadline)}`} · Deadline spéciaux première journée : {formatDateTime(summary.first_matchday_deadline)} · {summary.first_matchday_locked ? 'verrouillés' : 'encore ouverts'}.
+        Bonus long terme : {summary.bonus_locked ? 'verrouillés globalement' : `ouverts jusqu’au ${formatDateTime(summary.bonus_deadline)}`} · Réouvertures admin : {summary.users_bonus_unlocked || 0} · Deadline spéciaux première journée : {formatDateTime(summary.first_matchday_deadline)} · {summary.first_matchday_locked ? 'verrouillés' : 'encore ouverts'}.
       </p>
 
       <style>{styles}</style>
@@ -226,12 +252,21 @@ const styles = `
   .today-match-row strong { color: #0f766e; }
   .today-match-row span { color: #0f172a; font-weight: 850; }
   .today-match-row em { font-style: normal; color: #92400e; font-weight: 950; white-space: nowrap; }
-  .bonus-missing-row { border-radius: 12px; background: white; border: 1px solid #fed7aa; padding: 8px 10px; }
-  .bonus-missing-row summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; cursor: pointer; color: #7c2d12; }
-  .bonus-missing-row summary strong { color: #0f172a; }
-  .bonus-missing-row summary span { color: #b45309; font-weight: 950; }
-  .bonus-missing-row summary em { padding: 3px 7px; border-radius: 999px; background: #fee2e2; color: #991b1b; font-size: 10px; font-style: normal; font-weight: 950; text-transform: uppercase; }
+  .bonus-missing-row { border-radius: 12px; background: white; border: 1px solid #fed7aa; padding: 9px 10px; }
+  .bonus-complete-row { border-color: #bbf7d0; background: #f0fdf4; }
+  .bonus-unlocked-row { box-shadow: inset 4px 0 0 #0f766e; }
+  .bonus-missing-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; color: #7c2d12; }
+  .bonus-missing-summary strong { color: #0f172a; }
+  .bonus-missing-summary span { color: #b45309; font-weight: 950; }
+  .bonus-missing-summary em { padding: 3px 7px; border-radius: 999px; background: #fee2e2; color: #991b1b; font-size: 10px; font-style: normal; font-weight: 950; text-transform: uppercase; }
+  .bonus-missing-summary em.open-pill { background: #dcfce7; color: #166534; }
+  .bonus-missing-summary em.unlock-pill { background: #ccfbf1; color: #0f766e; }
+  .bonus-unlock-toggle { border: 0; border-radius: 999px; padding: 6px 10px; color: white; background: #0f766e; font-size: 11px; font-weight: 950; cursor: pointer; }
+  .bonus-unlock-toggle.is-on { background: #b91c1c; }
+  .bonus-unlock-toggle:disabled { opacity: .55; cursor: wait; }
+  .bonus-missing-details summary { margin-top: 7px; cursor: pointer; color: #b45309; font-weight: 950; font-size: 12px; }
   .bonus-missing-row ul { margin: 8px 0 0; padding-left: 18px; color: #7c2d12; font-size: 12px; line-height: 1.35; }
+  .bonus-complete-note { margin: 7px 0 0; color: #166534; font-size: 12px; font-weight: 900; }
   .reminder-panel textarea { width: 100%; min-height: 108px; box-sizing: border-box; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 11px; color: #0f172a; background: white; resize: vertical; font-size: 13px; line-height: 1.45; font-weight: 750; }
   .monitoring-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 16px; }
   .monitoring-table { min-width: 860px; }
@@ -248,7 +283,7 @@ const styles = `
   .monitoring-help { margin: 12px 0 0; color: #64748b; font-size: 12px; font-weight: 800; }
   .monitoring-error-card p { margin: 0; color: #991b1b; font-weight: 900; }
   @media (max-width: 920px) { .monitoring-title, .monitoring-columns { grid-template-columns: 1fr; display: grid; } .monitoring-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 560px) { .admin-monitoring-card { padding: 12px; } .monitoring-summary-grid { grid-template-columns: 1fr; } .today-match-row, .bonus-missing-row summary { grid-template-columns: 1fr; } .monitoring-actions .button { width: 100%; } }
+  @media (max-width: 560px) { .admin-monitoring-card { padding: 12px; } .monitoring-summary-grid { grid-template-columns: 1fr; } .today-match-row, .bonus-missing-summary { grid-template-columns: 1fr; } .monitoring-actions .button { width: 100%; } }
 `;
 
 export default AdminMonitoring;
