@@ -14,6 +14,8 @@ const EMPTY_BONUS = {
 function BonusPredictionsPanel({ matches, currentUserId }) {
   const [bonus, setBonus] = useState(EMPTY_BONUS);
   const [locked, setLocked] = useState(false);
+  const [globalLocked, setGlobalLocked] = useState(false);
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [deadline, setDeadline] = useState(null);
   const [scoring, setScoring] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -56,6 +58,8 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
             : ['', '', '', '']
         });
         setLocked(Boolean(response.data?.locked));
+        setGlobalLocked(Boolean(response.data?.global_locked ?? response.data?.locked));
+        setAdminUnlocked(Boolean(response.data?.admin_unlocked));
         setDeadline(response.data?.deadline || null);
         setScoring(response.data?.scoring || null);
       } catch (error) {
@@ -135,7 +139,7 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
   }
 
   return (
-    <section className={`bonus-panel ${locked ? 'bonus-panel-locked' : ''}`}>
+    <section className={`bonus-panel ${locked ? 'bonus-panel-locked' : ''} ${adminUnlocked ? 'bonus-panel-admin-unlocked' : ''}`}>
       <div className="bonus-panel-header">
         <div>
           <span className="bonus-eyebrow">🌟 Bonus avant compétition</span>
@@ -154,7 +158,7 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
             <em>points</em>
           </div>
           <button type="button" onClick={saveBonus} disabled={locked || status === 'saving'}>
-            {locked ? 'Bonus verrouillés' : status === 'saving' ? 'Sauvegarde...' : 'Sauvegarder'}
+            {locked ? 'Bonus verrouillés' : status === 'saving' ? 'Sauvegarde...' : adminUnlocked ? 'Sauvegarder la correction' : 'Sauvegarder'}
           </button>
           {status === 'saved' && <span className="bonus-status saved">✅ Enregistré</span>}
           {status === 'dirty' && <span className="bonus-status dirty">✍️ Modifications non sauvegardées</span>}
@@ -174,12 +178,18 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
         </div>
       )}
 
+      {globalLocked && adminUnlocked && (
+        <div className="bonus-admin-unlocked-banner">
+          🔓 Un admin a temporairement réouvert tes pronostics bonus long terme. Pense à sauvegarder tes corrections.
+        </div>
+      )}
+
       <div className="bonus-grid">
         <div className="bonus-card bonus-groups-card">
           <div className="bonus-card-title has-public-table">
             <div><span>12 × 5 pts</span><h3>Vainqueurs de groupes</h3></div>
             <strong>{completedGroupWinners}/12</strong>
-            <PublicBonusPredictionsTable type="groups" locked={locked} currentUserId={currentUserId} />
+            <PublicBonusPredictionsTable type="groups" locked={globalLocked || locked} currentUserId={currentUserId} />
           </div>
           <div className="bonus-group-grid">
             {GROUP_CODES.map(group => {
@@ -204,7 +214,7 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
           <div className="bonus-card-title has-public-table">
             <div><span>Tableau final</span><h3>Grands paris</h3></div>
             <strong>45 pts</strong>
-            <PublicBonusPredictionsTable type="final" locked={locked} currentUserId={currentUserId} />
+            <PublicBonusPredictionsTable type="final" locked={globalLocked || locked} currentUserId={currentUserId} />
           </div>
 
           <div className="final-picks-grid">
@@ -259,6 +269,7 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
         .bonus-panel { background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 18px 55px rgba(0,0,0,.2); }
         .bonus-panel-loading { color: #475569; font-weight: 900; }
         .bonus-panel-locked { opacity: .94; }
+        .bonus-panel-admin-unlocked { box-shadow: 0 18px 55px rgba(0,0,0,.2), inset 0 0 0 3px rgba(15,118,110,.22); }
         .bonus-panel-header { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 18px; align-items: stretch; margin-bottom: 14px; }
         .bonus-eyebrow { display: inline-flex; padding: 5px 10px; border-radius: 999px; background: #fff7ed; color: #c2410c; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
         .bonus-panel h2 { margin: 0 0 6px; color: #0f172a; font-size: 26px; letter-spacing: -.03em; }
@@ -280,6 +291,7 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
         .bonus-progress-row strong { display: block; color: #d97706; font-size: 18px; line-height: 1; }
         .bonus-progress-row span { display: block; margin-top: 5px; color: #64748b; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
         .bonus-locked-banner { margin-bottom: 14px; padding: 10px 12px; border-radius: 14px; color: #713f12; background: #fef3c7; border: 1px solid rgba(251,191,36,.5); font-size: 12px; font-weight: 900; }
+        .bonus-admin-unlocked-banner { margin-bottom: 14px; padding: 10px 12px; border-radius: 14px; color: #0f766e; background: #ccfbf1; border: 1px solid rgba(15,118,110,.28); font-size: 12px; font-weight: 950; }
         .bonus-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
         .bonus-card { border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 18px; padding: 14px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.55); }
         .bonus-card-title { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; margin-bottom: 12px; }
