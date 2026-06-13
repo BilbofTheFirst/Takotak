@@ -5,6 +5,7 @@ const {
   GROUP_CODES,
   ensureBonusPredictionTable,
   getBonusDeadline,
+  getBonusLockStatusForUser,
   normalizeBonusPrediction,
   buildActualBonusAnswers,
   calculateBonusPoints
@@ -44,9 +45,9 @@ router.get('/', authenticateToken, async (req, res) => {
     await ensureBonusPredictionTable(pool);
 
     const userId = req.user.id;
-    const [predictionResult, deadline, actual] = await Promise.all([
+    const [predictionResult, lockStatus, actual] = await Promise.all([
       pool.query('SELECT * FROM bonus_predictions WHERE user_id = $1', [userId]),
-      getBonusDeadline(pool),
+      getBonusLockStatusForUser(pool, userId),
       buildActualBonusAnswers(pool)
     ]);
 
@@ -55,8 +56,10 @@ router.get('/', authenticateToken, async (req, res) => {
 
     res.json({
       prediction,
-      locked: deadline.locked,
-      deadline: deadline.first_match_time,
+      locked: lockStatus.locked,
+      global_locked: lockStatus.global_locked,
+      admin_unlocked: lockStatus.admin_unlocked,
+      deadline: lockStatus.first_match_time,
       actual,
       scoring
     });
@@ -127,13 +130,13 @@ router.post('/', authenticateToken, async (req, res) => {
     await client.query('BEGIN');
     await ensureBonusPredictionTable(client);
 
-    const deadline = await getBonusDeadline(client);
-    if (deadline.locked) {
+    const userId = req.user.id;
+    const lockStatus = await getBonusLockStatusForUser(client, userId);
+    if (lockStatus.locked) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Bonus predictions are locked' });
     }
 
-    const userId = req.user.id;
     const prediction = normalizePayload(req.body);
 
     const result = await client.query(
