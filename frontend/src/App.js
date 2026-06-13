@@ -87,6 +87,12 @@ function PageLoader() {
 
 function Navigation({ user, onLogout, hasBonusAttention, hasPredictionAttention }) {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.toggle('mobile-menu-no-scroll', menuOpen);
+    return () => document.body.classList.remove('mobile-menu-no-scroll');
+  }, [menuOpen]);
+
   if (!user) return null;
 
   const closeMenu = () => setMenuOpen(false);
@@ -106,6 +112,7 @@ function Navigation({ user, onLogout, hasBonusAttention, hasPredictionAttention 
           type="button"
           className="mobile-menu-toggle"
           aria-expanded={menuOpen}
+          aria-controls="mobile-menu-panel"
           aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
           onClick={() => setMenuOpen(prev => !prev)}
         >
@@ -113,30 +120,34 @@ function Navigation({ user, onLogout, hasBonusAttention, hasPredictionAttention 
         </button>
       </div>
 
-      <div className="nav-links">
-        <Link to="/predictions" className={predictionsClassName} onClick={closeMenu}>🎯 Pronostics</Link>
-        <Link to="/bonus" className={bonusClassName} onClick={closeMenu}>🎁 Bonus</Link>
-        <Link to="/rankings" onClick={closeMenu}>🏆 Classement</Link>
-        <Link to="/stats" onClick={closeMenu}>📊 Stats</Link>
-        <Link to="/simulation" onClick={closeMenu}>🎮 Simulation</Link>
-        <Link to="/rules" onClick={closeMenu}>📋 Règles</Link>
-        {user?.is_admin && <Link to="/admin" onClick={closeMenu}>⚙️ Admin</Link>}
-      </div>
+      {menuOpen && <button type="button" className="mobile-menu-backdrop" aria-label="Fermer le menu" onClick={closeMenu} />}
 
-      <div className="nav-user">
-        <Link to="/profile" className="nav-profile-link" title="Mon profil" onClick={closeMenu}>
-          <UserAvatar user={user} size={32} />
-          <span>{user.username}</span>
-        </Link>
-        <button
-          onClick={() => {
-            closeMenu();
-            onLogout();
-          }}
-          className="button button-danger button-small"
-        >
-          Déconnexion
-        </button>
+      <div id="mobile-menu-panel" className="mobile-menu-panel">
+        <div className="nav-links">
+          <Link to="/predictions" className={predictionsClassName} onClick={closeMenu}>🎯 Pronostics</Link>
+          <Link to="/bonus" className={bonusClassName} onClick={closeMenu}>🎁 Bonus</Link>
+          <Link to="/rankings" onClick={closeMenu}>🏆 Classement</Link>
+          <Link to="/stats" onClick={closeMenu}>📊 Stats</Link>
+          <Link to="/simulation" onClick={closeMenu}>🎮 Simulation</Link>
+          <Link to="/rules" onClick={closeMenu}>📋 Règles</Link>
+          {user?.is_admin && <Link to="/admin" onClick={closeMenu}>⚙️ Admin</Link>}
+        </div>
+
+        <div className="nav-user">
+          <Link to="/profile" className="nav-profile-link" title="Mon profil" onClick={closeMenu}>
+            <UserAvatar user={user} size={32} />
+            <span>{user.username}</span>
+          </Link>
+          <button
+            onClick={() => {
+              closeMenu();
+              onLogout();
+            }}
+            className="button button-danger button-small"
+          >
+            Déconnexion
+          </button>
+        </div>
       </div>
     </nav>
   );
