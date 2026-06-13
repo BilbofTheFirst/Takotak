@@ -2,7 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
 const { calculatePointsDetailed } = require('../utils/scoring');
-const { GROUP_CODES, ensureBonusPredictionTable, getBonusDeadline } = require('../utils/bonusScoring');
+const { GROUP_CODES, ensureBonusPredictionTable, getBonusLockStatusForUser } = require('../utils/bonusScoring');
 const {
   SPECIAL_PREDICTION_DEFINITIONS,
   ensureSpecialPredictionsTable,
@@ -91,7 +91,7 @@ router.get('/attention-status', authenticateToken, async (req, res) => {
       ensureSpecialPredictionsTable(pool)
     ]);
 
-    const [matchesResult, bonusResult, specialResult, bonusDeadline, firstMatchdayStatus] = await Promise.all([
+    const [matchesResult, bonusResult, specialResult, bonusLockStatus, firstMatchdayStatus] = await Promise.all([
       pool.query(
         `SELECT
           m.id,
@@ -113,7 +113,7 @@ router.get('/attention-status', authenticateToken, async (req, res) => {
       ),
       pool.query('SELECT * FROM bonus_predictions WHERE user_id = $1', [userId]),
       pool.query('SELECT * FROM special_predictions WHERE user_id = $1 AND code = ANY($2::varchar[])', [userId, SPECIAL_PREDICTION_DEFINITIONS.map(definition => definition.code)]),
-      getBonusDeadline(pool),
+      getBonusLockStatusForUser(pool, userId),
       getFirstMatchdayStatus(pool)
     ]);
 
@@ -130,7 +130,7 @@ router.get('/attention-status', authenticateToken, async (req, res) => {
     const bonusProgress = buildBonusProgress(bonusResult.rows[0]);
     const specialProgress = buildSpecialProgress(specialResult.rows);
 
-    const bonusUrgent = !bonusDeadline.locked && !bonusProgress.complete;
+    const bonusUrgent = !bonusLockStatus.locked && !bonusProgress.complete;
     const specialUrgent = !firstMatchdayStatus.locked && !specialProgress.complete;
 
     const totalMissing = missingMatches.length
@@ -149,8 +149,10 @@ router.get('/attention-status', authenticateToken, async (req, res) => {
         missing: missingMatches
       },
       bonus: {
-        locked: Boolean(bonusDeadline.locked),
-        deadline: bonusDeadline.first_match_time,
+        locked: Boolean(bonusLockStatus.locked),
+        global_locked: Boolean(bonusLockStatus.global_locked),
+        admin_unlocked: Boolean(bonusLockStatus.admin_unlocked),
+        deadline: bonusLockStatus.first_match_time,
         urgent: bonusUrgent,
         ...bonusProgress
       },
