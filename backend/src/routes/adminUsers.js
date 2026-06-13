@@ -64,6 +64,7 @@ const buildBonusProgress = (row, locked = false) => {
     completed,
     total,
     missing,
+    missing_count: missing.length,
     complete: missing.length === 0,
     locked,
     urgent: !locked && missing.length > 0,
@@ -88,6 +89,7 @@ const buildSpecialProgress = (rows = [], locked = false) => {
     completed,
     total: SPECIAL_PREDICTION_DEFINITIONS.length,
     missing,
+    missing_count: missing.length,
     complete: missing.length === 0,
     locked,
     urgent: !locked && missing.length > 0
@@ -203,6 +205,9 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       };
     });
 
+    const bonusIncompleteUsers = userMonitoring.filter(user => !user.bonus.complete);
+    const specialIncompleteUsers = userMonitoring.filter(user => !user.special.complete);
+
     const summary = {
       users_count: users.length,
       today_matches_count: nextMatches.length,
@@ -211,9 +216,11 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       users_complete_today: userMonitoring.filter(user => user.today.complete).length,
       users_missing_today: userMonitoring.filter(user => !user.today.complete).length,
       users_complete_bonus: userMonitoring.filter(user => user.bonus.complete).length,
-      users_missing_bonus: bonusLocked ? 0 : userMonitoring.filter(user => !user.bonus.complete).length,
+      users_missing_bonus: bonusIncompleteUsers.length,
+      users_missing_bonus_urgent: bonusIncompleteUsers.filter(user => user.bonus.urgent).length,
       users_complete_special: userMonitoring.filter(user => user.special.complete).length,
-      users_missing_special: specialLocked ? 0 : userMonitoring.filter(user => !user.special.complete).length,
+      users_missing_special: specialIncompleteUsers.length,
+      users_missing_special_urgent: specialIncompleteUsers.filter(user => user.special.urgent).length,
       bonus_deadline: bonusDeadline.first_match_time,
       bonus_locked: bonusLocked,
       first_matchday_deadline: firstMatchdayStatus.deadline,
@@ -225,7 +232,9 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
     res.json({
       summary,
       today_matches: nextMatches,
-      users: userMonitoring
+      users: userMonitoring,
+      bonus_incomplete_users: bonusIncompleteUsers,
+      special_incomplete_users: specialIncompleteUsers
     });
   } catch (error) {
     console.error('Admin monitoring error:', error);
