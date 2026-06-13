@@ -9,6 +9,17 @@ const BONUS_POINTS = {
 
 const normalizeTeamName = (value) => String(value || '').trim();
 
+const ensureBonusUnlockTable = async (clientOrPool) => {
+  await clientOrPool.query(`
+    CREATE TABLE IF NOT EXISTS bonus_prediction_unlocks (
+      user_id integer PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      unlocked boolean NOT NULL DEFAULT true,
+      updated_by integer REFERENCES users(id) ON DELETE SET NULL,
+      updated_at timestamp DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+};
+
 const ensureBonusPredictionTable = async (clientOrPool) => {
   await clientOrPool.query(`
     CREATE TABLE IF NOT EXISTS bonus_predictions (
@@ -20,6 +31,8 @@ const ensureBonusPredictionTable = async (clientOrPool) => {
       updated_at timestamp DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await ensureBonusUnlockTable(clientOrPool);
 };
 
 const getBonusDeadline = async (clientOrPool) => {
@@ -36,6 +49,62 @@ const getBonusDeadline = async (clientOrPool) => {
   return {
     first_match_time: result.rows[0]?.first_match_time || null,
     locked: Boolean(result.rows[0]?.locked)
+  };
+};
+
+const getBonusUnlockForUser = async (clientOrPool, userId) => {
+  await ensureBonusUnlockTable(clientOrPool);
+  const result = await clientOrPool.query(
+    'SELECT unlocked FROM bonus_prediction_unlocks WHERE user_id = $1',
+    [userId]
+  );
+  return Boolean(result.rows[0]?.unlocked);
+};
+
+const getBonusUnlocks = async (clientOrPool) => {
+  await ensureBonusUnlockTable(clientOrPool);
+  const result = await clientOrPool.query('SELECT user_id, unlocked, updated_by, updated_at FROM bonus_prediction_unlocks WHERE unlocked = true');
+  return new Map(result.rows.map(row => [Number(row.user_id), row]));
+};
+
+const setBonusUnlockForUser = async (clientOrPool, userId, unlocked, adminUserId = null) => {
+  await ensureBonusUnlockTable(clientOrPool);
+
+  if (!unlocked) {
+    await clientOrPool.query('DELETE FROM bonus_prediction_unlocks WHERE user_id = $1', [userId]);
+    return { user_id: Number(userId), unlocked: false, updated_by: adminUserId ? Number(adminUserId) : null, updated_at: null };
+  }
+
+  const result = await clientOrPool.query(
+    `INSERT INTO bonus_prediction_unlocks (user_id, unlocked, updated_by, updated_at)
+     VALUES ($1, true, $2, CURRENT_TIMESTAMP)
+     ON CONFLICT (user_id)
+     DO UPDATE SET unlocked = true,
+                   updated_by = EXCLUDED.updated_by,
+                   updated_at = CURRENT_TIMESTAMP
+     RETURNING user_id, unlocked, updated_by, updated_at`,
+    [userId, adminUserId]
+  );
+
+  return {
+    user_id: Number(result.rows[0].user_id),
+    unlocked: Boolean(result.rows[0].unlocked),
+    updated_by: result.rows[0].updated_by ? Number(result.rows[0].updated_by) : null,
+    updated_at: result.rows[0].updated_at
+  };
+};
+
+const getBonusLockStatusForUser = async (clientOrPool, userId) => {
+  const [deadline, adminUnlocked] = await Promise.all([
+    getBonusDeadline(clientOrPool),
+    getBonusUnlockForUser(clientOrPool, userId)
+  ]);
+
+  return {
+    first_match_time: deadline.first_match_time,
+    global_locked: Boolean(deadline.locked),
+    admin_unlocked: Boolean(adminUnlocked),
+    locked: Boolean(deadline.locked && !adminUnlocked)
   };
 };
 
@@ -267,7 +336,12 @@ module.exports = {
   GROUP_CODES,
   BONUS_POINTS,
   ensureBonusPredictionTable,
+  ensureBonusUnlockTable,
   getBonusDeadline,
+  getBonusUnlockForUser,
+  getBonusUnlocks,
+  setBonusUnlockForUser,
+  getBonusLockStatusForUser,
   normalizeBonusPrediction,
   buildActualBonusAnswers,
   calculateBonusPoints,
