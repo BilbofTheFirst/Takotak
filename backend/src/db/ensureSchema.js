@@ -1,3 +1,4 @@
+const { ensureBonusPredictionTable } = require('../utils/bonusScoring');
 const { ensureSpecialPredictionsTable } = require('../utils/specialPredictions');
 const { ensureFifaRankingColumns } = require('../utils/fifaRankings');
 
@@ -9,6 +10,7 @@ async function ensureSchema(pool) {
       ADD COLUMN IF NOT EXISTS winner_team_id integer
   `);
 
+  await ensureBonusPredictionTable(pool);
   await ensureSpecialPredictionsTable(pool);
   await ensureFifaRankingColumns(pool);
 }
