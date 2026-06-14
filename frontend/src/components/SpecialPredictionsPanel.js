@@ -91,7 +91,7 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
   };
 
   if (loading) {
-    if (effectivePlacement === 'bonus') return null;
+    if (effectivePlacement === 'bonus' || effectivePlacement === 'predictions') return null;
     return <section className="special-panel special-loading">Chargement des pronostics spéciaux...</section>;
   }
 
