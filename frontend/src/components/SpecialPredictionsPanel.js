@@ -7,6 +7,14 @@ const formatDeadline = (deadline) => {
   return `${deadline.substring(8, 10)}/${deadline.substring(5, 7)} à ${deadline.substring(11, 16)}`;
 };
 
+const isDeadlinePassed = (deadline) => {
+  if (!deadline) return false;
+  const normalized = deadline.includes('Z') || deadline.includes('+') ? deadline : `${deadline}+02:00`;
+  const deadlineDate = new Date(normalized);
+  if (Number.isNaN(deadlineDate.getTime())) return false;
+  return deadlineDate <= new Date();
+};
+
 const getAutoPlacement = () => {
   if (typeof window === 'undefined') return 'always';
   if (window.location.pathname.startsWith('/bonus')) return 'bonus';
@@ -51,6 +59,7 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday =
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   const effectivePlacement = placement === 'auto' ? getAutoPlacement() : placement;
+  const effectiveLocked = Boolean(locked || isDeadlinePassed(deadline));
 
   const applyPayload = (payload = {}) => {
     setDefinitions(payload.definitions || []);
@@ -120,14 +129,14 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday =
     return <section className="special-panel special-loading">Chargement des pronostics spéciaux...</section>;
   }
 
-  if (effectivePlacement === 'bonus' && !locked) return null;
-  if (effectivePlacement === 'predictions' && locked) return null;
+  if (effectivePlacement === 'bonus' && !effectiveLocked) return null;
+  if (effectivePlacement === 'predictions' && effectiveLocked) return null;
 
   const isBonusPlacement = effectivePlacement === 'bonus';
   const copy = getMatchdayCopy(matchday, isBonusPlacement);
 
   return (
-    <section className={`special-panel ${locked ? 'is-locked' : ''} ${isBonusPlacement ? 'in-bonus-page' : ''} ${collapsed ? 'is-collapsed' : ''}`}>
+    <section className={`special-panel ${effectiveLocked ? 'is-locked' : ''} ${isBonusPlacement ? 'in-bonus-page' : ''} ${collapsed ? 'is-collapsed' : ''}`}>
       <div className="special-header">
         <div>
           <span className="special-eyebrow">{copy.eyebrow}</span>
@@ -144,8 +153,8 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday =
             </button>
           )}
           {!collapsed && (
-            <button type="button" onClick={save} disabled={locked || status === 'saving'}>
-              {locked ? 'Verrouillés' : status === 'saving' ? 'Sauvegarde...' : 'Sauvegarder'}
+            <button type="button" onClick={save} disabled={effectiveLocked || status === 'saving'}>
+              {effectiveLocked ? 'Verrouillés' : status === 'saving' ? 'Sauvegarde...' : 'Sauvegarder'}
             </button>
           )}
           {!collapsed && status === 'saved' && <span className="special-status saved">✅ Enregistré</span>}
@@ -162,8 +171,8 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday =
             <div><strong>{complete ? 'Oui' : 'Non'}</strong><span>résultats complets</span></div>
           </div>
 
-          {locked && <div className="special-lock">{copy.lockedText}</div>}
-          {locked && <PublicSpecialPredictionsTable locked={locked} currentUserId={currentUserId} matchday={matchday} />}
+          {effectiveLocked && <div className="special-lock">{copy.lockedText}</div>}
+          {effectiveLocked && <PublicSpecialPredictionsTable locked={effectiveLocked} currentUserId={currentUserId} matchday={matchday} />}
 
           <div className="special-grid">
             {definitions.map(definition => {
@@ -174,9 +183,9 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday =
                 <article className="special-card" key={definition.code}>
                   <div className="special-title"><div><span>{definition.max_points} pts max</span><h3>{definition.label}</h3></div><strong>{detail?.points ?? '-'}</strong></div>
                   <p>{definition.description}</p>
-                  <label><span>Ton prono</span><input type="number" min="0" max="300" inputMode="numeric" disabled={locked} value={predictions[definition.code] ?? ''} onChange={(event) => updatePrediction(definition.code, event.target.value)} placeholder="0" /></label>
+                  <label><span>Ton prono</span><input type="number" min="0" max="300" inputMode="numeric" disabled={effectiveLocked} value={predictions[definition.code] ?? ''} onChange={(event) => updatePrediction(definition.code, event.target.value)} placeholder="0" /></label>
                   <div className="special-result"><span>Résultat réel</span><strong>{actualValue ?? 'En attente'}</strong></div>
-                  {locked && <div className="special-result current"><span>Résultat actuel</span><strong>{currentValue ?? 'En attente'}</strong></div>}
+                  {effectiveLocked && <div className="special-result current"><span>Résultat actuel</span><strong>{currentValue ?? 'En attente'}</strong></div>}
                   <small>Tout pile = {definition.max_points} pts, puis -{definition.point_loss_per_gap} par écart.</small>
                 </article>
               );
