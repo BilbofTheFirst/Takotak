@@ -85,10 +85,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Valid match and goals are required' });
     }
 
-    const matchResult = await client.query(
-      'SELECT id, team1_id, team2_id FROM matches WHERE id = $1',
-      [match_id]
-    );
+    const matchResult = await client.query('SELECT id, team1_id, team2_id FROM matches WHERE id = $1', [match_id]);
 
     if (matchResult.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -140,14 +137,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
          team2_penalty_goals = EXCLUDED.team2_penalty_goals,
          winner_team_id = EXCLUDED.winner_team_id
        RETURNING *`,
-      [
-        match_id,
-        Number(team1_goals),
-        Number(team2_goals),
-        normalizedPenalty1,
-        normalizedPenalty2,
-        winnerTeamId
-      ]
+      [match_id, Number(team1_goals), Number(team2_goals), normalizedPenalty1, normalizedPenalty2, winnerTeamId]
     );
 
     await client.query('UPDATE matches SET status = $1 WHERE id = $2', ['finished', match_id]);
@@ -156,7 +146,6 @@ router.post('/', authenticateAdmin, async (req, res) => {
 
     for (const prediction of predictions.rows) {
       const scoring = calculatePointsDetailed(prediction, { team1_goals, team2_goals });
-
       await client.query(
         `INSERT INTO user_scores (user_id, match_id, points)
          VALUES ($1, $2, $3)
@@ -171,11 +160,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
 
     await client.query('COMMIT');
     refreshStatsOverviewCache();
-    res.json({
-      message: 'Result saved and points calculated',
-      result: result.rows[0],
-      predictionsUpdated: predictions.rows.length
-    });
+    res.json({ message: 'Result saved and points calculated', result: result.rows[0], predictionsUpdated: predictions.rows.length });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Create result error:', error);
@@ -227,16 +212,12 @@ router.delete('/:matchId', authenticateAdmin, async (req, res) => {
   const client = await pool.connect();
   try {
     const matchId = Number(req.params.matchId);
-
-    if (!Number.isInteger(matchId)) {
-      return res.status(400).json({ error: 'Valid match id required' });
-    }
+    if (!Number.isInteger(matchId)) return res.status(400).json({ error: 'Valid match id required' });
 
     await client.query('BEGIN');
     await ensureResultExtraColumns(client);
 
     const deletedResult = await client.query('DELETE FROM results WHERE match_id = $1 RETURNING *', [matchId]);
-
     await client.query('DELETE FROM user_scores WHERE match_id = $1', [matchId]);
     await client.query('UPDATE matches SET status = $1 WHERE id = $2', ['scheduled', matchId]);
     await propagateKnockoutTeams(client);
@@ -244,11 +225,7 @@ router.delete('/:matchId', authenticateAdmin, async (req, res) => {
 
     await client.query('COMMIT');
     refreshStatsOverviewCache();
-
-    res.json({
-      message: 'Result deleted and points cleared',
-      deleted: deletedResult.rows.length > 0
-    });
+    res.json({ message: 'Result deleted and points cleared', deleted: deletedResult.rows.length > 0 });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Delete result error:', error);
@@ -258,56 +235,160 @@ router.delete('/:matchId', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Leaderboard
-router.get('/leaderboard', authenticateToken, async (req, res) => {
+// Current user's stats
+router.get('/user/stats', authenticateToken, async (req, res) => {
   try {
-    await ensureLeaderboardUserColumns(pool);
-    const [scoresResult, bonusScoresResult, specialScoresResult, usersResult] = await Promise.all([
-      pool.query(`
-        SELECT
-          u.id,
-          u.username,
-          COALESCE(SUM(us.points), 0) as total_points,
-          COUNT(us.match_id) as predictions_count,
-          COUNT(CASE WHEN us.points = 3 THEN 1 END) as exact_scores,
-          COUNT(CASE WHEN us.points = 2 THEN 1 END) as goal_differences,
-          COUNT(CASE WHEN us.points = 1 THEN 1 END) as tendencies
-        FROM users u
-        LEFT JOIN user_scores us ON u.id = us.user_id
-        GROUP BY u.id, u.username
-      `),
-      getAllBonusScores(pool),
-      getAllSpecialPredictionScores(pool),
-      pool.query('SELECT id, avatar_data, avatar_updated_at FROM users')
-    ]);
+    const userId = req.user.id;
+    const [{ scores: bonusScores }, { scores: specialScores }] = await Promise.all([getAllBonusScores(pool), getAllSpecialPredictionScores(pool)]);
+    const userBonus = bonusScores.get(Number(userId))?.points || 0;
+    const userSpecial = specialScores.get(Number(userId))?.points || 0;
 
-    const avatarByUser = new Map(usersResult.rows.map(user => [Number(user.id), user]));
-    const leaderboard = scoresResult.rows.map(row => {
-      const userId = Number(row.id);
-      const bonusScore = bonusScoresResult.scores.get(userId)?.points || 0;
-      const specialScore = specialScoresResult.scores.get(userId)?.points || 0;
-      const avatarUser = avatarByUser.get(userId);
+    const statsResult = await pool.query(
+      `SELECT
+        COALESCE(SUM(us.points), 0)::int AS match_points,
+        COUNT(us.match_id)::int AS matches_played,
+        COALESCE(ROUND(AVG(us.points)::numeric, 2), 0)::float AS avg_points_per_match,
+        COUNT(*) FILTER (WHERE us.points = 3)::int AS exact_scores,
+        COUNT(*) FILTER (WHERE us.points = 2)::int AS correct_differences,
+        COUNT(*) FILTER (WHERE us.points = 1)::int AS correct_winners,
+        COUNT(*) FILTER (WHERE us.points = 0)::int AS wrong_predictions
+      FROM user_scores us
+      WHERE us.user_id = $1`,
+      [userId]
+    );
 
+    const rankRows = await pool.query(
+      `SELECT u.id, COALESCE(SUM(us.points), 0)::int AS match_points
+       FROM users u
+       LEFT JOIN user_scores us ON u.id = us.user_id
+       GROUP BY u.id`
+    );
+
+    const ranked = rankRows.rows
+      .map(row => ({
+        id: Number(row.id),
+        total_points: Number(row.match_points || 0) + (bonusScores.get(Number(row.id))?.points || 0) + (specialScores.get(Number(row.id))?.points || 0)
+      }))
+      .sort((a, b) => b.total_points - a.total_points || a.id - b.id);
+
+    const rank = ranked.findIndex(row => row.id === Number(userId)) + 1;
+    const baseStats = statsResult.rows[0];
+    const matchPoints = Number(baseStats.match_points || 0);
+
+    res.json({ ...baseStats, bonus_points: userBonus, special_points: userSpecial, total_points: matchPoints + userBonus + userSpecial, rank: rank || null });
+  } catch (error) {
+    console.error('Get user stats error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get leaderboard/rankings
+router.get('/leaderboard', async (req, res) => {
+  try {
+    await ensureLeaderboardUserColumns();
+    const [{ scores: bonusScores }, { scores: specialScores }] = await Promise.all([getAllBonusScores(pool), getAllSpecialPredictionScores(pool)]);
+
+    const result = await pool.query(`
+      SELECT
+        u.id,
+        u.username,
+        u.avatar_data,
+        u.avatar_updated_at,
+        COALESCE(SUM(us.points), 0)::int as match_points,
+        COUNT(us.match_id)::int as matches_predicted
+      FROM users u
+      LEFT JOIN user_scores us ON u.id = us.user_id
+      GROUP BY u.id, u.username, u.avatar_data, u.avatar_updated_at
+    `);
+
+    const latestMatchResult = await pool.query(`
+      SELECT r.match_id
+      FROM results r
+      JOIN matches m ON m.id = r.match_id
+      ORDER BY m.start_time DESC NULLS LAST, r.match_id DESC
+      LIMIT 1
+    `);
+
+    const latestMatchId = latestMatchResult.rows[0]?.match_id ? Number(latestMatchResult.rows[0].match_id) : null;
+    let latestScoreByUser = new Map();
+
+    if (latestMatchId) {
+      const latestScores = await pool.query('SELECT user_id, points FROM user_scores WHERE match_id = $1', [latestMatchId]);
+      latestScoreByUser = new Map(latestScores.rows.map(row => [Number(row.user_id), Number(row.points || 0)]));
+    }
+
+    const rows = result.rows.map(row => {
+      const id = Number(row.id);
+      const matchPoints = Number(row.match_points || 0);
+      const bonusPoints = bonusScores.get(id)?.points || 0;
+      const specialPoints = specialScores.get(id)?.points || 0;
       return {
-        id: userId,
+        id,
         username: row.username,
-        total_points: Number(row.total_points) + bonusScore + specialScore,
-        match_points: Number(row.total_points),
-        bonus_points: bonusScore,
-        special_points: specialScore,
-        predictions_count: Number(row.predictions_count),
-        exact_scores: Number(row.exact_scores),
-        goal_differences: Number(row.goal_differences),
-        tendencies: Number(row.tendencies),
-        avatar_url: buildAvatarUrl(avatarUser)
+        avatar_url: buildAvatarUrl(row),
+        match_points: matchPoints,
+        bonus_points: bonusPoints,
+        special_points: specialPoints,
+        total_points: matchPoints + bonusPoints + specialPoints,
+        previous_total_points: latestMatchId ? matchPoints - (latestScoreByUser.get(id) || 0) + bonusPoints + specialPoints : matchPoints + bonusPoints + specialPoints,
+        matches_predicted: Number(row.matches_predicted || 0)
       };
     });
 
-    leaderboard.sort((a, b) => b.total_points - a.total_points || a.username.localeCompare(b.username, 'fr'));
+    const rankedRows = [...rows].sort((a, b) => b.total_points - a.total_points || a.username.localeCompare(b.username, 'fr')).map((row, index) => ({ ...row, rank: index + 1 }));
+    const previousRanks = new Map([...rows].sort((a, b) => b.previous_total_points - a.previous_total_points || a.username.localeCompare(b.username, 'fr')).map((row, index) => [row.id, index + 1]));
 
-    res.json(leaderboard.map((row, index) => ({ ...row, rank: index + 1 })));
+    res.json(rankedRows.map(row => {
+      const previousRank = previousRanks.get(row.id) || row.rank;
+      const trend = previousRank - row.rank;
+      return { ...row, previous_rank: previousRank, trend, latest_match_id: latestMatchId };
+    }));
   } catch (error) {
     console.error('Get leaderboard error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.get('/leaderboard/progression', async (req, res) => {
+  try {
+    await ensureLeaderboardUserColumns();
+
+    const usersResult = await pool.query(`SELECT id, username, avatar_data, avatar_updated_at FROM users ORDER BY username ASC`);
+    const matchesResult = await pool.query(`
+      SELECT m.id, m.start_time
+      FROM matches m
+      JOIN results r ON r.match_id = m.id
+      ORDER BY m.start_time ASC NULLS LAST, m.id ASC
+    `);
+    const scoresResult = await pool.query(`
+      SELECT us.user_id, us.match_id, us.points
+      FROM user_scores us
+      JOIN results r ON r.match_id = us.match_id
+    `);
+
+    const pointsByUserAndMatch = new Map();
+    scoresResult.rows.forEach(row => {
+      pointsByUserAndMatch.set(`${Number(row.user_id)}:${Number(row.match_id)}`, Number(row.points || 0));
+    });
+
+    const orderedMatches = matchesResult.rows.map((match, index) => ({ match_number: index + 1, match_id: Number(match.id), start_time: match.start_time }));
+
+    const users = usersResult.rows.map(user => {
+      let cumulative = 0;
+      const id = Number(user.id);
+      const series = [{ match_number: 0, match_id: null, points: 0 }];
+
+      orderedMatches.forEach(match => {
+        cumulative += pointsByUserAndMatch.get(`${id}:${match.match_id}`) || 0;
+        series.push({ match_number: match.match_number, match_id: match.match_id, points: cumulative });
+      });
+
+      return { id, username: user.username, avatar_url: buildAvatarUrl(user), total_match_points: cumulative, series };
+    });
+
+    res.json({ matches: [{ match_number: 0, match_id: null, start_time: null }, ...orderedMatches], users });
+  } catch (error) {
+    console.error('Get leaderboard progression error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
