@@ -11,7 +11,7 @@ const EMPTY_BONUS = {
   semifinalists: ['', '', '', '']
 };
 
-function BonusPredictionsPanel({ matches, currentUserId }) {
+function BonusPredictionsPanel({ matches, currentUserId, collapsible = false, defaultCollapsed = false }) {
   const [bonus, setBonus] = useState(EMPTY_BONUS);
   const [locked, setLocked] = useState(false);
   const [globalLocked, setGlobalLocked] = useState(false);
@@ -20,6 +20,7 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
   const [scoring, setScoring] = useState(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('idle');
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   const groupTeams = useMemo(() => {
     const map = {};
@@ -75,10 +76,7 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
   }, []);
 
   const updateGroupWinner = (group, value) => {
-    setBonus(prev => ({
-      ...prev,
-      group_winners: { ...prev.group_winners, [group]: value }
-    }));
+    setBonus(prev => ({ ...prev, group_winners: { ...prev.group_winners, [group]: value } }));
     setStatus('dirty');
   };
 
@@ -121,10 +119,7 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
     }
   };
 
-  const renderTeamOption = (team) => (
-    <option key={team || 'empty'} value={team}>{team || '— choisir —'}</option>
-  );
-
+  const renderTeamOption = (team) => <option key={team || 'empty'} value={team}>{team || '— choisir —'}</option>;
   const renderSelectedFlag = (team) => {
     const flag = team ? getFlag(team) : null;
     return flag ? <img src={flag} alt={team} /> : <span>⚽</span>;
@@ -134,143 +129,89 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
   const completedSemis = bonus.semifinalists.filter(Boolean).length;
   const totalCompleted = completedGroupWinners + (bonus.champion ? 1 : 0) + (bonus.runner_up ? 1 : 0) + completedSemis;
 
-  if (loading) {
-    return <section className="bonus-panel bonus-panel-loading">Chargement des pronostics bonus...</section>;
-  }
+  if (loading) return <section className="bonus-panel bonus-panel-loading">Chargement des pronostics bonus...</section>;
 
   return (
-    <section className={`bonus-panel ${locked ? 'bonus-panel-locked' : ''} ${adminUnlocked ? 'bonus-panel-admin-unlocked' : ''}`}>
+    <section className={`bonus-panel ${locked ? 'bonus-panel-locked' : ''} ${adminUnlocked ? 'bonus-panel-admin-unlocked' : ''} ${collapsed ? 'bonus-panel-collapsed' : ''}`}>
       <div className="bonus-panel-header">
         <div>
           <span className="bonus-eyebrow">🌟 Bonus avant compétition</span>
           <h2>Pronostics bonus</h2>
-          <p>
-            Une seule page pour tes paris longue durée. Les groupes se jouent à 5 points chacun,
-            puis le tableau final peut rapporter gros.
-          </p>
+          <p>Une seule page pour tes paris longue durée. Les groupes se jouent à 5 points chacun, puis le tableau final peut rapporter gros.</p>
           {deadline && <small>Verrouillage au coup d’envoi du premier match : {deadline.substring(8, 10)}/{deadline.substring(5, 7)} à {deadline.substring(11, 16)}</small>}
         </div>
 
         <div className="bonus-actions-card">
-          <div className="bonus-score-card">
-            <span>Score bonus actuel</span>
-            <strong>{scoring?.points || 0}</strong>
-            <em>points</em>
+          <div className="bonus-score-card"><span>Score bonus actuel</span><strong>{scoring?.points || 0}</strong><em>points</em></div>
+          {collapsible && <button type="button" className="collapse-toggle" onClick={() => setCollapsed(prev => !prev)}>{collapsed ? 'Déplier' : 'Réduire'}</button>}
+          {!collapsed && <button type="button" onClick={saveBonus} disabled={locked || status === 'saving'}>{locked ? 'Bonus verrouillés' : status === 'saving' ? 'Sauvegarde...' : adminUnlocked ? 'Sauvegarder la correction' : 'Sauvegarder'}</button>}
+          {!collapsed && status === 'saved' && <span className="bonus-status saved">✅ Enregistré</span>}
+          {!collapsed && status === 'dirty' && <span className="bonus-status dirty">✍️ Modifications non sauvegardées</span>}
+          {!collapsed && status && !['idle', 'dirty', 'saving', 'saved'].includes(status) && <span className="bonus-status error">⚠️ Erreur</span>}
+        </div>
+      </div>
+
+      {!collapsed && (
+        <>
+          <div className="bonus-progress-row">
+            <div><strong>{completedGroupWinners}/12</strong><span>vainqueurs de groupes</span></div>
+            <div><strong>{completedSemis}/4</strong><span>demi-finalistes</span></div>
+            <div><strong>{totalCompleted}/18</strong><span>bonus remplis</span></div>
           </div>
-          <button type="button" onClick={saveBonus} disabled={locked || status === 'saving'}>
-            {locked ? 'Bonus verrouillés' : status === 'saving' ? 'Sauvegarde...' : adminUnlocked ? 'Sauvegarder la correction' : 'Sauvegarder'}
-          </button>
-          {status === 'saved' && <span className="bonus-status saved">✅ Enregistré</span>}
-          {status === 'dirty' && <span className="bonus-status dirty">✍️ Modifications non sauvegardées</span>}
-          {status && !['idle', 'dirty', 'saving', 'saved'].includes(status) && <span className="bonus-status error">⚠️ Erreur</span>}
-        </div>
-      </div>
 
-      <div className="bonus-progress-row">
-        <div><strong>{completedGroupWinners}/12</strong><span>vainqueurs de groupes</span></div>
-        <div><strong>{completedSemis}/4</strong><span>demi-finalistes</span></div>
-        <div><strong>{totalCompleted}/18</strong><span>bonus remplis</span></div>
-      </div>
+          {locked && <div className="bonus-locked-banner">🔒 Les pronostics bonus sont verrouillés car la compétition a commencé. Tu peux maintenant consulter les pronos du groupe par catégorie.</div>}
+          {globalLocked && adminUnlocked && <div className="bonus-admin-unlocked-banner">🔓 Un admin a temporairement réouvert tes pronostics bonus long terme. Pense à sauvegarder tes corrections.</div>}
 
-      {locked && (
-        <div className="bonus-locked-banner">
-          🔒 Les pronostics bonus sont verrouillés car la compétition a commencé. Tu peux maintenant consulter les pronos du groupe par catégorie.
-        </div>
+          <div className="bonus-grid">
+            <div className="bonus-card bonus-groups-card">
+              <div className="bonus-card-title has-public-table">
+                <div><span>12 × 5 pts</span><h3>Vainqueurs de groupes</h3></div>
+                <strong>{completedGroupWinners}/12</strong>
+                <PublicBonusPredictionsTable type="groups" locked={globalLocked || locked} currentUserId={currentUserId} />
+              </div>
+              <div className="bonus-group-grid">
+                {GROUP_CODES.map(group => {
+                  const selected = bonus.group_winners?.[group] || '';
+                  return (
+                    <div key={group} className="group-winner-box">
+                      <label className="group-winner-row">
+                        <span className="group-badge">{group}</span>
+                        <span className="group-flag">{renderSelectedFlag(selected)}</span>
+                        <select disabled={locked} value={selected} onChange={(event) => updateGroupWinner(group, event.target.value)}>
+                          {renderTeamOption('')}
+                          {(groupTeams[group] || []).map(renderTeamOption)}
+                        </select>
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bonus-card bonus-final-card">
+              <div className="bonus-card-title has-public-table">
+                <div><span>Tableau final</span><h3>Grands paris</h3></div>
+                <strong>45 pts</strong>
+                <PublicBonusPredictionsTable type="final" locked={globalLocked || locked} currentUserId={currentUserId} />
+              </div>
+              <div className="final-picks-grid">
+                <div className="final-pick-box"><label className="final-pick-row"><span className="pick-points">15</span><span className="bonus-flag">{renderSelectedFlag(bonus.champion)}</span><div><span className="field-label">Champion du monde</span><select disabled={locked} value={bonus.champion} onChange={(event) => updateField('champion', event.target.value)}>{renderTeamOption('')}{allTeams.map(renderTeamOption)}</select></div></label></div>
+                <div className="final-pick-box"><label className="final-pick-row"><span className="pick-points">10</span><span className="bonus-flag">{renderSelectedFlag(bonus.runner_up)}</span><div><span className="field-label">Finaliste perdant</span><select disabled={locked} value={bonus.runner_up} onChange={(event) => updateField('runner_up', event.target.value)}>{renderTeamOption('')}{allTeams.map(renderTeamOption)}</select></div></label></div>
+              </div>
+              <div className="semifinalists-box"><div className="semifinalists-title"><span>4 × 5 pts</span><strong>Demi-finalistes</strong></div><div className="semifinalists-grid">{bonus.semifinalists.map((team, index) => <label className="semifinalist-row" key={`semi-${index}`}><span className="pick-points">5</span><span className="bonus-flag">{renderSelectedFlag(team)}</span><select disabled={locked} value={team} onChange={(event) => updateSemifinalist(index, event.target.value)}>{renderTeamOption('')}{allTeams.map(renderTeamOption)}</select></label>)}</div></div>
+            </div>
+          </div>
+        </>
       )}
-
-      {globalLocked && adminUnlocked && (
-        <div className="bonus-admin-unlocked-banner">
-          🔓 Un admin a temporairement réouvert tes pronostics bonus long terme. Pense à sauvegarder tes corrections.
-        </div>
-      )}
-
-      <div className="bonus-grid">
-        <div className="bonus-card bonus-groups-card">
-          <div className="bonus-card-title has-public-table">
-            <div><span>12 × 5 pts</span><h3>Vainqueurs de groupes</h3></div>
-            <strong>{completedGroupWinners}/12</strong>
-            <PublicBonusPredictionsTable type="groups" locked={globalLocked || locked} currentUserId={currentUserId} />
-          </div>
-          <div className="bonus-group-grid">
-            {GROUP_CODES.map(group => {
-              const selected = bonus.group_winners?.[group] || '';
-              return (
-                <div key={group} className="group-winner-box">
-                  <label className="group-winner-row">
-                    <span className="group-badge">{group}</span>
-                    <span className="group-flag">{renderSelectedFlag(selected)}</span>
-                    <select disabled={locked} value={selected} onChange={(event) => updateGroupWinner(group, event.target.value)}>
-                      {renderTeamOption('')}
-                      {(groupTeams[group] || []).map(renderTeamOption)}
-                    </select>
-                  </label>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="bonus-card bonus-final-card">
-          <div className="bonus-card-title has-public-table">
-            <div><span>Tableau final</span><h3>Grands paris</h3></div>
-            <strong>45 pts</strong>
-            <PublicBonusPredictionsTable type="final" locked={globalLocked || locked} currentUserId={currentUserId} />
-          </div>
-
-          <div className="final-picks-grid">
-            <div className="final-pick-box">
-              <label className="final-pick-row">
-                <span className="pick-points">15</span>
-                <span className="bonus-flag">{renderSelectedFlag(bonus.champion)}</span>
-                <div>
-                  <span className="field-label">Champion du monde</span>
-                  <select disabled={locked} value={bonus.champion} onChange={(event) => updateField('champion', event.target.value)}>
-                    {renderTeamOption('')}
-                    {allTeams.map(renderTeamOption)}
-                  </select>
-                </div>
-              </label>
-            </div>
-
-            <div className="final-pick-box">
-              <label className="final-pick-row">
-                <span className="pick-points">10</span>
-                <span className="bonus-flag">{renderSelectedFlag(bonus.runner_up)}</span>
-                <div>
-                  <span className="field-label">Finaliste perdant</span>
-                  <select disabled={locked} value={bonus.runner_up} onChange={(event) => updateField('runner_up', event.target.value)}>
-                    {renderTeamOption('')}
-                    {allTeams.map(renderTeamOption)}
-                  </select>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div className="semifinalists-box">
-            <div className="semifinalists-title"><span>4 × 5 pts</span><strong>Demi-finalistes</strong></div>
-            <div className="semifinalists-grid">
-              {bonus.semifinalists.map((team, index) => (
-                <label className="semifinalist-row" key={`semi-${index}`}>
-                  <span className="pick-points">5</span>
-                  <span className="bonus-flag">{renderSelectedFlag(team)}</span>
-                  <select disabled={locked} value={team} onChange={(event) => updateSemifinalist(index, event.target.value)}>
-                    {renderTeamOption('')}
-                    {allTeams.map(renderTeamOption)}
-                  </select>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
 
       <style>{`
         .bonus-panel { background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 18px 55px rgba(0,0,0,.2); }
+        .bonus-panel-collapsed { padding-bottom: 12px; }
         .bonus-panel-loading { color: #475569; font-weight: 900; }
         .bonus-panel-locked { opacity: .94; }
         .bonus-panel-admin-unlocked { box-shadow: 0 18px 55px rgba(0,0,0,.2), inset 0 0 0 3px rgba(15,118,110,.22); }
         .bonus-panel-header { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 18px; align-items: stretch; margin-bottom: 14px; }
+        .bonus-panel-collapsed .bonus-panel-header { margin-bottom: 0; }
         .bonus-eyebrow { display: inline-flex; padding: 5px 10px; border-radius: 999px; background: #fff7ed; color: #c2410c; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
         .bonus-panel h2 { margin: 0 0 6px; color: #0f172a; font-size: 26px; letter-spacing: -.03em; }
         .bonus-panel h3 { margin: 2px 0 0; color: #0f172a; font-size: 18px; }
@@ -281,11 +222,10 @@ function BonusPredictionsPanel({ matches, currentUserId }) {
         .bonus-score-card span, .bonus-score-card em { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; opacity: .82; font-style: normal; }
         .bonus-score-card strong { font-size: 36px; line-height: 1; margin: 3px 0; color: #fff7ed; }
         .bonus-actions-card button { border: 0; border-radius: 999px; padding: 10px 13px; background: #0f172a; color: white; font-size: 12px; font-weight: 950; cursor: pointer; box-shadow: 0 9px 18px rgba(15,23,42,.18); }
+        .bonus-actions-card button.collapse-toggle { background: #e2e8f0; color: #334155; box-shadow: none; }
         .bonus-actions-card button:disabled { cursor: not-allowed; opacity: .6; }
         .bonus-status { font-size: 11px; font-weight: 950; text-align: center; }
-        .bonus-status.saved { color: #047857; }
-        .bonus-status.dirty { color: #92400e; }
-        .bonus-status.error { color: #b91c1c; }
+        .bonus-status.saved { color: #047857; } .bonus-status.dirty { color: #92400e; } .bonus-status.error { color: #b91c1c; }
         .bonus-progress-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
         .bonus-progress-row div { border-radius: 14px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; }
         .bonus-progress-row strong { display: block; color: #d97706; font-size: 18px; line-height: 1; }
