@@ -38,7 +38,7 @@ function BonusPredictions() {
             <p>
               Tes grands paris avant le coup d’envoi : vainqueurs de groupes,
               demi-finalistes, finaliste perdant et champion du monde.
-              Les spéciaux de première journée rejoignent automatiquement cette page après leur verrouillage.
+              Les spéciaux de première et deuxième journée rejoignent automatiquement cette page après leur verrouillage.
             </p>
           </div>
 
@@ -51,7 +51,8 @@ function BonusPredictions() {
           </div>
         </section>
 
-        <SpecialPredictionsPanel placement="bonus" currentUserId={currentUser?.id} />
+        <SpecialPredictionsPanel placement="bonus" matchday={1} currentUserId={currentUser?.id} />
+        <SpecialPredictionsPanel placement="bonus" matchday={2} currentUserId={currentUser?.id} />
         <BonusPredictionsPanel matches={matches} currentUserId={currentUser?.id} />
       </div>
       <style>{styles}</style>
@@ -158,20 +159,14 @@ const styles = `
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: .05em;
-    white-space: nowrap;
   }
 
-  @media (max-width: 920px) {
+  @media (max-width: 760px) {
+    .bonus-page { padding: 18px 10px 36px; }
     .bonus-hero { flex-direction: column; }
     .bonus-hero-summary { min-width: 0; }
-  }
-
-  @media (max-width: 560px) {
-    .bonus-page { padding: 18px 10px 36px; }
-    .bonus-summary-card { padding: 10px 8px; }
+    .bonus-summary-card { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .bonus-summary-card div { padding: 2px 6px; }
-    .bonus-summary-card strong { font-size: 22px; }
-    .bonus-summary-card span { font-size: 9px; letter-spacing: .03em; }
   }
 `;
 
