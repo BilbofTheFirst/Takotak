@@ -19,6 +19,7 @@ const router = express.Router();
 const TEMPORARY_PASSWORD = 'takotak';
 const FIRST_MATCHDAY = 1;
 const SECOND_MATCHDAY = 2;
+const REMINDER_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== '';
 
@@ -28,6 +29,14 @@ const parseJsonValue = (value, fallback) => {
     try { return JSON.parse(value); } catch (_) { return fallback; }
   }
   return value;
+};
+
+const isDeadlineWithinReminderWindow = (deadline, locked = false) => {
+  if (!deadline || locked) return false;
+  const deadlineTime = new Date(`${deadline}+02:00`).getTime();
+  if (Number.isNaN(deadlineTime)) return false;
+  const gap = deadlineTime - Date.now();
+  return gap > 0 && gap <= REMINDER_WINDOW_MS;
 };
 
 const buildPublicUser = (user) => ({
@@ -81,7 +90,7 @@ const buildBonusProgress = (row, globalLocked = false, adminUnlocked = false) =>
   };
 };
 
-const buildSpecialProgress = (definitions, rows = [], locked = false) => {
+const buildSpecialProgress = (definitions, rows = [], locked = false, canRemind = true) => {
   const valueByCode = new Map(rows.map(row => [row.code, row.predicted_value]));
   const missing = [];
   let completed = 0;
@@ -98,7 +107,7 @@ const buildSpecialProgress = (definitions, rows = [], locked = false) => {
     missing_count: missing.length,
     complete: missing.length === 0,
     locked,
-    urgent: !locked && missing.length > 0
+    urgent: Boolean(canRemind && !locked && missing.length > 0)
   };
 };
 
@@ -168,6 +177,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
     const bonusLocked = Boolean(bonusDeadline.locked);
     const specialLocked = Boolean(firstMatchdayStatus.locked);
     const special2Locked = Boolean(secondMatchdayStatus.locked);
+    const special2ReminderActive = isDeadlineWithinReminderWindow(secondMatchdayStatus.deadline, special2Locked);
     const firstCodeSet = new Set(firstDefinitions.map(definition => definition.code));
     const secondCodeSet = new Set(secondDefinitions.map(definition => definition.code));
     const bonusByUser = new Map(bonusResult.rows.map(row => [Number(row.user_id), row]));
@@ -202,7 +212,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
 
       const bonus = buildBonusProgress(bonusByUser.get(user.id), bonusLocked, bonusUnlocks.has(Number(user.id)));
       const special = buildSpecialProgress(firstDefinitions, specialRowsByUser.get(user.id), specialLocked);
-      const special2 = buildSpecialProgress(secondDefinitions, special2RowsByUser.get(user.id), special2Locked);
+      const special2 = buildSpecialProgress(secondDefinitions, special2RowsByUser.get(user.id), special2Locked, special2ReminderActive);
       const urgent_missing_count = missingMatches.length
         + (bonus.urgent ? bonus.missing.length : 0)
         + (special.urgent ? special.missing.length : 0)
@@ -246,6 +256,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       users_complete_special2: special2CompleteUsers.length,
       users_missing_special2: special2IncompleteUsers.length,
       users_missing_special2_urgent: special2IncompleteUsers.filter(user => user.special2.urgent).length,
+      special2_reminder_active: special2ReminderActive,
       bonus_deadline: bonusDeadline.first_match_time,
       bonus_locked: bonusLocked,
       first_matchday_deadline: firstMatchdayStatus.deadline,
