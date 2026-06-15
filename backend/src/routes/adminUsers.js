@@ -10,13 +10,15 @@ const {
   setBonusUnlockForUser
 } = require('../utils/bonusScoring');
 const {
-  SPECIAL_PREDICTION_DEFINITIONS,
   ensureSpecialPredictionsTable,
-  getFirstMatchdayStatus
+  getSpecialMatchdayDefinitions,
+  getSpecialMatchdayStatus
 } = require('../utils/specialPredictions');
 
 const router = express.Router();
 const TEMPORARY_PASSWORD = 'takotak';
+const FIRST_MATCHDAY = 1;
+const SECOND_MATCHDAY = 2;
 
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== '';
 
@@ -46,11 +48,8 @@ const buildBonusProgress = (row, globalLocked = false, adminUnlocked = false) =>
   let completed = 0;
 
   GROUP_CODES.forEach(group => {
-    if (hasValue(groupWinners[group])) {
-      completed += 1;
-    } else {
-      missing.push(`Vainqueur groupe ${group}`);
-    }
+    if (hasValue(groupWinners[group])) completed += 1;
+    else missing.push(`Vainqueur groupe ${group}`);
   });
 
   if (hasValue(row?.champion)) completed += 1;
@@ -82,22 +81,19 @@ const buildBonusProgress = (row, globalLocked = false, adminUnlocked = false) =>
   };
 };
 
-const buildSpecialProgress = (rows = [], locked = false) => {
+const buildSpecialProgress = (definitions, rows = [], locked = false) => {
   const valueByCode = new Map(rows.map(row => [row.code, row.predicted_value]));
   const missing = [];
   let completed = 0;
 
-  SPECIAL_PREDICTION_DEFINITIONS.forEach(definition => {
-    if (hasValue(valueByCode.get(definition.code))) {
-      completed += 1;
-    } else {
-      missing.push(definition.label);
-    }
+  definitions.forEach(definition => {
+    if (hasValue(valueByCode.get(definition.code))) completed += 1;
+    else missing.push(definition.label);
   });
 
   return {
     completed,
-    total: SPECIAL_PREDICTION_DEFINITIONS.length,
+    total: definitions.length,
     missing,
     missing_count: missing.length,
     complete: missing.length === 0,
@@ -113,7 +109,11 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       ensureSpecialPredictionsTable(pool)
     ]);
 
-    const [usersResult, nextMatchesResult, bonusResult, specialResult, bonusDeadline, bonusUnlocks, firstMatchdayStatus] = await Promise.all([
+    const firstDefinitions = getSpecialMatchdayDefinitions(FIRST_MATCHDAY);
+    const secondDefinitions = getSpecialMatchdayDefinitions(SECOND_MATCHDAY);
+    const allSpecialCodes = [...firstDefinitions, ...secondDefinitions].map(definition => definition.code);
+
+    const [usersResult, nextMatchesResult, bonusResult, specialResult, bonusDeadline, bonusUnlocks, firstMatchdayStatus, secondMatchdayStatus] = await Promise.all([
       pool.query(`
         SELECT id, username, email, is_admin, created_at
         FROM users
@@ -142,10 +142,11 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
         ORDER BY m.start_time ASC, m.id ASC
       `),
       pool.query('SELECT * FROM bonus_predictions'),
-      pool.query('SELECT * FROM special_predictions WHERE code = ANY($1::varchar[])', [SPECIAL_PREDICTION_DEFINITIONS.map(definition => definition.code)]),
+      pool.query('SELECT * FROM special_predictions WHERE code = ANY($1::varchar[])', [allSpecialCodes]),
       getBonusDeadline(pool),
       getBonusUnlocks(pool),
-      getFirstMatchdayStatus(pool)
+      getSpecialMatchdayStatus(pool, FIRST_MATCHDAY),
+      getSpecialMatchdayStatus(pool, SECOND_MATCHDAY)
     ]);
 
     const users = usersResult.rows.map(buildPublicUser);
@@ -161,20 +162,24 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
 
     const nextMatchIds = nextMatches.map(match => match.id);
     const nextPredictionsResult = nextMatchIds.length > 0
-      ? await pool.query(
-        'SELECT user_id, match_id FROM predictions WHERE match_id = ANY($1::int[])',
-        [nextMatchIds]
-      )
+      ? await pool.query('SELECT user_id, match_id FROM predictions WHERE match_id = ANY($1::int[])', [nextMatchIds])
       : { rows: [] };
 
     const bonusLocked = Boolean(bonusDeadline.locked);
     const specialLocked = Boolean(firstMatchdayStatus.locked);
+    const special2Locked = Boolean(secondMatchdayStatus.locked);
+    const firstCodeSet = new Set(firstDefinitions.map(definition => definition.code));
+    const secondCodeSet = new Set(secondDefinitions.map(definition => definition.code));
     const bonusByUser = new Map(bonusResult.rows.map(row => [Number(row.user_id), row]));
     const specialRowsByUser = new Map();
+    const special2RowsByUser = new Map();
+
     specialResult.rows.forEach(row => {
       const userId = Number(row.user_id);
-      if (!specialRowsByUser.has(userId)) specialRowsByUser.set(userId, []);
-      specialRowsByUser.get(userId).push(row);
+      const targetMap = secondCodeSet.has(row.code) ? special2RowsByUser : firstCodeSet.has(row.code) ? specialRowsByUser : null;
+      if (!targetMap) return;
+      if (!targetMap.has(userId)) targetMap.set(userId, []);
+      targetMap.get(userId).push(row);
     });
 
     const nextPredictionsByUser = new Map();
@@ -196,10 +201,12 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
         }));
 
       const bonus = buildBonusProgress(bonusByUser.get(user.id), bonusLocked, bonusUnlocks.has(Number(user.id)));
-      const special = buildSpecialProgress(specialRowsByUser.get(user.id), specialLocked);
+      const special = buildSpecialProgress(firstDefinitions, specialRowsByUser.get(user.id), specialLocked);
+      const special2 = buildSpecialProgress(secondDefinitions, special2RowsByUser.get(user.id), special2Locked);
       const urgent_missing_count = missingMatches.length
         + (bonus.urgent ? bonus.missing.length : 0)
-        + (special.urgent ? special.missing.length : 0);
+        + (special.urgent ? special.missing.length : 0)
+        + (special2.urgent ? special2.missing.length : 0);
 
       return {
         ...user,
@@ -211,6 +218,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
         },
         bonus,
         special,
+        special2,
         urgent_missing_count,
         should_remind: urgent_missing_count > 0
       };
@@ -218,6 +226,8 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
 
     const bonusIncompleteUsers = userMonitoring.filter(user => !user.bonus.complete);
     const specialIncompleteUsers = userMonitoring.filter(user => !user.special.complete);
+    const special2IncompleteUsers = userMonitoring.filter(user => !user.special2.complete);
+    const special2CompleteUsers = userMonitoring.filter(user => user.special2.complete);
 
     const summary = {
       users_count: users.length,
@@ -233,10 +243,15 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       users_complete_special: userMonitoring.filter(user => user.special.complete).length,
       users_missing_special: specialIncompleteUsers.length,
       users_missing_special_urgent: specialIncompleteUsers.filter(user => user.special.urgent).length,
+      users_complete_special2: special2CompleteUsers.length,
+      users_missing_special2: special2IncompleteUsers.length,
+      users_missing_special2_urgent: special2IncompleteUsers.filter(user => user.special2.urgent).length,
       bonus_deadline: bonusDeadline.first_match_time,
       bonus_locked: bonusLocked,
       first_matchday_deadline: firstMatchdayStatus.deadline,
       first_matchday_locked: specialLocked,
+      second_matchday_deadline: secondMatchdayStatus.deadline,
+      second_matchday_locked: special2Locked,
       window_hours: 24,
       generated_at: new Date().toISOString()
     };
@@ -247,7 +262,9 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       users: userMonitoring,
       bonus_incomplete_users: bonusIncompleteUsers,
       bonus_unlocked_users: userMonitoring.filter(user => user.bonus.admin_unlocked),
-      special_incomplete_users: specialIncompleteUsers
+      special_incomplete_users: specialIncompleteUsers,
+      special2_complete_users: special2CompleteUsers,
+      special2_incomplete_users: special2IncompleteUsers
     });
   } catch (error) {
     console.error('Admin monitoring error:', error);
@@ -273,18 +290,10 @@ router.get('/users', authenticateAdmin, async (req, res) => {
 router.patch('/users/:userId/bonus-unlock', authenticateAdmin, async (req, res) => {
   try {
     const userId = Number(req.params.userId);
-    if (!Number.isInteger(userId) || userId <= 0) {
-      return res.status(400).json({ error: 'Invalid user id' });
-    }
+    if (!Number.isInteger(userId) || userId <= 0) return res.status(400).json({ error: 'Invalid user id' });
 
-    const existingUser = await pool.query(
-      'SELECT id, username, email, is_admin, created_at FROM users WHERE id = $1',
-      [userId]
-    );
-
-    if (existingUser.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    const existingUser = await pool.query('SELECT id, username, email, is_admin, created_at FROM users WHERE id = $1', [userId]);
+    if (existingUser.rows.length === 0) return res.status(404).json({ error: 'User not found' });
 
     const unlocked = Boolean(req.body?.unlocked);
     const bonusUnlock = await setBonusUnlockForUser(pool, userId, unlocked, req.user?.id || null);
@@ -303,18 +312,10 @@ router.patch('/users/:userId/bonus-unlock', authenticateAdmin, async (req, res) 
 router.post('/users/:userId/reset-password', authenticateAdmin, async (req, res) => {
   try {
     const userId = Number(req.params.userId);
-    if (!Number.isInteger(userId) || userId <= 0) {
-      return res.status(400).json({ error: 'Invalid user id' });
-    }
+    if (!Number.isInteger(userId) || userId <= 0) return res.status(400).json({ error: 'Invalid user id' });
 
-    const existingUser = await pool.query(
-      'SELECT id, username, email, is_admin, created_at FROM users WHERE id = $1',
-      [userId]
-    );
-
-    if (existingUser.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    const existingUser = await pool.query('SELECT id, username, email, is_admin, created_at FROM users WHERE id = $1', [userId]);
+    if (existingUser.rows.length === 0) return res.status(404).json({ error: 'User not found' });
 
     const passwordHash = await hashPassword(TEMPORARY_PASSWORD);
     const result = await pool.query(
