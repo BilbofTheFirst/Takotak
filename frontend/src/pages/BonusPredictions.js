@@ -51,9 +51,9 @@ function BonusPredictions() {
           </div>
         </section>
 
-        <SpecialPredictionsPanel placement="bonus" matchday={1} currentUserId={currentUser?.id} />
-        <SpecialPredictionsPanel placement="bonus" matchday={2} currentUserId={currentUser?.id} />
-        <BonusPredictionsPanel matches={matches} currentUserId={currentUser?.id} />
+        <SpecialPredictionsPanel placement="bonus" matchday={1} currentUserId={currentUser?.id} collapsible defaultCollapsed />
+        <SpecialPredictionsPanel placement="bonus" matchday={2} currentUserId={currentUser?.id} collapsible defaultCollapsed />
+        <BonusPredictionsPanel matches={matches} currentUserId={currentUser?.id} collapsible />
       </div>
       <style>{styles}</style>
     </div>
