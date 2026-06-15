@@ -49,38 +49,15 @@ const COLUMN_TITLES = [
 ];
 
 const BRACKET_LAYOUT = [
-  { id: 74, col: 1, row: 2 },
-  { id: 77, col: 1, row: 5 },
-  { id: 73, col: 1, row: 8 },
-  { id: 75, col: 1, row: 11 },
-  { id: 76, col: 1, row: 14 },
-  { id: 78, col: 1, row: 17 },
-  { id: 79, col: 1, row: 20 },
-  { id: 80, col: 1, row: 23 },
-  { id: 89, col: 2, row: 4 },
-  { id: 90, col: 2, row: 10 },
-  { id: 91, col: 2, row: 16 },
-  { id: 92, col: 2, row: 22 },
-  { id: 97, col: 3, row: 7 },
-  { id: 99, col: 3, row: 19 },
-  { id: 101, col: 5, row: 7 },
-  { id: 102, col: 5, row: 19 },
-  { id: 104, col: 4, row: 13 },
-  { id: 103, col: 6, row: 13 },
-  { id: 83, col: 9, row: 2 },
-  { id: 84, col: 9, row: 5 },
-  { id: 81, col: 9, row: 8 },
-  { id: 82, col: 9, row: 11 },
-  { id: 86, col: 9, row: 14 },
-  { id: 88, col: 9, row: 17 },
-  { id: 85, col: 9, row: 20 },
-  { id: 87, col: 9, row: 23 },
-  { id: 93, col: 8, row: 4 },
-  { id: 94, col: 8, row: 10 },
-  { id: 95, col: 8, row: 16 },
-  { id: 96, col: 8, row: 22 },
-  { id: 98, col: 7, row: 7 },
-  { id: 100, col: 7, row: 19 }
+  { id: 74, col: 1, row: 2 }, { id: 77, col: 1, row: 5 }, { id: 73, col: 1, row: 8 }, { id: 75, col: 1, row: 11 },
+  { id: 76, col: 1, row: 14 }, { id: 78, col: 1, row: 17 }, { id: 79, col: 1, row: 20 }, { id: 80, col: 1, row: 23 },
+  { id: 89, col: 2, row: 4 }, { id: 90, col: 2, row: 10 }, { id: 91, col: 2, row: 16 }, { id: 92, col: 2, row: 22 },
+  { id: 97, col: 3, row: 7 }, { id: 99, col: 3, row: 19 }, { id: 101, col: 5, row: 7 }, { id: 102, col: 5, row: 19 },
+  { id: 104, col: 4, row: 13 }, { id: 103, col: 6, row: 13 },
+  { id: 83, col: 9, row: 2 }, { id: 84, col: 9, row: 5 }, { id: 81, col: 9, row: 8 }, { id: 82, col: 9, row: 11 },
+  { id: 86, col: 9, row: 14 }, { id: 88, col: 9, row: 17 }, { id: 85, col: 9, row: 20 }, { id: 87, col: 9, row: 23 },
+  { id: 93, col: 8, row: 4 }, { id: 94, col: 8, row: 10 }, { id: 95, col: 8, row: 16 }, { id: 96, col: 8, row: 22 },
+  { id: 98, col: 7, row: 7 }, { id: 100, col: 7, row: 19 }
 ];
 
 const THIRD_PLACE_TOKEN_REGEX = /^3[A-L](\/[A-L])+$/;
@@ -92,49 +69,33 @@ const isBracketToken = (value) => {
 
 const getThirdPlaceTokenAllowedGroups = (token) => token.replace('3', '').split('/');
 
-function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, matchSchedule = [] }) {
+function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, matchSchedule = [], lockedRealMatchIds = new Set() }) {
   const qualifiedThirds = useMemo(() => allThirdPlaces.slice(0, 8), [allThirdPlaces]);
   const scheduleById = useMemo(() => new Map(matchSchedule.map(match => [Number(match.id), match])), [matchSchedule]);
 
   const thirdPlaceAssignments = useMemo(() => {
-    const tokens = Object.values(KNOCKOUT)
-      .flatMap(config => [config.team1, config.team2])
-      .filter(token => THIRD_PLACE_TOKEN_REGEX.test(token));
-
-    const slots = [...new Set(tokens)].map((token, index) => ({
-      token,
-      index,
-      allowedGroups: getThirdPlaceTokenAllowedGroups(token)
-    }));
-
+    const tokens = Object.values(KNOCKOUT).flatMap(config => [config.team1, config.team2]).filter(token => THIRD_PLACE_TOKEN_REGEX.test(token));
+    const slots = [...new Set(tokens)].map((token, index) => ({ token, index, allowedGroups: getThirdPlaceTokenAllowedGroups(token) }));
     const qualifiedGroups = new Set(qualifiedThirds.map(team => team.group));
     const orderedSlots = [...slots].sort((a, b) => {
       const aCandidates = a.allowedGroups.filter(group => qualifiedGroups.has(group)).length;
       const bCandidates = b.allowedGroups.filter(group => qualifiedGroups.has(group)).length;
       return aCandidates - bCandidates || a.index - b.index;
     });
-
     const assignment = {};
     const usedGroups = new Set();
 
     const solve = (slotIndex) => {
       if (slotIndex >= orderedSlots.length) return true;
-
       const slot = orderedSlots[slotIndex];
-      const candidates = qualifiedThirds.filter(team => (
-        slot.allowedGroups.includes(team.group) && !usedGroups.has(team.group)
-      ));
-
+      const candidates = qualifiedThirds.filter(team => slot.allowedGroups.includes(team.group) && !usedGroups.has(team.group));
       for (const candidate of candidates) {
         assignment[slot.token] = candidate;
         usedGroups.add(candidate.group);
-
         if (solve(slotIndex + 1)) return true;
-
         usedGroups.delete(candidate.group);
         delete assignment[slot.token];
       }
-
       return false;
     };
 
@@ -143,15 +104,12 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     const fallbackAssignment = {};
     const fallbackUsedGroups = new Set();
     slots.forEach(slot => {
-      const candidate = qualifiedThirds.find(team => (
-        slot.allowedGroups.includes(team.group) && !fallbackUsedGroups.has(team.group)
-      ));
+      const candidate = qualifiedThirds.find(team => slot.allowedGroups.includes(team.group) && !fallbackUsedGroups.has(team.group));
       if (candidate) {
         fallbackAssignment[slot.token] = candidate;
         fallbackUsedGroups.add(candidate.group);
       }
     });
-
     return fallbackAssignment;
   }, [qualifiedThirds]);
 
@@ -162,10 +120,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
       return groupsData[group]?.[rank]?.team || token;
     }
 
-    if (THIRD_PLACE_TOKEN_REGEX.test(token)) {
-      return thirdPlaceAssignments[token]?.team || token;
-    }
-
+    if (THIRD_PLACE_TOKEN_REGEX.test(token)) return thirdPlaceAssignments[token]?.team || token;
     return token;
   }, [groupsData, thirdPlaceAssignments]);
 
@@ -185,12 +140,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
   const matches = useMemo(() => {
     const map = {};
     Object.entries(KNOCKOUT).forEach(([id, config]) => {
-      map[id] = {
-        id: Number(id),
-        ...config,
-        team1Name: getPlacement(config.team1),
-        team2Name: getPlacement(config.team2)
-      };
+      map[id] = { id: Number(id), ...config, team1Name: getPlacement(config.team1), team2Name: getPlacement(config.team2) };
     });
 
     const resolveToken = (token) => {
@@ -210,19 +160,13 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
       map[id].team2Name = resolveToken(map[id].team2);
       map[id].start_time = scheduleById.get(id)?.start_time || null;
     });
-
     return map;
   }, [getPlacement, getWinner, getLoser, scheduleById]);
 
   const renderFlag = (team) => {
-    if (!team || isBracketToken(team)) {
-      return <span className="bracket-token" title={team || 'À définir'}>{team || '⚽'}</span>;
-    }
-
+    if (!team || isBracketToken(team)) return <span className="bracket-token" title={team || 'À définir'}>{team || '⚽'}</span>;
     const flag = getFlag(team);
-    return flag
-      ? <img className="bracket-flag" src={flag} alt={team} title={team} />
-      : <span className="bracket-token" title={team}>?</span>;
+    return flag ? <img className="bracket-flag" src={flag} alt={team} title={team} /> : <span className="bracket-token" title={team}>?</span>;
   };
 
   const formatDateTime = (value) => {
@@ -236,7 +180,8 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     const sim = koSimulations[match.id] || { team1_goals: 0, team2_goals: 0 };
     const winner = getWinner(match.id);
     const isDraw = Number(sim.team1_goals) === Number(sim.team2_goals);
-    const canChooseWinner = isDraw && !isBracketToken(match.team1Name) && !isBracketToken(match.team2Name);
+    const isRealLocked = lockedRealMatchIds.has(Number(match.id));
+    const canChooseWinner = !isRealLocked && isDraw && !isBracketToken(match.team1Name) && !isBracketToken(match.team2Name);
 
     const renderWinnerFlag = (side, teamName) => (
       <button
@@ -245,7 +190,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
         disabled={!canChooseWinner}
         aria-pressed={canChooseWinner ? winner === side : undefined}
         aria-label={canChooseWinner ? `Qualifie ${teamName}` : teamName || 'À définir'}
-        title={canChooseWinner ? `Cliquer pour qualifier ${teamName}` : teamName || 'À définir'}
+        title={isRealLocked ? 'Résultat réel verrouillé dans la simulation' : canChooseWinner ? `Cliquer pour qualifier ${teamName}` : teamName || 'À définir'}
         onClick={() => onScoreChange(match.id, 'winner', side)}
       >
         {renderFlag(teamName)}
@@ -253,293 +198,56 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     );
 
     return (
-      <article
-        className={`compact-bracket-match ${match.id === 103 ? 'third-place-match' : ''} ${canChooseWinner ? 'draw-needs-winner' : ''}`}
-        style={{ gridColumn: col, gridRow: `${row} / span 2` }}
-        title={`${match.round} M${match.id} — ${match.team1Name} vs ${match.team2Name}`}
-      >
-        <header>
-          <span>{match.round}</span>
-          {match.start_time && <em>{formatDateTime(match.start_time)}</em>}
-          <strong>M{match.id}</strong>
-        </header>
-
+      <article className={`compact-bracket-match ${match.id === 103 ? 'third-place-match' : ''} ${canChooseWinner ? 'draw-needs-winner' : ''} ${isRealLocked ? 'real-knockout-result' : ''}`} style={{ gridColumn: col, gridRow: `${row} / span 2` }} title={`${match.round} M${match.id} — ${match.team1Name} vs ${match.team2Name}`}>
+        <header><span>{match.round}</span>{match.start_time && <em>{formatDateTime(match.start_time)}</em>}<strong>{isRealLocked ? 'Réel' : `M${match.id}`}</strong></header>
         <div className="compact-scoreline">
           {renderWinnerFlag('team1', match.team1Name)}
-          <input
-            type="text"
-            inputMode="numeric"
-            maxLength="2"
-            value={sim.team1_goals}
-            aria-label={`Score ${match.team1Name || 'équipe 1'}`}
-            title={match.team1Name || 'Équipe 1'}
-            onFocus={selectScoreText}
-            onChange={(event) => onScoreChange(match.id, 'team1_goals', event.target.value)}
-          />
+          <input type="text" inputMode="numeric" maxLength="2" value={sim.team1_goals} disabled={isRealLocked} aria-label={`Score ${match.team1Name || 'équipe 1'}`} title={match.team1Name || 'Équipe 1'} onFocus={selectScoreText} onChange={(event) => onScoreChange(match.id, 'team1_goals', event.target.value)} />
           <span className="score-dash">-</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            maxLength="2"
-            value={sim.team2_goals}
-            aria-label={`Score ${match.team2Name || 'équipe 2'}`}
-            title={match.team2Name || 'Équipe 2'}
-            onFocus={selectScoreText}
-            onChange={(event) => onScoreChange(match.id, 'team2_goals', event.target.value)}
-          />
+          <input type="text" inputMode="numeric" maxLength="2" value={sim.team2_goals} disabled={isRealLocked} aria-label={`Score ${match.team2Name || 'équipe 2'}`} title={match.team2Name || 'Équipe 2'} onFocus={selectScoreText} onChange={(event) => onScoreChange(match.id, 'team2_goals', event.target.value)} />
           {renderWinnerFlag('team2', match.team2Name)}
         </div>
       </article>
     );
   };
 
-  const champion = getWinner(104)
-    ? (getWinner(104) === 'team1' ? matches[104].team1Name : matches[104].team2Name)
-    : 'À définir';
+  const champion = getWinner(104) ? (getWinner(104) === 'team1' ? matches[104].team1Name : matches[104].team2Name) : 'À définir';
 
   return (
     <section className="simulation-section knockout-section">
       <div className="simulation-section-title"><span>🏆 Phase éliminatoire</span><h2>Tableau final simulé</h2></div>
-      <div className="compact-bracket-scroll">
-        <div className="compact-bracket-board">
-          {COLUMN_TITLES.map(title => (
-            <div key={`${title.col}-${title.label}`} className="compact-round-title" style={{ gridColumn: title.col, gridRow: 1 }}>
-              {title.label}
-            </div>
-          ))}
-
-          {BRACKET_LAYOUT.map(item => (
-            <MatchCard key={item.id} match={matches[item.id]} col={item.col} row={item.row} />
-          ))}
-
-          <div className="compact-champion" style={{ gridColumn: 5, gridRow: '13 / span 4' }} title={champion}>
-            <span>🏆</span>
-            <strong>{champion}</strong>
-          </div>
-        </div>
-      </div>
+      <div className="compact-bracket-scroll"><div className="compact-bracket-board">
+        {COLUMN_TITLES.map(title => <div key={`${title.col}-${title.label}`} className="compact-round-title" style={{ gridColumn: title.col, gridRow: 1 }}>{title.label}</div>)}
+        {BRACKET_LAYOUT.map(item => <MatchCard key={item.id} match={matches[item.id]} col={item.col} row={item.row} />)}
+        <div className="compact-champion" style={{ gridColumn: 5, gridRow: '13 / span 4' }} title={champion}><span>🏆</span><strong>{champion}</strong></div>
+      </div></div>
 
       <style>{`
         .knockout-section { margin-top: 30px; }
-        .compact-bracket-scroll {
-          overflow-x: auto;
-          border-radius: 22px;
-          background: rgba(255,255,255,.96);
-          border: 1px solid rgba(255,255,255,.55);
-          box-shadow: 0 18px 55px rgba(0,0,0,.2);
-          padding: 14px;
-        }
-
-        .compact-bracket-board {
-          width: 100%;
-          min-width: 1320px;
-          display: grid;
-          grid-template-columns: repeat(9, minmax(132px, 1fr));
-          grid-template-rows: 32px repeat(25, 31px);
-          column-gap: clamp(8px, .9vw, 14px);
-          row-gap: 5px;
-          align-items: center;
-        }
-
-        .compact-round-title {
-          align-self: stretch;
-          display: grid;
-          place-items: center;
-          border-radius: 13px;
-          color: white;
-          background: linear-gradient(135deg, #0f766e, #d97706);
-          font-size: 11px;
-          font-weight: 950;
-          text-transform: uppercase;
-          letter-spacing: .06em;
-          white-space: nowrap;
-        }
-
-        .compact-bracket-match {
-          align-self: stretch;
-          overflow: hidden;
-          border-radius: 13px;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 8px 18px rgba(15,23,42,.08);
-        }
-
-        .compact-bracket-match.draw-needs-winner {
-          border-color: #fed7aa;
-          background: #fffaf0;
-        }
-
-        .compact-bracket-match header {
-          height: 20px;
-          display: grid;
-          grid-template-columns: auto 1fr auto;
-          gap: 3px;
-          align-items: center;
-          padding: 2px 6px;
-          border-radius: 13px 13px 0 0;
-          background: #ecfdf5;
-          color: #047857;
-          font-size: 8px;
-          font-weight: 950;
-          text-transform: uppercase;
-        }
-
-        .compact-bracket-match header em {
-          min-width: 0;
-          color: #64748b;
-          font-size: 8px;
-          font-style: normal;
-          font-weight: 850;
-          text-align: center;
-          white-space: nowrap;
-        }
-
-        .compact-bracket-match header strong {
-          padding: 1px 4px;
-          border-radius: 999px;
-          background: #fff7ed;
-          color: #c2410c;
-          font-size: 8px;
-        }
-
-        .third-place-match header {
-          background: #fff7ed;
-          color: #92400e;
-        }
-
-        .compact-scoreline {
-          min-height: 44px;
-          height: calc(100% - 20px);
-          display: grid;
-          grid-template-columns: 26px 28px 6px 28px 26px;
-          justify-content: center;
-          gap: 3px;
-          align-items: center;
-          justify-items: center;
-          padding: 7px 4px 10px;
-          box-sizing: border-box;
-          border-top: 1px solid #e2e8f0;
-          border-radius: 0 0 13px 13px;
-        }
-
-        .team-flag-slot {
-          width: 26px;
-          height: 31px;
-          display: grid;
-          place-items: center;
-          border: 0;
-          padding: 0;
-          border-radius: 10px;
-          background: transparent;
-          cursor: default;
-        }
-
-        .team-flag-slot:disabled {
-          opacity: 1;
-        }
-
-        .team-flag-slot.winner-selectable {
-          cursor: pointer;
-          background: #ffedd5;
-          box-shadow: inset 0 0 0 1px #fdba74;
-        }
-
-        .team-flag-slot.winner-selectable:hover,
-        .team-flag-slot.winner-selectable:focus-visible {
-          background: #fed7aa;
-          outline: none;
-        }
-
-        .team-flag-slot.winner {
-          background: #dcfce7;
-          box-shadow: inset 0 0 0 2px #22c55e, 0 0 0 2px rgba(34,197,94,.18);
-        }
-
-        .bracket-flag,
-        .bracket-token {
-          width: 23px;
-          height: 23px;
-          border-radius: 999px;
-          object-fit: cover;
-          display: grid;
-          place-items: center;
-          background: #e2e8f0;
-          border: 2px solid white;
-          box-shadow: 0 4px 10px rgba(15,23,42,.12);
-        }
-
-        .bracket-token {
-          width: auto;
-          min-width: 23px;
-          max-width: 34px;
-          padding: 0 3px;
-          color: #475569;
-          font-size: 8px;
-          font-weight: 950;
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .compact-scoreline input {
-          width: 28px;
-          height: 26px;
-          border: 1.5px solid #cbd5e1;
-          border-radius: 8px;
-          text-align: center;
-          color: #0f172a;
-          background: white;
-          font-size: 12px;
-          font-weight: 950;
-        }
-
-        .score-dash {
-          color: #94a3b8;
-          font-size: 10px;
-          font-weight: 950;
-          line-height: 1;
-        }
-
-        .compact-champion {
-          align-self: stretch;
-          display: grid;
-          align-content: center;
-          justify-items: center;
-          gap: 3px;
-          padding: 8px;
-          border-radius: 16px;
-          color: white;
-          background: linear-gradient(135deg, #0f766e, #d97706);
-          box-shadow: 0 12px 28px rgba(15,23,42,.18);
-          text-align: center;
-        }
-
-        .compact-champion span { font-size: 20px; }
-        .compact-champion strong {
-          max-width: 100%;
-          overflow: visible;
-          text-overflow: unset;
-          white-space: normal;
-          font-size: 12px;
-          line-height: 1.1;
-        }
-
-        @media (max-width: 1200px) {
-          .compact-bracket-board {
-            min-width: 1200px;
-            column-gap: 8px;
-            grid-template-columns: repeat(9, minmax(118px, 1fr));
-          }
-          .compact-scoreline {
-            grid-template-columns: 25px 27px 6px 27px 25px;
-            gap: 3px;
-            padding: 7px 4px 10px;
-          }
-          .bracket-flag, .bracket-token { width: 22px; height: 22px; min-width: 22px; }
-          .team-flag-slot { width: 25px; height: 30px; }
-          .compact-scoreline input { width: 27px; }
-        }
+        .compact-bracket-scroll { overflow-x: auto; border-radius: 22px; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 18px 55px rgba(0,0,0,.2); padding: 14px; }
+        .compact-bracket-board { width: 100%; min-width: 1320px; display: grid; grid-template-columns: repeat(9, minmax(132px, 1fr)); grid-template-rows: 32px repeat(25, 31px); column-gap: clamp(8px, .9vw, 14px); row-gap: 5px; align-items: center; }
+        .compact-round-title { align-self: stretch; display: grid; place-items: center; border-radius: 13px; color: white; background: linear-gradient(135deg, #0f766e, #d97706); font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+        .compact-bracket-match { align-self: stretch; overflow: hidden; border-radius: 14px; border: 1px solid #e2e8f0; background: #f8fafc; box-shadow: 0 8px 18px rgba(15,23,42,.08); }
+        .compact-bracket-match.real-knockout-result { background: #ecfdf5; border-color: #bbf7d0; }
+        .compact-bracket-match.draw-needs-winner { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,.16); }
+        .compact-bracket-match header { height: 24px; display: grid; grid-template-columns: 1fr auto auto; gap: 4px; align-items: center; padding: 3px 6px; color: white; background: #0f172a; }
+        .compact-bracket-match.real-knockout-result header { background: #0f766e; }
+        .compact-bracket-match header span { font-size: 9px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+        .compact-bracket-match header em { font-size: 8px; font-style: normal; opacity: .72; }
+        .compact-bracket-match header strong { font-size: 9px; color: #fde68a; }
+        .compact-scoreline { height: calc(100% - 24px); display: grid; grid-template-columns: 24px 28px 8px 28px 24px; gap: 3px; align-items: center; justify-content: center; padding: 4px 5px; }
+        .team-flag-slot { width: 24px; height: 24px; border: 0; padding: 0; border-radius: 999px; background: transparent; display: grid; place-items: center; }
+        .team-flag-slot.winner { box-shadow: 0 0 0 3px #fbbf24; }
+        .team-flag-slot.winner-selectable { cursor: pointer; }
+        .bracket-flag { width: 22px; height: 22px; border-radius: 999px; object-fit: cover; border: 2px solid white; box-shadow: 0 4px 10px rgba(15,23,42,.18); }
+        .bracket-token { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 999px; background: #e2e8f0; color: #334155; font-size: 8px; font-weight: 950; }
+        .compact-scoreline input { width: 28px; height: 24px; border: 1.3px solid #cbd5e1; border-radius: 8px; text-align: center; color: #0f172a; background: white; font-size: 12px; font-weight: 950; outline: none; }
+        .compact-scoreline input:disabled { color: #047857; border-color: #bbf7d0; background: white; }
+        .score-dash { color: #94a3b8; font-size: 11px; font-weight: 950; text-align: center; }
+        .compact-champion { align-self: center; justify-self: stretch; min-height: 86px; display: grid; place-items: center; gap: 6px; border-radius: 18px; color: white; background: linear-gradient(135deg, #d97706, #0f766e); box-shadow: 0 16px 35px rgba(15,23,42,.24); text-align: center; padding: 10px; }
+        .compact-champion span { font-size: 28px; }
+        .compact-champion strong { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+        .third-place-match { opacity: .9; }
       `}</style>
     </section>
   );
