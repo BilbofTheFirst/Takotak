@@ -2,15 +2,17 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
 const {
-  SPECIAL_PREDICTION_DEFINITIONS,
   ensureSpecialPredictionsTable,
-  getFirstMatchdayStatus,
+  getSpecialMatchdayDefinitions,
+  getSpecialMatchdayStatus,
   buildSpecialPredictionScoring,
-  recalculateFirstMatchdaySpecialPredictionPoints,
+  recalculateSpecialPredictionPointsForMatchday,
   normalizeSpecialPredictionValue
 } = require('../utils/specialPredictions');
 
 const router = express.Router();
+
+const normalizeMatchday = (value) => Number(value) === 2 ? 2 : 1;
 
 const buildAvatarUrl = (user) => {
   if (!user?.avatar_data) return null;
@@ -19,10 +21,12 @@ const buildAvatarUrl = (user) => {
   return `/profile/users/${user.user_id || user.id}/avatar?v=${version}`;
 };
 
-const buildPayload = async (clientOrPool, userId) => {
+const buildPayload = async (clientOrPool, userId, matchday = 1) => {
   await ensureSpecialPredictionsTable(clientOrPool);
-  const status = await getFirstMatchdayStatus(clientOrPool);
-  const codes = SPECIAL_PREDICTION_DEFINITIONS.map(definition => definition.code);
+  const normalizedMatchday = normalizeMatchday(matchday);
+  const status = await getSpecialMatchdayStatus(clientOrPool, normalizedMatchday);
+  const definitions = getSpecialMatchdayDefinitions(normalizedMatchday);
+  const codes = definitions.map(definition => definition.code);
   const result = await clientOrPool.query(
     'SELECT * FROM special_predictions WHERE user_id = $1 AND code = ANY($2::varchar[])',
     [userId, codes]
@@ -31,14 +35,15 @@ const buildPayload = async (clientOrPool, userId) => {
   const predictionRows = result.rows;
   const predictionMap = new Map(predictionRows.map(row => [row.code, row]));
   const predictions = Object.fromEntries(
-    SPECIAL_PREDICTION_DEFINITIONS.map(definition => [
+    definitions.map(definition => [
       definition.code,
       predictionMap.get(definition.code)?.predicted_value ?? ''
     ])
   );
 
   return {
-    definitions: SPECIAL_PREDICTION_DEFINITIONS,
+    matchday: normalizedMatchday,
+    definitions,
     predictions,
     locked: status.locked,
     deadline: status.deadline,
@@ -47,13 +52,13 @@ const buildPayload = async (clientOrPool, userId) => {
     current_actual: status.current_actual,
     completed_matches: status.completed_matches,
     total_matches: status.total_matches,
-    scoring: buildSpecialPredictionScoring(predictionRows, status.actual)
+    scoring: buildSpecialPredictionScoring(predictionRows, status.actual, definitions)
   };
 };
 
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    res.json(await buildPayload(pool, req.user.id));
+    res.json(await buildPayload(pool, req.user.id, req.query.matchday));
   } catch (error) {
     console.error('Get special predictions error:', error);
     res.status(500).json({ error: 'Server error', detail: error.message, code: error.code });
@@ -63,14 +68,17 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/public', authenticateToken, async (req, res) => {
   try {
     await ensureSpecialPredictionsTable(pool);
-    const status = await getFirstMatchdayStatus(pool);
-    const codes = SPECIAL_PREDICTION_DEFINITIONS.map(definition => definition.code);
+    const matchday = normalizeMatchday(req.query.matchday);
+    const status = await getSpecialMatchdayStatus(pool, matchday);
+    const definitions = getSpecialMatchdayDefinitions(matchday);
+    const codes = definitions.map(definition => definition.code);
 
     if (!status.locked) {
       return res.json({
+        matchday,
         locked: false,
         deadline: status.deadline,
-        definitions: SPECIAL_PREDICTION_DEFINITIONS,
+        definitions,
         actual: null,
         current_actual: status.current_actual,
         completed_matches: status.completed_matches,
@@ -119,19 +127,20 @@ router.get('/public', authenticateToken, async (req, res) => {
         username: user.username,
         avatar_url: user.avatar_url,
         predictions: Object.fromEntries(
-          SPECIAL_PREDICTION_DEFINITIONS.map(definition => [
+          definitions.map(definition => [
             definition.code,
             rowByCode.get(definition.code)?.predicted_value ?? null
           ])
         ),
-        scoring: buildSpecialPredictionScoring(user.rows, status.actual)
+        scoring: buildSpecialPredictionScoring(user.rows, status.actual, definitions)
       };
     });
 
     return res.json({
+      matchday,
       locked: true,
       deadline: status.deadline,
-      definitions: SPECIAL_PREDICTION_DEFINITIONS,
+      definitions,
       actual: status.actual,
       current_actual: status.current_actual,
       completed_matches: status.completed_matches,
@@ -152,7 +161,9 @@ router.post('/', authenticateToken, async (req, res) => {
     await client.query('BEGIN');
     await ensureSpecialPredictionsTable(client);
 
-    const status = await getFirstMatchdayStatus(client);
+    const matchday = normalizeMatchday(req.query.matchday || req.body?.matchday);
+    const definitions = getSpecialMatchdayDefinitions(matchday);
+    const status = await getSpecialMatchdayStatus(client, matchday);
     if (status.locked) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Special predictions are locked' });
@@ -161,7 +172,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const incomingPredictions = req.body?.predictions || req.body || {};
 
-    for (const definition of SPECIAL_PREDICTION_DEFINITIONS) {
+    for (const definition of definitions) {
       const normalizedValue = normalizeSpecialPredictionValue(incomingPredictions[definition.code]);
 
       if (normalizedValue === undefined) {
@@ -170,10 +181,7 @@ router.post('/', authenticateToken, async (req, res) => {
       }
 
       if (normalizedValue === null) {
-        await client.query(
-          'DELETE FROM special_predictions WHERE user_id = $1 AND code = $2',
-          [userId, definition.code]
-        );
+        await client.query('DELETE FROM special_predictions WHERE user_id = $1 AND code = $2', [userId, definition.code]);
         continue;
       }
 
@@ -189,9 +197,9 @@ router.post('/', authenticateToken, async (req, res) => {
       );
     }
 
-    await recalculateFirstMatchdaySpecialPredictionPoints(client);
+    await recalculateSpecialPredictionPointsForMatchday(client, matchday);
 
-    const payload = await buildPayload(client, userId);
+    const payload = await buildPayload(client, userId, matchday);
     await client.query('COMMIT');
     res.json(payload);
   } catch (error) {
