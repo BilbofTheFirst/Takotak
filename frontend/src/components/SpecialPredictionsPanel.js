@@ -37,7 +37,7 @@ const getMatchdayCopy = (matchday, isBonusPlacement) => {
   };
 };
 
-function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday = 1 }) {
+function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday = 1, collapsible = false, defaultCollapsed = false }) {
   const [definitions, setDefinitions] = useState([]);
   const [predictions, setPredictions] = useState({});
   const [actual, setActual] = useState({});
@@ -48,6 +48,7 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday =
   const [deadline, setDeadline] = useState(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('idle');
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   const effectivePlacement = placement === 'auto' ? getAutoPlacement() : placement;
 
@@ -126,7 +127,7 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday =
   const copy = getMatchdayCopy(matchday, isBonusPlacement);
 
   return (
-    <section className={`special-panel ${locked ? 'is-locked' : ''} ${isBonusPlacement ? 'in-bonus-page' : ''}`}>
+    <section className={`special-panel ${locked ? 'is-locked' : ''} ${isBonusPlacement ? 'in-bonus-page' : ''} ${collapsed ? 'is-collapsed' : ''}`}>
       <div className="special-header">
         <div>
           <span className="special-eyebrow">{copy.eyebrow}</span>
@@ -137,46 +138,59 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday =
 
         <div className="special-actions">
           <div className="special-score"><span>Score spécial</span><strong>{scoring?.points || 0}</strong><em>/ {maxPoints} pts</em></div>
-          <button type="button" onClick={save} disabled={locked || status === 'saving'}>
-            {locked ? 'Verrouillés' : status === 'saving' ? 'Sauvegarde...' : 'Sauvegarder'}
-          </button>
-          {status === 'saved' && <span className="special-status saved">✅ Enregistré</span>}
-          {status === 'dirty' && <span className="special-status dirty">✍️ Non sauvegardé</span>}
-          {status === 'error' && <span className="special-status error">⚠️ Erreur</span>}
+          {collapsible && (
+            <button type="button" className="collapse-toggle" onClick={() => setCollapsed(prev => !prev)}>
+              {collapsed ? 'Déplier' : 'Réduire'}
+            </button>
+          )}
+          {!collapsed && (
+            <button type="button" onClick={save} disabled={locked || status === 'saving'}>
+              {locked ? 'Verrouillés' : status === 'saving' ? 'Sauvegarde...' : 'Sauvegarder'}
+            </button>
+          )}
+          {!collapsed && status === 'saved' && <span className="special-status saved">✅ Enregistré</span>}
+          {!collapsed && status === 'dirty' && <span className="special-status dirty">✍️ Non sauvegardé</span>}
+          {!collapsed && status === 'error' && <span className="special-status error">⚠️ Erreur</span>}
         </div>
       </div>
 
-      <div className="special-progress">
-        <div><strong>{completed}/{definitions.length}</strong><span>remplis</span></div>
-        <div><strong>{maxPoints}</strong><span>points max</span></div>
-        <div><strong>{complete ? 'Oui' : 'Non'}</strong><span>résultats complets</span></div>
-      </div>
+      {!collapsed && (
+        <>
+          <div className="special-progress">
+            <div><strong>{completed}/{definitions.length}</strong><span>remplis</span></div>
+            <div><strong>{maxPoints}</strong><span>points max</span></div>
+            <div><strong>{complete ? 'Oui' : 'Non'}</strong><span>résultats complets</span></div>
+          </div>
 
-      {locked && <div className="special-lock">{copy.lockedText}</div>}
-      {locked && <PublicSpecialPredictionsTable locked={locked} currentUserId={currentUserId} matchday={matchday} />}
+          {locked && <div className="special-lock">{copy.lockedText}</div>}
+          {locked && <PublicSpecialPredictionsTable locked={locked} currentUserId={currentUserId} matchday={matchday} />}
 
-      <div className="special-grid">
-        {definitions.map(definition => {
-          const detail = scoring?.details?.[definition.code];
-          const actualValue = actual?.[definition.code];
-          const currentValue = currentActual?.[definition.code];
-          return (
-            <article className="special-card" key={definition.code}>
-              <div className="special-title"><div><span>{definition.max_points} pts max</span><h3>{definition.label}</h3></div><strong>{detail?.points ?? '-'}</strong></div>
-              <p>{definition.description}</p>
-              <label><span>Ton prono</span><input type="number" min="0" max="300" inputMode="numeric" disabled={locked} value={predictions[definition.code] ?? ''} onChange={(event) => updatePrediction(definition.code, event.target.value)} placeholder="0" /></label>
-              <div className="special-result"><span>Résultat réel</span><strong>{actualValue ?? 'En attente'}</strong></div>
-              {locked && <div className="special-result current"><span>Résultat actuel</span><strong>{currentValue ?? 'En attente'}</strong></div>}
-              <small>Tout pile = {definition.max_points} pts, puis -{definition.point_loss_per_gap} par écart.</small>
-            </article>
-          );
-        })}
-      </div>
+          <div className="special-grid">
+            {definitions.map(definition => {
+              const detail = scoring?.details?.[definition.code];
+              const actualValue = actual?.[definition.code];
+              const currentValue = currentActual?.[definition.code];
+              return (
+                <article className="special-card" key={definition.code}>
+                  <div className="special-title"><div><span>{definition.max_points} pts max</span><h3>{definition.label}</h3></div><strong>{detail?.points ?? '-'}</strong></div>
+                  <p>{definition.description}</p>
+                  <label><span>Ton prono</span><input type="number" min="0" max="300" inputMode="numeric" disabled={locked} value={predictions[definition.code] ?? ''} onChange={(event) => updatePrediction(definition.code, event.target.value)} placeholder="0" /></label>
+                  <div className="special-result"><span>Résultat réel</span><strong>{actualValue ?? 'En attente'}</strong></div>
+                  {locked && <div className="special-result current"><span>Résultat actuel</span><strong>{currentValue ?? 'En attente'}</strong></div>}
+                  <small>Tout pile = {definition.max_points} pts, puis -{definition.point_loss_per_gap} par écart.</small>
+                </article>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <style>{`
         .special-panel { background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 18px 55px rgba(0,0,0,.2); }
+        .special-panel.is-collapsed { padding-bottom: 12px; }
         .special-loading { color: #475569; font-weight: 900; }
         .special-header { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 18px; margin-bottom: 14px; }
+        .is-collapsed .special-header { margin-bottom: 0; }
         .special-eyebrow { display: inline-flex; padding: 5px 10px; border-radius: 999px; background: #ecfdf5; color: #047857; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
         .special-panel h2 { margin: 0 0 6px; color: #0f172a; font-size: 26px; letter-spacing: -.03em; }
         .special-panel h3 { margin: 2px 0 0; color: #0f172a; font-size: 18px; }
@@ -187,6 +201,7 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday =
         .special-score span, .special-score em { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; opacity: .82; font-style: normal; }
         .special-score strong { font-size: 36px; line-height: 1; color: #fff7ed; }
         .special-actions button { border: 0; border-radius: 999px; padding: 10px 13px; background: #0f172a; color: white; font-size: 12px; font-weight: 950; cursor: pointer; }
+        .special-actions button.collapse-toggle { background: #e2e8f0; color: #334155; box-shadow: none; }
         .special-actions button:disabled { cursor: not-allowed; opacity: .6; }
         .special-status { font-size: 11px; font-weight: 950; text-align: center; }
         .special-status.saved { color: #047857; } .special-status.dirty { color: #92400e; } .special-status.error { color: #b91c1c; }
