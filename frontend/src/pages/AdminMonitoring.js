@@ -52,8 +52,6 @@ function AdminMonitoring() {
   const users = data?.users || [];
   const usersToRemind = useMemo(() => users.filter(user => user.should_remind), [users]);
   const bonusIncompleteUsers = useMemo(() => data?.bonus_incomplete_users || users.filter(user => !user.bonus.complete), [data, users]);
-  const special2CompleteUsers = useMemo(() => data?.special2_complete_users || users.filter(user => getSpecial2(user).complete), [data, users]);
-  const special2IncompleteUsers = useMemo(() => data?.special2_incomplete_users || users.filter(user => !getSpecial2(user).complete), [data, users]);
   const reminderText = useMemo(() => buildReminderText(usersToRemind), [usersToRemind]);
 
   const copyReminder = async () => {
@@ -104,7 +102,7 @@ function AdminMonitoring() {
         <div>
           <span>📡 Monitoring</span>
           <h2>Pronostics à surveiller</h2>
-          <p>Vue rapide pour relancer les joueurs avant les matchs des prochaines 24h, contrôler les bonus incomplets, les spéciaux J2 et réouvrir ponctuellement un bonus long terme.</p>
+          <p>Vue rapide pour relancer les joueurs avant les matchs des prochaines 24h, contrôler les bonus incomplets et réouvrir ponctuellement un bonus long terme.</p>
         </div>
         <div className="monitoring-actions">
           <button type="button" className="button secondary" onClick={loadMonitoring}>Rafraîchir</button>
@@ -117,7 +115,7 @@ function AdminMonitoring() {
       <div className="monitoring-summary-grid">
         <div><strong>{summary.users_missing_today || 0}</strong><span>joueurs à relancer 24h</span></div>
         <div><strong>{summary.users_missing_bonus || 0}</strong><span>bonus long terme incomplets</span></div>
-        <div><strong>{summary.users_complete_special2 || 0}/{summary.users_count || 0}</strong><span>spéciaux J2 faits</span></div>
+        <div><strong>{summary.users_bonus_unlocked || 0}</strong><span>bonus réouverts admin</span></div>
         <div><strong>{summary.today_predictions_done || 0}/{summary.today_predictions_required || 0}</strong><span>pronos matchs 24h</span></div>
       </div>
 
@@ -149,46 +147,6 @@ function AdminMonitoring() {
             <strong>{usersToRemind.length} joueur{usersToRemind.length > 1 ? 's' : ''}</strong>
           </div>
           <textarea readOnly value={reminderText} />
-        </div>
-      </div>
-
-      <div className="monitoring-panel special2-panel">
-        <div className="monitoring-subtitle">
-          <span>⚡ Spéciaux J2</span>
-          <strong>{special2CompleteUsers.length}/{summary.users_count || users.length} complet{special2CompleteUsers.length > 1 ? 's' : ''}</strong>
-        </div>
-        <p className="monitoring-empty bonus-note">
-          Vue admin des joueurs qui ont déjà rempli les trois pronostics spéciaux de deuxième journée.
-        </p>
-        <div className="special2-columns">
-          <div>
-            <h3>✅ Déjà fait</h3>
-            {special2CompleteUsers.length === 0 ? <p className="monitoring-empty">Personne n’a encore complété les spéciaux J2.</p> : (
-              <div className="status-chip-list">
-                {special2CompleteUsers.map(user => <span key={`j2-ok-${user.id}`} className="status-chip ok">{user.username}</span>)}
-              </div>
-            )}
-          </div>
-          <div>
-            <h3>🕓 Encore incomplet</h3>
-            {special2IncompleteUsers.length === 0 ? <p className="monitoring-empty">Tout le monde a complété les spéciaux J2.</p> : (
-              <div className="special2-missing-list">
-                {special2IncompleteUsers.map(user => {
-                  const special2 = getSpecial2(user);
-                  return (
-                    <details key={`j2-missing-${user.id}`} className="bonus-missing-row special2-row">
-                      <summary className="bonus-missing-summary">
-                        <strong>{user.username}</strong>
-                        <span>{special2.completed}/{special2.total}</span>
-                        {special2.locked ? <em>🔒 Verrouillé</em> : <em className="open-pill">Ouvert</em>}
-                      </summary>
-                      <ul>{special2.missing.map((item, index) => <li key={`${user.id}-special2-${index}`}>{item}</li>)}</ul>
-                    </details>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -277,7 +235,7 @@ function AdminMonitoring() {
       </div>
 
       <p className="monitoring-help">
-        Bonus long terme : {summary.bonus_locked ? 'verrouillés globalement' : `ouverts jusqu’au ${formatDateTime(summary.bonus_deadline)}`} · Réouvertures admin : {summary.users_bonus_unlocked || 0} · Deadline spéciaux J1 : {formatDateTime(summary.first_matchday_deadline)} · {summary.first_matchday_locked ? 'verrouillés' : 'encore ouverts'} · Deadline spéciaux J2 : {formatDateTime(summary.second_matchday_deadline)} · {summary.second_matchday_locked ? 'verrouillés' : 'encore ouverts'}.
+        Bonus long terme : {summary.bonus_locked ? 'verrouillés globalement' : `ouverts jusqu’au ${formatDateTime(summary.bonus_deadline)}`} · Réouvertures admin : {summary.users_bonus_unlocked || 0} · Deadline spéciaux J1 : {formatDateTime(summary.first_matchday_deadline)} · {summary.first_matchday_locked ? 'verrouillés' : 'encore ouverts'} · Deadline spéciaux J2 : {formatDateTime(summary.second_matchday_deadline)} · {summary.second_matchday_locked ? 'verrouillés' : summary.special2_reminder_active ? 'relance active' : 'hors relance'}.
       </p>
 
       <style>{styles}</style>
@@ -303,34 +261,24 @@ const styles = `
   .monitoring-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
   .monitoring-panel { border: 1px solid #e2e8f0; border-radius: 16px; padding: 13px; background: #f8fafc; }
   .bonus-admin-panel { margin-bottom: 14px; background: #fff7ed; border-color: #fed7aa; }
-  .special2-panel { margin-bottom: 14px; background: #eff6ff; border-color: #bfdbfe; }
   .monitoring-subtitle { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 10px; }
   .monitoring-subtitle strong { color: #0f172a; font-size: 13px; }
   .monitoring-empty { margin: 0; color: #64748b; font-size: 13px; font-weight: 800; }
   .bonus-note { margin-bottom: 10px; color: #9a3412; }
-  .special2-panel .bonus-note { color: #1d4ed8; }
-  .today-match-list, .bonus-missing-list, .special2-missing-list { display: grid; gap: 7px; }
+  .today-match-list, .bonus-missing-list { display: grid; gap: 7px; }
   .today-match-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; background: white; border: 1px solid #e2e8f0; font-size: 12px; }
   .today-match-row strong { color: #0f766e; }
   .today-match-row span { color: #0f172a; font-weight: 850; }
   .today-match-row em { font-style: normal; color: #92400e; font-weight: 950; white-space: nowrap; }
-  .special2-columns { display: grid; grid-template-columns: 1fr 1.25fr; gap: 12px; }
-  .special2-columns h3 { margin: 0 0 8px; color: #0f172a; font-size: 14px; }
-  .status-chip-list { display: flex; gap: 7px; flex-wrap: wrap; }
-  .status-chip { display: inline-flex; align-items: center; padding: 6px 9px; border-radius: 999px; font-size: 12px; font-weight: 950; }
-  .status-chip.ok { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
   .bonus-missing-row { border-radius: 12px; background: white; border: 1px solid #fed7aa; padding: 8px 10px; }
-  .special2-row { border-color: #bfdbfe; }
   .bonus-unlocked-row { box-shadow: inset 4px 0 0 #0f766e; }
   .bonus-missing-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; cursor: pointer; color: #7c2d12; }
   .bonus-missing-summary strong { color: #0f172a; }
   .bonus-missing-summary span { color: #b45309; font-weight: 950; }
-  .special2-row .bonus-missing-summary span { color: #1d4ed8; }
   .bonus-missing-summary em { padding: 3px 7px; border-radius: 999px; background: #fee2e2; color: #991b1b; font-size: 10px; font-style: normal; font-weight: 950; text-transform: uppercase; }
   .bonus-missing-summary em.open-pill { background: #dcfce7; color: #166534; }
   .bonus-missing-summary em.unlock-pill { background: #ccfbf1; color: #0f766e; }
   .bonus-missing-row ul { margin: 8px 0 0; padding-left: 18px; color: #7c2d12; font-size: 12px; line-height: 1.35; }
-  .special2-row ul { color: #1e40af; }
   .reminder-panel textarea { width: 100%; min-height: 108px; box-sizing: border-box; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 11px; color: #0f172a; background: white; resize: vertical; font-size: 13px; line-height: 1.45; font-weight: 750; }
   .monitoring-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 16px; }
   .monitoring-table { min-width: 980px; }
@@ -350,7 +298,7 @@ const styles = `
   .ok-pill { display: inline-flex; padding: 5px 9px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 950; }
   .monitoring-help { margin: 12px 0 0; color: #64748b; font-size: 12px; font-weight: 800; }
   .monitoring-error-card p { margin: 0; color: #991b1b; font-weight: 900; }
-  @media (max-width: 920px) { .monitoring-title, .monitoring-columns, .special2-columns { grid-template-columns: 1fr; display: grid; } .monitoring-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 920px) { .monitoring-title, .monitoring-columns { grid-template-columns: 1fr; display: grid; } .monitoring-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 560px) { .admin-monitoring-card { padding: 12px; } .monitoring-summary-grid { grid-template-columns: 1fr; } .today-match-row, .bonus-missing-summary { grid-template-columns: 1fr; } .monitoring-actions .button { width: 100%; } }
 `;
 
