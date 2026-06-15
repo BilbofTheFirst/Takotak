@@ -11,11 +11,31 @@ const DARK = '#0f172a';
 const GRADIENT = `linear-gradient(135deg, ${PRIMARY} 0%, ${SECONDARY} 100%)`;
 const defaultScore = { team1_goals: 0, team2_goals: 0 };
 
+const hasRealResult = (match) => (
+  match?.team1_goals !== null && match?.team1_goals !== undefined &&
+  match?.team2_goals !== null && match?.team2_goals !== undefined
+);
+
+const getRealScore = (match) => {
+  const score = {
+    team1_goals: Number(match.team1_goals || 0),
+    team2_goals: Number(match.team2_goals || 0)
+  };
+
+  if (Number(score.team1_goals) === Number(score.team2_goals)) {
+    if (match.winner_team_id && Number(match.winner_team_id) === Number(match.team1_id)) score.winner = 'team1';
+    if (match.winner_team_id && Number(match.winner_team_id) === Number(match.team2_id)) score.winner = 'team2';
+  }
+
+  return score;
+};
+
 function Simulation() {
   const [matches, setMatches] = useState([]);
   const [predictions, setPredictions] = useState({});
   const [simulations, setSimulations] = useState({});
   const [koSimulations, setKoSimulations] = useState({});
+  const [includeRealResults, setIncludeRealResults] = useState(() => localStorage.getItem('takotak_sim_include_real_results') !== '0');
   const [loading, setLoading] = useState(true);
   const [saveMessage, setSaveMessage] = useState('');
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -28,6 +48,10 @@ function Simulation() {
       localStorage.setItem('takotak_ko_simulations', JSON.stringify(koSimulations));
     }
   }, [simulations, koSimulations]);
+
+  useEffect(() => {
+    localStorage.setItem('takotak_sim_include_real_results', includeRealResults ? '1' : '0');
+  }, [includeRealResults]);
 
   const loadData = async () => {
     try {
@@ -68,12 +92,35 @@ function Simulation() {
   const handleKoSimulationChange = (matchId, field, value) => {
     setKoSimulations(prev => {
       const current = prev[matchId] || defaultScore;
-      if (field === 'winner') {
-        return { ...prev, [matchId]: { ...current, winner: value } };
-      }
+      if (field === 'winner') return { ...prev, [matchId]: { ...current, winner: value } };
       return { ...prev, [matchId]: { ...current, [field]: normalizeScore(value) } };
     });
   };
+
+  const getEffectiveGroupSimulation = (match) => {
+    if (includeRealResults && hasRealResult(match)) return getRealScore(match);
+    return simulations[match.id] || defaultScore;
+  };
+
+  const effectiveKoSimulations = useMemo(() => {
+    if (!includeRealResults) return koSimulations;
+
+    const next = { ...koSimulations };
+    matches
+      .filter(match => Number(match.id) >= 73 && hasRealResult(match))
+      .forEach(match => { next[match.id] = getRealScore(match); });
+
+    return next;
+  }, [includeRealResults, koSimulations, matches]);
+
+  const realResultMatchIds = useMemo(() => new Set(
+    includeRealResults
+      ? matches.filter(hasRealResult).map(match => Number(match.id))
+      : []
+  ), [includeRealResults, matches]);
+
+  const realGroupResultCount = useMemo(() => matches.filter(match => Number(match.id) <= 72 && hasRealResult(match)).length, [matches]);
+  const realKoResultCount = useMemo(() => matches.filter(match => Number(match.id) >= 73 && hasRealResult(match)).length, [matches]);
 
   const calculatePoints = (prediction, result) => {
     if (!prediction) return null;
@@ -89,11 +136,7 @@ function Simulation() {
   };
 
   const getGroupMatches = (groupLetter) => matches.filter(match => (
-    Number(match.id) <= 72
-    && match.groupe1 === groupLetter
-    && match.groupe2 === groupLetter
-    && match.team1
-    && match.team2
+    Number(match.id) <= 72 && match.groupe1 === groupLetter && match.groupe2 === groupLetter && match.team1 && match.team2
   ));
 
   const getTeamsInGroup = (groupLetter) => {
@@ -115,7 +158,7 @@ function Simulation() {
     });
 
     groupMatches.forEach(match => {
-      const sim = simulations[match.id] || defaultScore;
+      const sim = getEffectiveGroupSimulation(match);
       const g1 = Number(sim.team1_goals) || 0;
       const g2 = Number(sim.team2_goals) || 0;
       stats[match.team1].played += 1;
@@ -154,7 +197,7 @@ function Simulation() {
     const data = {};
     GROUPS.forEach(group => { data[group] = getGroupClassification(group); });
     return data;
-  }, [simulations, matches]);
+  }, [simulations, includeRealResults, matches]);
 
   const allThirdPlaces = useMemo(() => {
     const seenTeams = new Set();
@@ -173,10 +216,10 @@ function Simulation() {
 
   const totalSimulatedPoints = useMemo(() => {
     return matches.filter(match => Number(match.id) <= 72).reduce((total, match) => {
-      const points = calculatePoints(predictions[match.id], simulations[match.id] || defaultScore);
+      const points = calculatePoints(predictions[match.id], getEffectiveGroupSimulation(match));
       return total + (points || 0);
     }, 0);
-  }, [matches, predictions, simulations]);
+  }, [matches, predictions, simulations, includeRealResults]);
 
   const clearSimulation = () => {
     localStorage.removeItem('takotak_simulations');
@@ -215,13 +258,24 @@ function Simulation() {
           <div>
             <span className="simulation-eyebrow">Mode bac à sable</span>
             <h1>🎮 Simulation Coupe du Monde</h1>
-            <p>Teste tous les scores, observe les classements évoluer et construis ton tableau final. Rien n'est envoyé en base : tout reste dans ton navigateur.</p>
+            <p>Teste tous les scores, observe les classements évoluer et construis ton tableau final. Les résultats réels déjà encodés peuvent servir de base.</p>
           </div>
           <div className="simulation-summary">
             <div><strong>{totalSimulatedPoints}</strong><span>points simulés</span></div>
             <div><strong>{allThirdPlaces.slice(0, 8).length}</strong><span>troisièmes qualifiés</span></div>
             <button type="button" onClick={clearSimulation}>🔄 Réinitialiser</button>
           </div>
+        </section>
+
+        <section className="simulation-options-card">
+          <label className="real-results-toggle">
+            <input type="checkbox" checked={includeRealResults} onChange={(event) => setIncludeRealResults(event.target.checked)} />
+            <span>
+              <strong>Utiliser les résultats réels déjà encodés</strong>
+              <em>{realGroupResultCount} match{realGroupResultCount > 1 ? 's' : ''} de groupes · {realKoResultCount} match{realKoResultCount > 1 ? 's' : ''} à élimination directe</em>
+            </span>
+          </label>
+          <p>{includeRealResults ? 'Les matchs réels sont verrouillés dans la simulation. Tu simules uniquement la suite.' : 'Mode libre : même les matchs déjà encodés peuvent être modifiés dans la simulation.'}</p>
         </section>
 
         {saveMessage && <div className="simulation-toast">✅ {saveMessage}</div>}
@@ -239,20 +293,21 @@ function Simulation() {
                   <div className="group-card-body">
                     <div className="group-matches">
                       {groupMatches.map(match => {
-                        const sim = simulations[match.id] || defaultScore;
+                        const sim = getEffectiveGroupSimulation(match);
                         const prediction = predictions[match.id];
                         const points = calculatePoints(prediction, sim);
+                        const isRealResult = includeRealResults && hasRealResult(match);
                         return (
-                          <div key={match.id} className="simulation-match-line">
+                          <div key={match.id} className={`simulation-match-line ${isRealResult ? 'real-result-line' : ''}`}>
                             <span className="match-schedule">{formatMatchDateTime(match.start_time)}</span>
                             <span className="match-team-name match-team-left" title={match.team1}>{match.team1}</span>
                             {renderFlag(match.team1)}
-                            <input type="text" inputMode="numeric" maxLength="2" value={sim.team1_goals} onFocus={selectScoreText} onChange={(e) => handleSimulationChange(match.id, 'team1_goals', e.target.value)} aria-label={`Score ${match.team1}`} />
+                            <input type="text" inputMode="numeric" maxLength="2" value={sim.team1_goals} disabled={isRealResult} onFocus={selectScoreText} onChange={(e) => handleSimulationChange(match.id, 'team1_goals', e.target.value)} aria-label={`Score ${match.team1}`} />
                             <span className="score-separator">-</span>
-                            <input type="text" inputMode="numeric" maxLength="2" value={sim.team2_goals} onFocus={selectScoreText} onChange={(e) => handleSimulationChange(match.id, 'team2_goals', e.target.value)} aria-label={`Score ${match.team2}`} />
+                            <input type="text" inputMode="numeric" maxLength="2" value={sim.team2_goals} disabled={isRealResult} onFocus={selectScoreText} onChange={(e) => handleSimulationChange(match.id, 'team2_goals', e.target.value)} aria-label={`Score ${match.team2}`} />
                             {renderFlag(match.team2)}
                             <span className="match-team-name match-team-right" title={match.team2}>{match.team2}</span>
-                            <span className="prediction-pill">{prediction ? `Prono ${prediction.team1_goals}-${prediction.team2_goals}` : 'Pas de prono'}</span>
+                            <span className={`prediction-pill ${isRealResult ? 'real-pill' : ''}`}>{isRealResult ? 'Résultat réel' : prediction ? `Prono ${prediction.team1_goals}-${prediction.team2_goals}` : 'Pas de prono'}</span>
                             <strong className={`sim-points points-${points ?? 0}`}>{points === null ? '—' : `${points} pt${points > 1 ? 's' : ''}`}</strong>
                           </div>
                         );
@@ -285,7 +340,7 @@ function Simulation() {
           </div>
         </section>
 
-        <TournamentBracket groupsData={groupsData} allThirdPlaces={allThirdPlaces} koSimulations={koSimulations} onScoreChange={handleKoSimulationChange} matchSchedule={matches} />
+        <TournamentBracket groupsData={groupsData} allThirdPlaces={allThirdPlaces} koSimulations={effectiveKoSimulations} onScoreChange={handleKoSimulationChange} matchSchedule={matches} lockedRealMatchIds={realResultMatchIds} />
       </div>
 
       {selectedTeam && <TeamInfoModal teamId={selectedTeam.team} teamName={selectedTeam.team} onClose={() => setSelectedTeam(null)} />}
@@ -306,6 +361,12 @@ const styles = `
   .simulation-summary strong { display: block; font-size: 26px; color: #fde68a; line-height: 1; }
   .simulation-summary span { display: block; margin-top: 6px; color: rgba(255,255,255,.7); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
   .simulation-summary button { grid-column: span 2; cursor: pointer; font-weight: 950; background: linear-gradient(135deg, rgba(239,68,68,.9), rgba(185,28,28,.9)); }
+  .simulation-options-card { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 16px; padding: 13px 15px; border-radius: 18px; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 14px 36px rgba(0,0,0,.14); }
+  .real-results-toggle { display: flex; align-items: center; gap: 11px; cursor: pointer; }
+  .real-results-toggle input { width: 20px; height: 20px; accent-color: ${PRIMARY}; }
+  .real-results-toggle strong { display: block; color: ${DARK}; font-size: 14px; }
+  .real-results-toggle em { display: block; margin-top: 3px; color: #64748b; font-style: normal; font-size: 11px; font-weight: 850; }
+  .simulation-options-card p { margin: 0; color: #475569; font-size: 12px; font-weight: 850; line-height: 1.35; text-align: right; }
   .simulation-toast { margin-bottom: 16px; padding: 10px 14px; border-radius: 14px; color: #064e3b; background: #dcfce7; border: 1px solid rgba(34,197,94,.35); font-size: 12px; font-weight: 950; }
   .simulation-section { margin-bottom: 26px; }
   .simulation-section-title { color: white; margin-bottom: 12px; }
@@ -320,6 +381,7 @@ const styles = `
   .group-card-body { display: grid; grid-template-columns: 1fr; }
   .group-matches { padding: 7px 9px; border-bottom: 1px solid #e2e8f0; }
   .simulation-match-line { display: grid; grid-template-columns: 64px minmax(98px, 1fr) 24px 36px 10px 36px 24px minmax(98px, 1fr) 72px 48px; align-items: center; gap: 5px; padding: 5px 2px; border-bottom: 1px solid #eef2f7; }
+  .simulation-match-line.real-result-line { background: #ecfdf5; border-radius: 10px; padding-inline: 5px; }
   .simulation-match-line:last-child { border-bottom: 0; }
   .match-schedule { color: #64748b; font-size: 10px; font-weight: 900; white-space: nowrap; }
   .match-team-name { min-width: 0; color: #0f172a; font-size: 12px; font-weight: 950; line-height: 1.12; }
@@ -329,7 +391,9 @@ const styles = `
   .sim-flag { width: 23px; height: 23px; border-radius: 999px; object-fit: cover; flex: 0 0 auto; border: 2px solid white; box-shadow: 0 5px 12px rgba(15,23,42,.14); background: #e2e8f0; display: grid; place-items: center; font-size: 10px; font-weight: 900; color: #64748b; }
   .simulation-match-line input { width: 36px; height: 30px; border: 1.5px solid #cbd5e1; border-radius: 9px; text-align: center; color: #0f172a; background: white; font-size: 13px; font-weight: 950; outline: none; box-shadow: 0 6px 14px rgba(15,23,42,.06); }
   .simulation-match-line input:focus { border-color: ${SECONDARY}; }
+  .simulation-match-line input:disabled { color: #047857; background: white; border-color: #bbf7d0; }
   .prediction-pill { justify-self: center; padding: 4px 7px; border-radius: 999px; background: #e2e8f0; color: #475569; font-size: 9px; font-weight: 900; white-space: nowrap; }
+  .prediction-pill.real-pill { background: #bbf7d0; color: #047857; }
   .sim-points { min-width: 42px; padding: 4px 6px; border-radius: 9px; font-size: 9px; font-weight: 950; text-align: center; }
   .points-3 { background: #dcfce7; color: #047857; } .points-2 { background: #dbeafe; color: #1d4ed8; } .points-1 { background: #fef3c7; color: #92400e; } .points-0 { background: #fee2e2; color: #b91c1c; }
   .group-standings { padding: 10px; background: #f8fafc; }
@@ -354,7 +418,7 @@ const styles = `
   .loading-page { display: grid; place-items: center; } .simulation-loading-card { text-align: center; color: white; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); border-radius: 18px; padding: 30px 42px; box-shadow: 0 22px 65px rgba(0,0,0,.22); } .simulation-ball { font-size: 42px; margin-bottom: 12px; animation: bounce 1s infinite; }
   @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   @media (max-width: 1180px) { .groups-grid { grid-template-columns: 1fr; } }
-  @media (max-width: 780px) { .simulation-hero { flex-direction: column; } .simulation-summary { min-width: 0; } .simulation-match-line { grid-template-columns: 64px 1fr 23px 36px 10px 36px 23px 1fr; } .prediction-pill, .sim-points { grid-column: auto; } .standing-header, .standing-row { grid-template-columns: minmax(190px,1fr) repeat(8, 34px); } }
+  @media (max-width: 780px) { .simulation-hero, .simulation-options-card { flex-direction: column; align-items: stretch; } .simulation-options-card p { text-align: left; } .simulation-summary { min-width: 0; } .simulation-match-line { grid-template-columns: 64px 1fr 23px 36px 10px 36px 23px 1fr; } .prediction-pill, .sim-points { grid-column: auto; } .standing-header, .standing-row { grid-template-columns: minmax(190px,1fr) repeat(8, 34px); } }
 `;
 
 export default Simulation;
