@@ -14,7 +14,30 @@ const getAutoPlacement = () => {
   return 'always';
 };
 
-function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
+const getMatchdayCopy = (matchday, isBonusPlacement) => {
+  const isSecond = Number(matchday) === 2;
+  if (isSecond) {
+    return {
+      eyebrow: '⚡ Spéciaux deuxième journée',
+      title: isBonusPlacement ? 'Résultat des spéciaux deuxième journée' : 'Paris globaux sur la deuxième journée',
+      description: isBonusPlacement
+        ? 'Les spéciaux de deuxième journée sont verrouillés. Tu peux suivre ton score dès que les résultats sont calculés.'
+        : 'Deuxième journée = le deuxième match de chaque équipe, donc 24 matchs au total.',
+      lockedText: '🔒 Les pronostics spéciaux de deuxième journée sont verrouillés. Tu peux maintenant consulter les pronos du groupe dans un tableau global.'
+    };
+  }
+
+  return {
+    eyebrow: '⚡ Spéciaux première journée',
+    title: isBonusPlacement ? 'Résultat des spéciaux première journée' : 'Paris globaux sur les premiers matchs',
+    description: isBonusPlacement
+      ? 'Les spéciaux sont maintenant verrouillés et ont rejoint les bonus. Tu peux suivre ton score dès que les résultats sont calculés.'
+      : 'Première journée = le premier match de chaque équipe, donc 24 matchs au total. Ce n’est pas uniquement les matchs du 11 juin.',
+    lockedText: '🔒 Les pronostics spéciaux sont verrouillés. Tu peux maintenant consulter les pronos du groupe dans un tableau global.'
+  };
+};
+
+function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday = 1 }) {
   const [definitions, setDefinitions] = useState([]);
   const [predictions, setPredictions] = useState({});
   const [actual, setActual] = useState({});
@@ -44,7 +67,8 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
 
     const load = async () => {
       try {
-        const response = await specialPredictionsService.get();
+        setLoading(true);
+        const response = await specialPredictionsService.get(matchday);
         if (mounted) applyPayload(response.data);
       } catch (error) {
         console.error('Erreur chargement pronostics spéciaux:', error);
@@ -56,7 +80,7 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
 
     load();
     return () => { mounted = false; };
-  }, []);
+  }, [matchday]);
 
   const maxPoints = useMemo(
     () => definitions.reduce((sum, definition) => sum + Number(definition.max_points || 0), 0),
@@ -81,7 +105,7 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
   const save = async () => {
     setStatus('saving');
     try {
-      const response = await specialPredictionsService.save({ predictions });
+      const response = await specialPredictionsService.save({ predictions, matchday }, matchday);
       applyPayload(response.data);
       setStatus('saved');
     } catch (error) {
@@ -99,18 +123,15 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
   if (effectivePlacement === 'predictions' && locked) return null;
 
   const isBonusPlacement = effectivePlacement === 'bonus';
+  const copy = getMatchdayCopy(matchday, isBonusPlacement);
 
   return (
     <section className={`special-panel ${locked ? 'is-locked' : ''} ${isBonusPlacement ? 'in-bonus-page' : ''}`}>
       <div className="special-header">
         <div>
-          <span className="special-eyebrow">⚡ Spéciaux première journée</span>
-          <h2>{isBonusPlacement ? 'Résultat des spéciaux première journée' : 'Paris globaux sur les premiers matchs'}</h2>
-          <p>
-            {isBonusPlacement
-              ? 'Les spéciaux sont maintenant verrouillés et ont rejoint les bonus. Tu peux suivre ton score dès que les résultats sont calculés.'
-              : 'Première journée = le premier match de chaque équipe, donc 24 matchs au total. Ce n’est pas uniquement les matchs du 11 juin.'}
-          </p>
+          <span className="special-eyebrow">{copy.eyebrow}</span>
+          <h2>{copy.title}</h2>
+          <p>{copy.description}</p>
           {deadline && <small>Verrouillage : {formatDeadline(deadline)}</small>}
         </div>
 
@@ -131,8 +152,8 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId }) {
         <div><strong>{complete ? 'Oui' : 'Non'}</strong><span>résultats complets</span></div>
       </div>
 
-      {locked && <div className="special-lock">🔒 Les pronostics spéciaux sont verrouillés. Tu peux maintenant consulter les pronos du groupe dans un tableau global.</div>}
-      {locked && <PublicSpecialPredictionsTable locked={locked} currentUserId={currentUserId} />}
+      {locked && <div className="special-lock">{copy.lockedText}</div>}
+      {locked && <PublicSpecialPredictionsTable locked={locked} currentUserId={currentUserId} matchday={matchday} />}
 
       <div className="special-grid">
         {definitions.map(definition => {
