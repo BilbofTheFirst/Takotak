@@ -8,7 +8,7 @@ const formatActual = (definition, currentActual) => {
   return `Actuel : ${value}${definition.unit ? ` ${definition.unit}` : ''}`;
 };
 
-function PublicSpecialPredictionsTable({ locked, currentUserId }) {
+function PublicSpecialPredictionsTable({ locked, currentUserId, matchday = 1 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [payload, setPayload] = useState(null);
@@ -16,6 +16,7 @@ function PublicSpecialPredictionsTable({ locked, currentUserId }) {
 
   const definitions = payload?.definitions || [];
   const currentActual = payload?.current_actual || payload?.actual || {};
+  const title = Number(matchday) === 2 ? 'Spéciaux J2' : 'Spéciaux J1';
 
   const rows = useMemo(() => {
     if (!payload?.locked) return [];
@@ -36,7 +37,7 @@ function PublicSpecialPredictionsTable({ locked, currentUserId }) {
     setError('');
 
     try {
-      const response = await specialPredictionsService.getPublic();
+      const response = await specialPredictionsService.getPublic(matchday);
       setPayload(response.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Impossible de charger les pronostics du groupe');
@@ -66,10 +67,8 @@ function PublicSpecialPredictionsTable({ locked, currentUserId }) {
       {open && (
         <div className="public-special-panel">
           <div className="public-special-panel-title">
-            <strong>Pronos du groupe · Spéciaux J1</strong>
-            {payload?.completed_matches !== undefined && (
-              <span>{payload.completed_matches}/{payload.total_matches} matchs encodés</span>
-            )}
+            <strong>Pronos du groupe · {title}</strong>
+            {payload?.completed_matches !== undefined && <span>{payload.completed_matches}/{payload.total_matches} matchs encodés</span>}
           </div>
 
           {loading && <div className="public-special-state">Chargement des pronos...</div>}
@@ -89,9 +88,7 @@ function PublicSpecialPredictionsTable({ locked, currentUserId }) {
                   <span>Pts</span>
                 </div>
 
-                {rows.length === 0 ? (
-                  <div className="public-special-state">Aucun prono trouvé.</div>
-                ) : rows.map(row => (
+                {rows.length === 0 ? <div className="public-special-state">Aucun prono trouvé.</div> : rows.map(row => (
                   <div key={row.user_id} className={`public-special-row ${Number(currentUserId) === Number(row.user_id) ? 'is-current-user' : ''}`}>
                     <span className="public-special-user"><UserAvatar user={row} size={30} /><strong>{row.username}</strong></span>
                     {definitions.map(definition => (
