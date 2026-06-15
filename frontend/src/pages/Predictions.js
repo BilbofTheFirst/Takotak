@@ -20,60 +20,23 @@ const MATCHDAY_FILTERS = [
 ];
 
 const KNOCKOUT_MATCHES = {
-  73: { round: '16e de finale', team1: '2A', team2: '2B' },
-  74: { round: '16e de finale', team1: '1E', team2: '3A/B/C/D/F' },
-  75: { round: '16e de finale', team1: '1F', team2: '2C' },
-  76: { round: '16e de finale', team1: '1C', team2: '2F' },
-  77: { round: '16e de finale', team1: '1I', team2: '3C/D/F/G/H' },
-  78: { round: '16e de finale', team1: '2E', team2: '2I' },
-  79: { round: '16e de finale', team1: '1A', team2: '3C/E/F/H/I' },
-  80: { round: '16e de finale', team1: '1L', team2: '3E/H/I/J/K' },
-  81: { round: '16e de finale', team1: '1D', team2: '3B/E/F/I/J' },
-  82: { round: '16e de finale', team1: '1G', team2: '3A/E/H/I/J' },
-  83: { round: '16e de finale', team1: '2K', team2: '2L' },
-  84: { round: '16e de finale', team1: '1H', team2: '2J' },
-  85: { round: '16e de finale', team1: '1B', team2: '3E/F/G/I/J' },
-  86: { round: '16e de finale', team1: '1J', team2: '2H' },
-  87: { round: '16e de finale', team1: '1K', team2: '3D/E/I/J/L' },
-  88: { round: '16e de finale', team1: '2D', team2: '2G' },
-  89: { round: '8e de finale', team1: 'V74', team2: 'V77' },
-  90: { round: '8e de finale', team1: 'V73', team2: 'V75' },
-  91: { round: '8e de finale', team1: 'V76', team2: 'V78' },
-  92: { round: '8e de finale', team1: 'V79', team2: 'V80' },
-  93: { round: '8e de finale', team1: 'V83', team2: 'V84' },
-  94: { round: '8e de finale', team1: 'V81', team2: 'V82' },
-  95: { round: '8e de finale', team1: 'V86', team2: 'V88' },
-  96: { round: '8e de finale', team1: 'V85', team2: 'V87' },
-  97: { round: 'Quart de finale', team1: 'V89', team2: 'V90' },
-  98: { round: 'Quart de finale', team1: 'V93', team2: 'V94' },
-  99: { round: 'Quart de finale', team1: 'V91', team2: 'V92' },
-  100: { round: 'Quart de finale', team1: 'V95', team2: 'V96' },
-  101: { round: 'Demi-finale', team1: 'V97', team2: 'V98' },
-  102: { round: 'Demi-finale', team1: 'V99', team2: 'V100' },
-  103: { round: '3e place', team1: 'P101', team2: 'P102' },
-  104: { round: 'Finale', team1: 'V101', team2: 'V102' }
+  73: { round: '16e de finale', team1: '2A', team2: '2B' }, 74: { round: '16e de finale', team1: '1E', team2: '3A/B/C/D/F' }, 75: { round: '16e de finale', team1: '1F', team2: '2C' }, 76: { round: '16e de finale', team1: '1C', team2: '2F' },
+  77: { round: '16e de finale', team1: '1I', team2: '3C/D/F/G/H' }, 78: { round: '16e de finale', team1: '2E', team2: '2I' }, 79: { round: '16e de finale', team1: '1A', team2: '3C/E/F/H/I' }, 80: { round: '16e de finale', team1: '1L', team2: '3E/H/I/J/K' },
+  81: { round: '16e de finale', team1: '1D', team2: '3B/E/F/I/J' }, 82: { round: '16e de finale', team1: '1G', team2: '3A/E/H/I/J' }, 83: { round: '16e de finale', team1: '2K', team2: '2L' }, 84: { round: '16e de finale', team1: '1H', team2: '2J' },
+  85: { round: '16e de finale', team1: '1B', team2: '3E/F/G/I/J' }, 86: { round: '16e de finale', team1: '1J', team2: '2H' }, 87: { round: '16e de finale', team1: '1K', team2: '3D/E/I/J/L' }, 88: { round: '16e de finale', team1: '2D', team2: '2G' },
+  89: { round: '8e de finale', team1: 'V74', team2: 'V77' }, 90: { round: '8e de finale', team1: 'V73', team2: 'V75' }, 91: { round: '8e de finale', team1: 'V76', team2: 'V78' }, 92: { round: '8e de finale', team1: 'V79', team2: 'V80' },
+  93: { round: '8e de finale', team1: 'V83', team2: 'V84' }, 94: { round: '8e de finale', team1: 'V81', team2: 'V82' }, 95: { round: '8e de finale', team1: 'V86', team2: 'V88' }, 96: { round: '8e de finale', team1: 'V85', team2: 'V87' },
+  97: { round: 'Quart de finale', team1: 'V89', team2: 'V90' }, 98: { round: 'Quart de finale', team1: 'V93', team2: 'V94' }, 99: { round: 'Quart de finale', team1: 'V91', team2: 'V92' }, 100: { round: 'Quart de finale', team1: 'V95', team2: 'V96' },
+  101: { round: 'Demi-finale', team1: 'V97', team2: 'V98' }, 102: { round: 'Demi-finale', team1: 'V99', team2: 'V100' }, 103: { round: '3e place', team1: 'P101', team2: 'P102' }, 104: { round: 'Finale', team1: 'V101', team2: 'V102' }
 };
 
-const getMockNowValue = () => {
-  if (typeof window === 'undefined') return null;
-  return window.__TAKOTAK_MOCK_NOW__ || null;
-};
-
+const getMockNowValue = () => (typeof window === 'undefined' ? null : window.__TAKOTAK_MOCK_NOW__ || null);
 const isMockResultsEnabled = () => {
   if (typeof window === 'undefined') return false;
-  const params = new URLSearchParams(window.location.search);
-  return params.get('mockResults') === '1';
+  return new URLSearchParams(window.location.search).get('mockResults') === '1';
 };
-
-const buildMockScore = (matchId) => ({
-  team1_goals: (Number(matchId) * 7) % 5,
-  team2_goals: (Number(matchId) * 11) % 4
-});
-
-const isMobileViewport = () => {
-  if (typeof window === 'undefined') return false;
-  return window.matchMedia('(max-width: 760px)').matches;
-};
+const buildMockScore = (matchId) => ({ team1_goals: (Number(matchId) * 7) % 5, team2_goals: (Number(matchId) * 11) % 4 });
+const isMobileViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches;
 
 function Predictions() {
   const [matches, setMatches] = useState([]);
@@ -101,51 +64,34 @@ function Predictions() {
     return () => media.removeEventListener?.('change', update);
   }, []);
 
-  useEffect(() => {
-    setVisibleMobileDayCount(MOBILE_INITIAL_DAYS);
-  }, [showPastDays, selectedMatchday]);
+  useEffect(() => { setVisibleMobileDayCount(MOBILE_INITIAL_DAYS); }, [showPastDays, selectedMatchday]);
 
   const formatDateBelge = (timestamp) => {
     if (!timestamp) return '';
-    const dateStr = timestamp.substring(0, 10);
-    const [year, month, day] = dateStr.split('-');
+    const [year, month, day] = timestamp.substring(0, 10).split('-');
     const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
     const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     return `${days[date.getDay()]} ${parseInt(day, 10)} ${months[parseInt(month, 10) - 1]} ${year}`;
   };
 
-  const formatMockDate = (date) => date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  });
-
+  const formatMockDate = (date) => date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
   const getDateKey = (timestamp) => timestamp ? timestamp.substring(0, 10) : 'unknown';
   const formatTimeBelge = (timestamp) => timestamp ? timestamp.substring(11, 16) : '--:--';
   const isKnockoutMatch = (matchId) => Boolean(KNOCKOUT_MATCHES[matchId]);
   const hasResult = (match) => match.team1_goals !== null && match.team1_goals !== undefined && match.team2_goals !== null && match.team2_goals !== undefined;
   const isValidScoreValue = (value) => /^[0-9]{1,2}$/.test(String(value)) && Number(value) >= 0 && Number(value) <= 99;
-
   const isPastOrClosedMatch = useCallback((match) => new Date(match.start_time) <= currentNow || hasResult(match), [currentNow]);
 
   const getDisplayMatch = useCallback((match) => {
-    if (!mockResultsEnabled || hasResult(match) || !match.team1 || !match.team2 || new Date(match.start_time) >= currentNow) {
-      return match;
-    }
-
-    return {
-      ...match,
-      ...buildMockScore(match.id),
-      is_mock_result: true
-    };
+    if (!mockResultsEnabled || hasResult(match) || !match.team1 || !match.team2 || new Date(match.start_time) >= currentNow) return match;
+    return { ...match, ...buildMockScore(match.id), is_mock_result: true };
   }, [currentNow, mockResultsEnabled]);
 
   const loadData = useCallback(async () => {
     try {
       const [matchesRes, predictionsRes] = await Promise.all([matchesService.getAll(), predictionsService.getAll()]);
       setMatches(matchesRes.data);
-
       const predMap = {};
       const tempMap = {};
       predictionsRes.data.forEach(p => {
@@ -167,20 +113,17 @@ function Predictions() {
   const competitionDayByMatch = useMemo(() => {
     const byMatch = {};
     const appearances = {};
-    const groupMatches = matches
+    matches
       .filter(match => Number(match.id) <= 72 && match.team1 && match.team2)
       .slice()
-      .sort((a, b) => new Date(a.start_time) - new Date(b.start_time) || Number(a.id) - Number(b.id));
-
-    groupMatches.forEach(match => {
-      const team1Day = (appearances[match.team1] || 0) + 1;
-      const team2Day = (appearances[match.team2] || 0) + 1;
-      const day = team1Day === team2Day ? team1Day : Math.max(team1Day, team2Day);
-      byMatch[match.id] = day;
-      appearances[match.team1] = team1Day;
-      appearances[match.team2] = team2Day;
-    });
-
+      .sort((a, b) => new Date(a.start_time) - new Date(b.start_time) || Number(a.id) - Number(b.id))
+      .forEach(match => {
+        const team1Day = (appearances[match.team1] || 0) + 1;
+        const team2Day = (appearances[match.team2] || 0) + 1;
+        byMatch[match.id] = team1Day === team2Day ? team1Day : Math.max(team1Day, team2Day);
+        appearances[match.team1] = team1Day;
+        appearances[match.team2] = team2Day;
+      });
     return byMatch;
   }, [matches]);
 
@@ -191,14 +134,8 @@ function Predictions() {
     return matches.filter(match => competitionDayByMatch[match.id] === day);
   }, [competitionDayByMatch, matches, selectedMatchday]);
 
-  const visibleMatchesForGroups = useMemo(() => (
-    showPastDays ? filteredMatches : filteredMatches.filter(match => !isPastOrClosedMatch(match))
-  ), [filteredMatches, isPastOrClosedMatch, showPastDays]);
-
-  const pastMatchesCount = useMemo(() => filteredMatches.filter(isPastOrClosedMatch).length,
-	[filteredMatches, isPastOrClosedMatch]
-	);
-
+  const visibleMatchesForGroups = useMemo(() => showPastDays ? filteredMatches : filteredMatches.filter(match => !isPastOrClosedMatch(match)), [filteredMatches, isPastOrClosedMatch, showPastDays]);
+  const pastMatchesCount = useMemo(() => filteredMatches.filter(isPastOrClosedMatch).length, [filteredMatches, isPastOrClosedMatch]);
   const hiddenPastMatchesCount = showPastDays ? 0 : pastMatchesCount;
 
   const matchdayCounts = useMemo(() => ({
@@ -254,12 +191,10 @@ function Predictions() {
       setSaveStatus(prev => ({ ...prev, [matchId]: 'invalid' }));
       return;
     }
-
     if (isPredictionSaved(matchId, scores)) {
       setSaveStatus(prev => ({ ...prev, [matchId]: 'saved' }));
       return;
     }
-
     setSaveStatus(prev => ({ ...prev, [matchId]: 'saving' }));
     try {
       const response = await predictionsService.create(matchId, Number(scores.team1), Number(scores.team2));
@@ -278,7 +213,6 @@ function Predictions() {
     const isClosed = new Date(match.start_time) <= currentNow;
     const hasKnownTeams = Boolean(match.team1 && match.team2);
     if (isClosed || !hasKnownTeams || hasResult(match)) return;
-
     const cleanedValue = String(value).replace(/[^0-9]/g, '').slice(0, 2);
     const nextScores = { ...getScoresForMatch(matchId), [team]: cleanedValue };
     setTempScores(prev => ({ ...prev, [matchId]: nextScores }));
@@ -300,9 +234,7 @@ function Predictions() {
   };
 
   const handleTeamKeyDown = (event, teamName) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      openTeamInfo(event, teamName);
-    }
+    if (event.key === 'Enter' || event.key === ' ') openTeamInfo(event, teamName);
   };
 
   const renderTeamBlock = (match, position, align) => {
@@ -311,21 +243,10 @@ function Predictions() {
     const flag = teamName ? getFlag(teamName) : null;
     const knockoutPlaceholder = !teamName && isKnockoutMatch(match.id);
     const isClickable = Boolean(teamName);
-
     return (
-      <div
-        className={`team-block ${align === 'right' ? 'team-block-right' : ''} ${isClickable ? 'team-block-clickable' : ''}`}
-        onClick={isClickable ? (event) => openTeamInfo(event, teamName) : undefined}
-        onKeyDown={isClickable ? (event) => handleTeamKeyDown(event, teamName) : undefined}
-        role={isClickable ? 'button' : undefined}
-        tabIndex={isClickable ? 0 : undefined}
-        title={isClickable ? `Voir les 5 derniers matchs de ${teamName}` : undefined}
-        aria-label={isClickable ? `Voir les 5 derniers matchs de ${teamName}` : undefined}
-      >
+      <div className={`team-block ${align === 'right' ? 'team-block-right' : ''} ${isClickable ? 'team-block-clickable' : ''}`} onClick={isClickable ? (event) => openTeamInfo(event, teamName) : undefined} onKeyDown={isClickable ? (event) => handleTeamKeyDown(event, teamName) : undefined} role={isClickable ? 'button' : undefined} tabIndex={isClickable ? 0 : undefined} title={isClickable ? `Voir les 5 derniers matchs de ${teamName}` : undefined} aria-label={isClickable ? `Voir les 5 derniers matchs de ${teamName}` : undefined}>
         {align === 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
-        <span className="flag-shell">
-          {flag ? <img src={flag} alt={teamName} /> : <span className={knockoutPlaceholder ? 'football-placeholder-icon' : ''}>{knockoutPlaceholder ? '⚽' : '?'}</span>}
-        </span>
+        <span className="flag-shell">{flag ? <img src={flag} alt={teamName} /> : <span className={knockoutPlaceholder ? 'football-placeholder-icon' : ''}>{knockoutPlaceholder ? '⚽' : '?'}</span>}</span>
         {align !== 'right' && <span className={`team-name ${knockoutPlaceholder ? 'team-placeholder' : ''}`}>{label}</span>}
       </div>
     );
@@ -334,29 +255,10 @@ function Predictions() {
   const renderScoreZone = (match, originalMatch, scores, hasKnownTeams, disabled) => {
     const prediction = predictions[match.id];
     const points = calculatePredictionPoints(match, prediction);
-
     if (!hasKnownTeams) return <div className="unknown-match-note">À définir</div>;
-
-    if (hasResult(match)) {
-      return (
-        <div className="result-zone">
-          <div className="real-score">{match.team1_goals}-{match.team2_goals}</div>
-          <div className="prediction-recap">{prediction ? `Prono ${prediction.team1_goals}-${prediction.team2_goals}` : 'Pas de prono'}</div>
-          {points !== null && <div className={`points-chip points-${points}`}>+{points} pt{points > 1 ? 's' : ''}</div>}
-          {match.is_mock_result && <div className="mock-result-note">simulé</div>}
-        </div>
-      );
-    }
-
+    if (hasResult(match)) return <div className="result-zone"><div className="real-score">{match.team1_goals}-{match.team2_goals}</div><div className="prediction-recap">{prediction ? `Prono ${prediction.team1_goals}-${prediction.team2_goals}` : 'Pas de prono'}</div>{points !== null && <div className={`points-chip points-${points}`}>+{points} pt{points > 1 ? 's' : ''}</div>}{match.is_mock_result && <div className="mock-result-note">simulé</div>}</div>;
     const onFocus = (event) => event.currentTarget.select();
-
-    return (
-      <>
-        <input type="text" inputMode="numeric" maxLength="2" value={scores.team1} onFocus={onFocus} onChange={(e) => handleScoreChange(originalMatch, 'team1', e.target.value)} onBlur={() => commitScore(originalMatch)} disabled={disabled} aria-label={`Score ${match.team1}`} />
-        <span className="score-separator">-</span>
-        <input type="text" inputMode="numeric" maxLength="2" value={scores.team2} onFocus={onFocus} onChange={(e) => handleScoreChange(originalMatch, 'team2', e.target.value)} onBlur={() => commitScore(originalMatch)} disabled={disabled} aria-label={`Score ${match.team2}`} />
-      </>
-    );
+    return <><input type="text" inputMode="numeric" maxLength="2" value={scores.team1} onFocus={onFocus} onChange={(e) => handleScoreChange(originalMatch, 'team1', e.target.value)} onBlur={() => commitScore(originalMatch)} disabled={disabled} aria-label={`Score ${match.team1}`} /><span className="score-separator">-</span><input type="text" inputMode="numeric" maxLength="2" value={scores.team2} onFocus={onFocus} onChange={(e) => handleScoreChange(originalMatch, 'team2', e.target.value)} onBlur={() => commitScore(originalMatch)} disabled={disabled} aria-label={`Score ${match.team2}`} /></>;
   };
 
   const dayGroups = useMemo(() => {
@@ -372,13 +274,20 @@ function Predictions() {
   const isPastGroup = useCallback((group) => group.matches.every(isPastOrClosedMatch), [isPastOrClosedMatch]);
   const renderedDayGroups = isMobile ? dayGroups.slice(0, visibleMobileDayCount) : dayGroups;
   const hiddenMobileDayCount = Math.max(dayGroups.length - renderedDayGroups.length, 0);
-
   const displayMatches = useMemo(() => filteredMatches.map(getDisplayMatch), [filteredMatches, getDisplayMatch]);
   const totalPredictions = Object.keys(predictions).length;
   const playableMatches = displayMatches.filter(m => m.team1 && m.team2 && !hasResult(m) && new Date(m.start_time) > currentNow).length;
   const lockedMatches = displayMatches.filter(m => new Date(m.start_time) <= currentNow || hasResult(m)).length;
-
   const selectedFilterLabel = MATCHDAY_FILTERS.find(filter => filter.value === selectedMatchday)?.label || 'Tous';
+
+  const firstGroupIndexByMatchday = useMemo(() => {
+    const result = { 1: -1, 2: -1 };
+    renderedDayGroups.forEach((group, index) => {
+      if (result[1] === -1 && group.matches.some(match => competitionDayByMatch[match.id] === 1)) result[1] = index;
+      if (result[2] === -1 && group.matches.some(match => competitionDayByMatch[match.id] === 2)) result[2] = index;
+    });
+    return result;
+  }, [competitionDayByMatch, renderedDayGroups]);
 
   const getStatusConfig = (match, scores) => {
     const status = saveStatus[match.id];
@@ -387,7 +296,6 @@ function Predictions() {
     const prediction = predictions[match.id];
     const isSaved = isPredictionSaved(match.id, scores);
     const points = calculatePredictionPoints(match, prediction);
-
     if (!hasKnownTeams) return null;
     if (points !== null) return { label: `+${points} pt${points > 1 ? 's' : ''}`, icon: '🏆', className: `prediction-status points points-${points}` };
     if (isClosed) return { label: 'Fermé', icon: '🔒', className: 'prediction-status locked' };
@@ -400,105 +308,37 @@ function Predictions() {
     return { label: 'À pronostiquer', icon: '🎯', className: 'prediction-status todo' };
   };
 
-  if (loading) {
-    return <div className="predictions-page loading-page"><div className="loading-card"><div className="loading-ball">⚽</div><p>Chargement des matchs...</p></div><style>{styles}</style></div>;
-  }
+  const renderSpecialsForGroup = (index) => {
+    if (selectedMatchday !== 'all') return null;
+    return <>{index === firstGroupIndexByMatchday[1] && <SpecialPredictionsPanel matchday={1} />}{index === firstGroupIndexByMatchday[2] && <SpecialPredictionsPanel matchday={2} />}</>;
+  };
+
+  if (loading) return <div className="predictions-page loading-page"><div className="loading-card"><div className="loading-ball">⚽</div><p>Chargement des matchs...</p></div><style>{styles}</style></div>;
 
   return (
     <div className="predictions-page">
       <div className="predictions-container">
-        <section className="predictions-hero">
-          <div>
-            <span className="eyebrow">Coupe du Monde 2026</span>
-            <h1>🎯 Mes pronostics</h1>
-            <p>Filtre par journée pour remplir tes scores et, pour la journée 1, tes pronostics spéciaux en regardant les matchs concernés.</p>
-          </div>
-          <div className="prediction-summary">
-            <div><strong>{totalPredictions}</strong><span>pronos saisis</span></div>
-            <div><strong>{playableMatches}</strong><span>matchs jouables</span></div>
-            <div><strong>{lockedMatches}</strong><span>fermés/résultats</span></div>
-          </div>
-        </section>
-
-        {isMockMode && (
-          <div className="mock-mode-banner">
-            🧪 Simulation active : {formatMockDate(currentNow)}{mockResultsEnabled ? ' · résultats simulés visibles' : ''}
-          </div>
-        )}
-
-        <div className="matchday-filter-card">
-          <div>
-            <span>Filtre compétition</span>
-            <strong>{selectedFilterLabel}</strong>
-          </div>
-          <div className="matchday-filter-buttons">
-            {MATCHDAY_FILTERS.map(filter => (
-              <button
-                key={filter.value}
-                type="button"
-                className={selectedMatchday === filter.value ? 'active' : ''}
-                onClick={() => setSelectedMatchday(filter.value)}
-              >
-                {filter.label}
-                <em>{matchdayCounts[filter.value] || 0}</em>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {(selectedMatchday === 'all' || selectedMatchday === '1') && <SpecialPredictionsPanel />}
-
-        <div className="prediction-toolbar">
-          {pastMatchesCount > 0 && (
-			<button type="button" onClick={() => setShowPastDays(prev => !prev)}>
-				{showPastDays
-				? 'Masquer les matchs passés'
-				: `Afficher les matchs passés (${hiddenPastMatchesCount})`}
-			</button>
-		)}
-          <div className="autosave-inline"><span>💾</span> Sauvegarde en quittant le champ</div>
-        </div>
-
-        {renderedDayGroups.length === 0 && (
-          <div className="empty-filter-card">Aucun match à pronostiquer dans ce filtre.</div>
-        )}
-
-        {renderedDayGroups.map(group => (
-          <section key={group.key} className={`match-day-card ${isPastGroup(group) ? 'past-day-card' : ''}`}>
-            <div className="match-day-header"><div><span>📅 Journée calendrier</span><h2>{group.label}</h2></div><span className="match-count">{group.matches.length} match{group.matches.length > 1 ? 's' : ''}</span></div>
-            <div className="match-list">
-              {group.matches.map(match => {
-                const displayMatch = getDisplayMatch(match);
-                const scores = getScoresForMatch(match.id);
-                const isClosed = new Date(match.start_time) <= currentNow;
-                const hasKnownTeams = Boolean(displayMatch.team1 && displayMatch.team2);
-                const disabled = isClosed || !hasKnownTeams || hasResult(displayMatch);
-                const statusConfig = getStatusConfig(displayMatch, scores);
-                const knockout = isKnockoutMatch(match.id);
-                const resultAvailable = hasResult(displayMatch);
-                const canRevealPublicPredictions = hasKnownTeams && (isClosed || resultAvailable);
-                return (
-                  <article key={match.id} className={`match-row ${disabled ? 'match-row-disabled' : ''} ${resultAvailable ? 'match-row-result' : ''}`}>
-                    <div className="match-meta"><span className="match-label">{getMatchLabel(displayMatch)}</span><span className="match-time">{formatTimeBelge(displayMatch.start_time)}</span></div>
-                    <div className="match-main">{renderTeamBlock(displayMatch, 'team1', 'right')}<div className="score-zone">{renderScoreZone(displayMatch, match, scores, hasKnownTeams, disabled)}</div>{renderTeamBlock(displayMatch, 'team2')}</div>
-                    <div className="match-status-zone">{knockout && <span className="match-number">M{match.id}</span>}{statusConfig && <div className={statusConfig.className} title={statusConfig.detail || ''}><span>{statusConfig.icon}</span>{statusConfig.label}</div>}</div>
-                    {canRevealPublicPredictions && <PublicMatchPredictionsPanel match={displayMatch} />}
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-        ))}
-
-        {isMobile && hiddenMobileDayCount > 0 && (
-          <div className="mobile-load-more-wrap">
-            <button type="button" className="mobile-load-more-button" onClick={() => setVisibleMobileDayCount(prev => prev + MOBILE_DAYS_STEP)}>
-              Afficher plus de journées ({hiddenMobileDayCount} restantes)
-            </button>
-          </div>
-        )}
+        <section className="predictions-hero"><div><span className="eyebrow">Coupe du Monde 2026</span><h1>🎯 Mes pronostics</h1><p>Filtre par journée pour remplir tes scores et tes pronostics spéciaux liés aux journées de compétition.</p></div><div className="prediction-summary"><div><strong>{totalPredictions}</strong><span>pronos saisis</span></div><div><strong>{playableMatches}</strong><span>matchs jouables</span></div><div><strong>{lockedMatches}</strong><span>fermés/résultats</span></div></div></section>
+        {isMockMode && <div className="mock-mode-banner">🧪 Simulation active : {formatMockDate(currentNow)}{mockResultsEnabled ? ' · résultats simulés visibles' : ''}</div>}
+        <div className="matchday-filter-card"><div><span>Filtre compétition</span><strong>{selectedFilterLabel}</strong></div><div className="matchday-filter-buttons">{MATCHDAY_FILTERS.map(filter => <button key={filter.value} type="button" className={selectedMatchday === filter.value ? 'active' : ''} onClick={() => setSelectedMatchday(filter.value)}>{filter.label}<em>{matchdayCounts[filter.value] || 0}</em></button>)}</div></div>
+        {selectedMatchday === '1' && <SpecialPredictionsPanel matchday={1} />}
+        {selectedMatchday === '2' && <SpecialPredictionsPanel matchday={2} />}
+        <div className="prediction-toolbar">{pastMatchesCount > 0 && <button type="button" onClick={() => setShowPastDays(prev => !prev)}>{showPastDays ? 'Masquer les matchs passés' : `Afficher les matchs passés (${hiddenPastMatchesCount})`}</button>}<div className="autosave-inline"><span>💾</span> Sauvegarde en quittant le champ</div></div>
+        {renderedDayGroups.length === 0 && <div className="empty-filter-card">Aucun match à pronostiquer dans ce filtre.</div>}
+        {renderedDayGroups.map((group, index) => <React.Fragment key={group.key}>{renderSpecialsForGroup(index)}<section className={`match-day-card ${isPastGroup(group) ? 'past-day-card' : ''}`}><div className="match-day-header"><div><span>📅 Journée calendrier</span><h2>{group.label}</h2></div><span className="match-count">{group.matches.length} match{group.matches.length > 1 ? 's' : ''}</span></div><div className="match-list">{group.matches.map(match => {
+          const displayMatch = getDisplayMatch(match);
+          const scores = getScoresForMatch(match.id);
+          const isClosed = new Date(match.start_time) <= currentNow;
+          const hasKnownTeams = Boolean(displayMatch.team1 && displayMatch.team2);
+          const disabled = isClosed || !hasKnownTeams || hasResult(displayMatch);
+          const statusConfig = getStatusConfig(displayMatch, scores);
+          const knockout = isKnockoutMatch(match.id);
+          const resultAvailable = hasResult(displayMatch);
+          const canRevealPublicPredictions = hasKnownTeams && (isClosed || resultAvailable);
+          return <article key={match.id} className={`match-row ${disabled ? 'match-row-disabled' : ''} ${resultAvailable ? 'match-row-result' : ''}`}><div className="match-meta"><span className="match-label">{getMatchLabel(displayMatch)}</span><span className="match-time">{formatTimeBelge(displayMatch.start_time)}</span></div><div className="match-main">{renderTeamBlock(displayMatch, 'team1', 'right')}<div className="score-zone">{renderScoreZone(displayMatch, match, scores, hasKnownTeams, disabled)}</div>{renderTeamBlock(displayMatch, 'team2')}</div><div className="match-status-zone">{knockout && <span className="match-number">M{match.id}</span>}{statusConfig && <div className={statusConfig.className} title={statusConfig.detail || ''}><span>{statusConfig.icon}</span>{statusConfig.label}</div>}</div>{canRevealPublicPredictions && <PublicMatchPredictionsPanel match={displayMatch} />}</article>;
+        })}</div></section></React.Fragment>)}
+        {isMobile && hiddenMobileDayCount > 0 && <div className="mobile-load-more-wrap"><button type="button" className="mobile-load-more-button" onClick={() => setVisibleMobileDayCount(prev => prev + MOBILE_DAYS_STEP)}>Afficher plus de journées ({hiddenMobileDayCount} restantes)</button></div>}
       </div>
-
       {selectedTeam && <TeamInfoModal teamId={selectedTeam.name} teamName={selectedTeam.name} onClose={() => setSelectedTeam(null)} />}
       <style>{styles}</style>
     </div>
@@ -527,7 +367,6 @@ const styles = `
   .matchday-filter-buttons em { min-width: 20px; height: 20px; border-radius: 999px; display: grid; place-items: center; font-style: normal; background: rgba(255,255,255,.75); color: #0f172a; font-size: 10px; }
   .prediction-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border-radius: 16px; padding: 10px 12px; margin-bottom: 16px; }
   .prediction-toolbar button { border: 0; border-radius: 999px; padding: 8px 12px; background: ${GRADIENT}; color: white; font-size: 12px; font-weight: 900; cursor: pointer; box-shadow: 0 8px 18px rgba(15,118,110,.18); }
-  .prediction-toolbar button + button { background: #e2e8f0; color: #334155; box-shadow: none; }
   .autosave-inline { margin-left: auto; color: #64748b; font-size: 12px; font-weight: 800; }
   .empty-filter-card { border-radius: 18px; padding: 18px; color: #475569; font-weight: 900; text-align: center; }
   .mobile-load-more-wrap { display: none; }
@@ -568,10 +407,7 @@ const styles = `
   .prediction-recap { color: #64748b; font-size: 10px; font-weight: 800; white-space: nowrap; }
   .mock-result-note { color: #b45309; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
   .points-chip { padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 950; }
-  .points-3 { background: #dcfce7; color: #047857; }
-  .points-2 { background: #dbeafe; color: #1d4ed8; }
-  .points-1 { background: #fef3c7; color: #92400e; }
-  .points-0 { background: #fee2e2; color: #b91c1c; }
+  .points-3 { background: #dcfce7; color: #047857; } .points-2 { background: #dbeafe; color: #1d4ed8; } .points-1 { background: #fef3c7; color: #92400e; } .points-0 { background: #fee2e2; color: #b91c1c; }
   .match-status-zone { display: flex; justify-content: flex-end; align-items: center; gap: 8px; min-width: 0; }
   .prediction-status { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 112px; padding: 6px 9px; border-radius: 999px; font-size: 11px; font-weight: 900; white-space: nowrap; }
   .prediction-status.saved { background: #dcfce7; color: #047857; }
