@@ -75,9 +75,9 @@ export const bonusPredictionsService = {
 };
 
 export const specialPredictionsService = {
-  get: () => api.get('/special-predictions'),
-  getPublic: () => api.get('/special-predictions/public'),
-  save: (payload) => api.post('/special-predictions', payload)
+  get: (matchday = 1) => api.get('/special-predictions', { params: { matchday } }),
+  getPublic: (matchday = 1) => api.get('/special-predictions/public', { params: { matchday } }),
+  save: (payload, matchday = 1) => api.post('/special-predictions', payload, { params: { matchday } })
 };
 
 export const resultsService = {
