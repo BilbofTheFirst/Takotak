@@ -16,10 +16,10 @@ const isDeadlinePassed = (deadline) => {
 };
 
 const getAutoPlacement = () => {
-  if (typeof window === 'undefined') return 'always';
+  if (typeof window === 'undefined') return 'predictions';
   if (window.location.pathname.startsWith('/bonus')) return 'bonus';
   if (window.location.pathname.startsWith('/predictions')) return 'predictions';
-  return 'always';
+  return 'predictions';
 };
 
 const getMatchdayCopy = (matchday, isBonusPlacement) => {
@@ -45,7 +45,7 @@ const getMatchdayCopy = (matchday, isBonusPlacement) => {
   };
 };
 
-function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday = 1, collapsible = false, defaultCollapsed = false }) {
+function SpecialPredictionsPanel({ placement = 'predictions', currentUserId, matchday = 1, collapsible = false, defaultCollapsed = false }) {
   const [definitions, setDefinitions] = useState([]);
   const [predictions, setPredictions] = useState({});
   const [actual, setActual] = useState({});
@@ -130,7 +130,7 @@ function SpecialPredictionsPanel({ placement = 'auto', currentUserId, matchday =
   }
 
   if (effectivePlacement === 'bonus' && !effectiveLocked) return null;
-  if (effectivePlacement === 'predictions' && effectiveLocked) return null;
+  if (effectivePlacement === 'predictions' && (effectiveLocked || !deadline)) return null;
 
   const isBonusPlacement = effectivePlacement === 'bonus';
   const copy = getMatchdayCopy(matchday, isBonusPlacement);
