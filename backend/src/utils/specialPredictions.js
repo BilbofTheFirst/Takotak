@@ -56,7 +56,7 @@ const SECOND_MATCHDAY_SPECIAL_DEFINITIONS = [
     code: SPECIAL_PREDICTION_CODES.SECOND_SIX_POINT_TEAMS,
     matchday: SPECIAL_MATCHDAYS.SECOND,
     label: 'Équipes à 6 points',
-    description: 'Combien d’équipes auront gagné leurs deux premiers matchs après la deuxième journée ?',
+    description: 'Combien d’équipes auront gagné leurs deux premiers matchs après la deuxième journée ? Cette question tient compte des 24 matchs de J1 et des 24 matchs de J2.',
     max_points: 5,
     point_loss_per_gap: 1,
     unit: 'équipes'
@@ -64,8 +64,8 @@ const SECOND_MATCHDAY_SPECIAL_DEFINITIONS = [
   {
     code: SPECIAL_PREDICTION_CODES.SECOND_BOTH_TEAMS_SCORE_COUNT,
     matchday: SPECIAL_MATCHDAYS.SECOND,
-    label: 'Les deux équipes marquent',
-    description: 'Combien de matchs de la deuxième journée verront les deux équipes marquer au moins un but ?',
+    label: 'Les deux équipes marquent sur J2',
+    description: 'Sur les 24 matchs de la deuxième journée, combien verront les deux équipes marquer au moins un but ?',
     max_points: 5,
     point_loss_per_gap: 1,
     unit: 'matchs'
