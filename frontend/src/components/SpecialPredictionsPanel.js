@@ -31,7 +31,8 @@ const getMatchdayCopy = (matchday, isBonusPlacement) => {
       description: isBonusPlacement
         ? 'Les spéciaux de deuxième journée sont verrouillés. Tu peux suivre ton score dès que les résultats sont calculés.'
         : 'Deuxième journée = le deuxième match de chaque équipe, donc 24 matchs au total.',
-      lockedText: '🔒 Les pronostics spéciaux de deuxième journée sont verrouillés. Tu peux maintenant consulter les pronos du groupe dans un tableau global.'
+      lockedText: '🔒 Les pronostics spéciaux de deuxième journée sont verrouillés. Tu peux maintenant consulter les pronos du groupe dans un tableau global.',
+      unlockedText: '🔓 Un admin a temporairement réouvert tes pronostics spéciaux de deuxième journée. Pense à sauvegarder tes corrections.'
     };
   }
 
@@ -41,7 +42,8 @@ const getMatchdayCopy = (matchday, isBonusPlacement) => {
     description: isBonusPlacement
       ? 'Les spéciaux sont maintenant verrouillés et ont rejoint les bonus. Tu peux suivre ton score dès que les résultats sont calculés.'
       : 'Première journée = le premier match de chaque équipe, donc 24 matchs au total. Ce n’est pas uniquement les matchs du 11 juin.',
-    lockedText: '🔒 Les pronostics spéciaux sont verrouillés. Tu peux maintenant consulter les pronos du groupe dans un tableau global.'
+    lockedText: '🔒 Les pronostics spéciaux sont verrouillés. Tu peux maintenant consulter les pronos du groupe dans un tableau global.',
+    unlockedText: '🔓 Un admin a temporairement réouvert tes pronostics spéciaux. Pense à sauvegarder tes corrections.'
   };
 };
 
@@ -52,6 +54,8 @@ function SpecialPredictionsPanel({ placement = 'predictions', currentUserId, mat
   const [currentActual, setCurrentActual] = useState({});
   const [scoring, setScoring] = useState(null);
   const [locked, setLocked] = useState(false);
+  const [globalLocked, setGlobalLocked] = useState(false);
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [complete, setComplete] = useState(false);
   const [deadline, setDeadline] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +63,10 @@ function SpecialPredictionsPanel({ placement = 'predictions', currentUserId, mat
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   const effectivePlacement = placement === 'auto' ? getAutoPlacement() : placement;
-  const effectiveLocked = Boolean(locked || isDeadlinePassed(deadline));
+  const deadlinePassed = isDeadlinePassed(deadline);
+  const globallyClosed = Boolean(globalLocked || deadlinePassed);
+  const effectiveLocked = Boolean((locked || globallyClosed) && !adminUnlocked);
+  const showAsClosedPanel = Boolean(globallyClosed || effectiveLocked || adminUnlocked);
 
   const applyPayload = (payload = {}) => {
     setDefinitions(payload.definitions || []);
@@ -68,6 +75,8 @@ function SpecialPredictionsPanel({ placement = 'predictions', currentUserId, mat
     setCurrentActual(payload.current_actual || payload.actual || {});
     setScoring(payload.scoring || null);
     setLocked(Boolean(payload.locked));
+    setGlobalLocked(Boolean(payload.global_locked ?? payload.locked));
+    setAdminUnlocked(Boolean(payload.admin_unlocked));
     setComplete(Boolean(payload.complete));
     setDeadline(payload.deadline || null);
   };
@@ -103,6 +112,7 @@ function SpecialPredictionsPanel({ placement = 'predictions', currentUserId, mat
   }).length;
 
   const updatePrediction = (code, value) => {
+    if (effectiveLocked) return;
     if (value !== '') {
       const numberValue = Number(value);
       if (!Number.isInteger(numberValue) || numberValue < 0 || numberValue > 300) return;
@@ -129,14 +139,14 @@ function SpecialPredictionsPanel({ placement = 'predictions', currentUserId, mat
     return <section className="special-panel special-loading">Chargement des pronostics spéciaux...</section>;
   }
 
-  if (effectivePlacement === 'bonus' && !effectiveLocked) return null;
-  if (effectivePlacement === 'predictions' && (effectiveLocked || !deadline)) return null;
+  if (effectivePlacement === 'bonus' && !showAsClosedPanel) return null;
+  if (effectivePlacement === 'predictions' && (showAsClosedPanel || !deadline)) return null;
 
   const isBonusPlacement = effectivePlacement === 'bonus';
   const copy = getMatchdayCopy(matchday, isBonusPlacement);
 
   return (
-    <section className={`special-panel ${effectiveLocked ? 'is-locked' : ''} ${isBonusPlacement ? 'in-bonus-page' : ''} ${collapsed ? 'is-collapsed' : ''}`}>
+    <section className={`special-panel ${showAsClosedPanel ? 'is-locked' : ''} ${adminUnlocked ? 'is-admin-unlocked' : ''} ${isBonusPlacement ? 'in-bonus-page' : ''} ${collapsed ? 'is-collapsed' : ''}`}>
       <div className="special-header">
         <div>
           <span className="special-eyebrow">{copy.eyebrow}</span>
@@ -154,7 +164,7 @@ function SpecialPredictionsPanel({ placement = 'predictions', currentUserId, mat
           )}
           {!collapsed && (
             <button type="button" onClick={save} disabled={effectiveLocked || status === 'saving'}>
-              {effectiveLocked ? 'Verrouillés' : status === 'saving' ? 'Sauvegarde...' : 'Sauvegarder'}
+              {effectiveLocked ? 'Verrouillés' : status === 'saving' ? 'Sauvegarde...' : adminUnlocked ? 'Sauvegarder la correction' : 'Sauvegarder'}
             </button>
           )}
           {!collapsed && status === 'saved' && <span className="special-status saved">✅ Enregistré</span>}
@@ -171,8 +181,9 @@ function SpecialPredictionsPanel({ placement = 'predictions', currentUserId, mat
             <div><strong>{complete ? 'Oui' : 'Non'}</strong><span>résultats complets</span></div>
           </div>
 
-          {effectiveLocked && <div className="special-lock">{copy.lockedText}</div>}
-          {effectiveLocked && <PublicSpecialPredictionsTable locked={effectiveLocked} currentUserId={currentUserId} matchday={matchday} />}
+          {showAsClosedPanel && !adminUnlocked && <div className="special-lock">{copy.lockedText}</div>}
+          {showAsClosedPanel && adminUnlocked && <div className="special-unlocked">{copy.unlockedText}</div>}
+          {showAsClosedPanel && <PublicSpecialPredictionsTable locked={showAsClosedPanel} currentUserId={currentUserId} matchday={matchday} />}
 
           <div className="special-grid">
             {definitions.map(definition => {
@@ -185,7 +196,7 @@ function SpecialPredictionsPanel({ placement = 'predictions', currentUserId, mat
                   <p>{definition.description}</p>
                   <label><span>Ton prono</span><input type="number" min="0" max="300" inputMode="numeric" disabled={effectiveLocked} value={predictions[definition.code] ?? ''} onChange={(event) => updatePrediction(definition.code, event.target.value)} placeholder="0" /></label>
                   <div className="special-result"><span>Résultat réel</span><strong>{actualValue ?? 'En attente'}</strong></div>
-                  {effectiveLocked && <div className="special-result current"><span>Résultat actuel</span><strong>{currentValue ?? 'En attente'}</strong></div>}
+                  {showAsClosedPanel && <div className="special-result current"><span>Résultat actuel</span><strong>{currentValue ?? 'En attente'}</strong></div>}
                   <small>Tout pile = {definition.max_points} pts, puis -{definition.point_loss_per_gap} par écart.</small>
                 </article>
               );
@@ -197,6 +208,7 @@ function SpecialPredictionsPanel({ placement = 'predictions', currentUserId, mat
       <style>{`
         .special-panel { background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.55); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 18px 55px rgba(0,0,0,.2); }
         .special-panel.is-collapsed { padding-bottom: 12px; }
+        .special-panel.is-admin-unlocked { box-shadow: 0 18px 55px rgba(0,0,0,.2), inset 0 0 0 3px rgba(15,118,110,.22); }
         .special-loading { color: #475569; font-weight: 900; }
         .special-header { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 18px; margin-bottom: 14px; }
         .is-collapsed .special-header { margin-bottom: 0; }
@@ -218,7 +230,9 @@ function SpecialPredictionsPanel({ placement = 'predictions', currentUserId, mat
         .special-progress div { border-radius: 14px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; }
         .special-progress strong { display: block; color: #2563eb; font-size: 18px; }
         .special-progress span, .special-title span, .special-card label span, .special-result span { display: block; color: #0f766e; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
-        .special-lock { margin-bottom: 14px; padding: 10px 12px; border-radius: 14px; color: #713f12; background: #fef3c7; border: 1px solid rgba(251,191,36,.5); font-size: 12px; font-weight: 900; }
+        .special-lock, .special-unlocked { margin-bottom: 14px; padding: 10px 12px; border-radius: 14px; font-size: 12px; font-weight: 900; }
+        .special-lock { color: #713f12; background: #fef3c7; border: 1px solid rgba(251,191,36,.5); }
+        .special-unlocked { color: #0f766e; background: #ccfbf1; border: 1px solid rgba(15,118,110,.28); }
         .special-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
         .special-card { border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 18px; padding: 14px; }
         .special-title { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
