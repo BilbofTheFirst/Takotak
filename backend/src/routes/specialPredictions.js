@@ -14,6 +14,29 @@ const router = express.Router();
 
 const normalizeMatchday = (value) => Number(value) === 2 ? 2 : 1;
 
+const ensureSpecialUnlockTable = async (clientOrPool = pool) => {
+  await clientOrPool.query(`
+    CREATE TABLE IF NOT EXISTS special_prediction_unlocks (
+      user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      matchday integer NOT NULL,
+      unlocked_by integer REFERENCES users(id) ON DELETE SET NULL,
+      updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, matchday)
+    )
+  `);
+
+  await clientOrPool.query('CREATE INDEX IF NOT EXISTS idx_special_prediction_unlocks_matchday ON special_prediction_unlocks(matchday)');
+};
+
+const getSpecialUnlockForUser = async (clientOrPool, userId, matchday) => {
+  await ensureSpecialUnlockTable(clientOrPool);
+  const result = await clientOrPool.query(
+    'SELECT user_id FROM special_prediction_unlocks WHERE user_id = $1 AND matchday = $2',
+    [userId, normalizeMatchday(matchday)]
+  );
+  return result.rows.length > 0;
+};
+
 const buildAvatarUrl = (user) => {
   if (!user?.avatar_data) return null;
   const rawVersion = user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : Date.now();
@@ -22,11 +45,17 @@ const buildAvatarUrl = (user) => {
 };
 
 const buildPayload = async (clientOrPool, userId, matchday = 1) => {
-  await ensureSpecialPredictionsTable(clientOrPool);
+  await Promise.all([
+    ensureSpecialPredictionsTable(clientOrPool),
+    ensureSpecialUnlockTable(clientOrPool)
+  ]);
+
   const normalizedMatchday = normalizeMatchday(matchday);
   const status = await getSpecialMatchdayStatus(clientOrPool, normalizedMatchday);
   const definitions = getSpecialMatchdayDefinitions(normalizedMatchday);
   const codes = definitions.map(definition => definition.code);
+  const adminUnlocked = status.locked ? await getSpecialUnlockForUser(clientOrPool, userId, normalizedMatchday) : false;
+  const userLocked = Boolean(status.locked && !adminUnlocked);
   const result = await clientOrPool.query(
     'SELECT * FROM special_predictions WHERE user_id = $1 AND code = ANY($2::varchar[])',
     [userId, codes]
@@ -45,7 +74,9 @@ const buildPayload = async (clientOrPool, userId, matchday = 1) => {
     matchday: normalizedMatchday,
     definitions,
     predictions,
-    locked: status.locked,
+    locked: userLocked,
+    global_locked: Boolean(status.locked),
+    admin_unlocked: adminUnlocked,
     deadline: status.deadline,
     complete: status.complete,
     actual: status.actual,
@@ -77,6 +108,7 @@ router.get('/public', authenticateToken, async (req, res) => {
       return res.json({
         matchday,
         locked: false,
+        global_locked: false,
         deadline: status.deadline,
         definitions,
         actual: null,
@@ -139,6 +171,7 @@ router.get('/public', authenticateToken, async (req, res) => {
     return res.json({
       matchday,
       locked: true,
+      global_locked: true,
       deadline: status.deadline,
       definitions,
       actual: status.actual,
@@ -159,12 +192,16 @@ router.post('/', authenticateToken, async (req, res) => {
 
   try {
     await client.query('BEGIN');
-    await ensureSpecialPredictionsTable(client);
+    await Promise.all([
+      ensureSpecialPredictionsTable(client),
+      ensureSpecialUnlockTable(client)
+    ]);
 
     const matchday = normalizeMatchday(req.query.matchday || req.body?.matchday);
     const definitions = getSpecialMatchdayDefinitions(matchday);
     const status = await getSpecialMatchdayStatus(client, matchday);
-    if (status.locked) {
+    const adminUnlocked = status.locked ? await getSpecialUnlockForUser(client, req.user.id, matchday) : false;
+    if (status.locked && !adminUnlocked) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Special predictions are locked' });
     }
