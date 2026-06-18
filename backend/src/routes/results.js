@@ -44,6 +44,23 @@ const buildAvatarUrl = (user) => {
   return `/profile/users/${user.id}/avatar?v=${version}`;
 };
 
+const getSpecialPointsByPrefix = (specialScore, prefix) => (
+  Object.entries(specialScore?.details || {})
+    .filter(([code]) => code.startsWith(prefix))
+    .reduce((sum, [, detail]) => sum + Number(detail?.points || 0), 0)
+);
+
+const buildSpecialBreakdown = (specialScore) => {
+  const specialJ1Points = getSpecialPointsByPrefix(specialScore, 'FIRST_MATCHDAY_');
+  const specialJ2Points = getSpecialPointsByPrefix(specialScore, 'SECOND_MATCHDAY_');
+
+  return {
+    special_points: Number(specialScore?.points || 0),
+    special_j1_points: specialJ1Points,
+    special_j2_points: specialJ2Points
+  };
+};
+
 const ensureLeaderboardUserColumns = async (clientOrPool = pool) => {
   if (leaderboardUserColumnsReady) return;
   await clientOrPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_data TEXT');
@@ -241,7 +258,8 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const [{ scores: bonusScores }, { scores: specialScores }] = await Promise.all([getAllBonusScores(pool), getAllSpecialPredictionScores(pool)]);
     const userBonus = bonusScores.get(Number(userId))?.points || 0;
-    const userSpecial = specialScores.get(Number(userId))?.points || 0;
+    const specialBreakdown = buildSpecialBreakdown(specialScores.get(Number(userId)));
+    const userSpecial = specialBreakdown.special_points;
 
     const statsResult = await pool.query(
       `SELECT
@@ -275,7 +293,13 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
     const baseStats = statsResult.rows[0];
     const matchPoints = Number(baseStats.match_points || 0);
 
-    res.json({ ...baseStats, bonus_points: userBonus, special_points: userSpecial, total_points: matchPoints + userBonus + userSpecial, rank: rank || null });
+    res.json({
+      ...baseStats,
+      bonus_points: userBonus,
+      ...specialBreakdown,
+      total_points: matchPoints + userBonus + userSpecial,
+      rank: rank || null
+    });
   } catch (error) {
     console.error('Get user stats error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -321,14 +345,16 @@ router.get('/leaderboard', async (req, res) => {
       const id = Number(row.id);
       const matchPoints = Number(row.match_points || 0);
       const bonusPoints = bonusScores.get(id)?.points || 0;
-      const specialPoints = specialScores.get(id)?.points || 0;
+      const specialBreakdown = buildSpecialBreakdown(specialScores.get(id));
+      const specialPoints = specialBreakdown.special_points;
+
       return {
         id,
         username: row.username,
         avatar_url: buildAvatarUrl(row),
         match_points: matchPoints,
         bonus_points: bonusPoints,
-        special_points: specialPoints,
+        ...specialBreakdown,
         total_points: matchPoints + bonusPoints + specialPoints,
         previous_total_points: latestMatchId ? matchPoints - (latestScoreByUser.get(id) || 0) + bonusPoints + specialPoints : matchPoints + bonusPoints + specialPoints,
         matches_predicted: Number(row.matches_predicted || 0)
