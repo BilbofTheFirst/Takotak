@@ -24,6 +24,10 @@ const expireLocalSession = () => {
   window.dispatchEvent(new CustomEvent(AUTH_SESSION_EXPIRED_EVENT, {
     detail: { reason: 'auth_failed' }
   }));
+
+  window.setTimeout(() => {
+    window.location.replace('/');
+  }, 0);
 };
 
 const api = axios.create({
