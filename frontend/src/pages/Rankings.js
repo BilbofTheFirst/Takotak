@@ -25,7 +25,7 @@ const buildProgressionTicks = (values) => {
   return sampledIndexes.map(index => uniqueValues[index]);
 };
 
-const formatProgressionTick = (value) => Number(value) === 0 ? 'Départ' : `M${value}`;
+const formatProgressionTick = (value, labelsByNumber) => labelsByNumber?.get(Number(value)) || (Number(value) === 0 ? 'Départ' : `M${value}`);
 
 const getDefaultChartUsers = (rankedUsers, chartMode, currentUserId) => {
   const base = chartMode === 'all' ? rankedUsers : rankedUsers.slice(0, chartMode === 'top5' ? 5 : 8);
@@ -65,6 +65,7 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
   const usersById = useMemo(() => new Map((progression?.users || []).map(user => [Number(user.id), user])), [progression]);
   const currentUserId = Number(currentUser?.id || 0);
   const hiddenIds = useMemo(() => new Set(hiddenUserIds.map(Number)), [hiddenUserIds]);
+  const matchLabelsByNumber = useMemo(() => new Map((progression?.matches || []).filter(match => match.label).map(match => [Number(match.match_number), match.label])), [progression]);
 
   const chartUsers = useMemo(() => {
     const selected = rankedUsers.filter(user => selectedUserIds.includes(Number(user.id)));
@@ -139,11 +140,11 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
 
   return (
     <div className="chart-card">
-      <div className="chart-header"><div><span>📈 Progression</span><h2>Évolution des scores</h2></div><p>{series.length} courbe{series.length > 1 ? 's' : ''} affichée{series.length > 1 ? 's' : ''}. En cas d’égalité, les avatars en bout de ligne sont affichés côte à côte.</p></div>
+      <div className="chart-header"><div><span>📈 Progression</span><h2>Évolution des scores</h2></div><p>{series.length} courbe{series.length > 1 ? 's' : ''} affichée{series.length > 1 ? 's' : ''}. Le dernier point “Total” inclut les points bonus et spéciaux.</p></div>
       <div className="chart-controls"><button type="button" className={chartMode === 'top5' ? 'active' : ''} onClick={() => setChartMode('top5')}>Top 5</button><button type="button" className={chartMode === 'top8' ? 'active' : ''} onClick={() => setChartMode('top8')}>Top 8</button><button type="button" className={chartMode === 'all' ? 'active' : ''} onClick={() => setChartMode('all')}>Tous</button>{hasOverrides && <button type="button" className="ghost" onClick={clearChartOverrides}>Réinitialiser l’affichage</button>}</div>
       <div className="chart-scroll"><svg viewBox={`0 0 ${width} ${height}`} className="progression-chart" role="img" aria-label="Graphique d'évolution des scores">
         {[0, 0.25, 0.5, 0.75, 1].map(ratio => { const y = padTop + chartHeight - ratio * chartHeight; const value = Math.round(maxY * ratio); return <g key={ratio}><line x1={padLeft} y1={y} x2={width - padRight} y2={y} className="chart-grid" /><text x={padLeft - 10} y={y + 4} className="chart-axis-label" textAnchor="end">{value}</text></g>; })}
-        {xAxisTicks.map(matchNumber => { const x = xFor(matchNumber); return <g key={`x-${matchNumber}`}><line x1={x} y1={padTop} x2={x} y2={padTop + chartHeight} className="chart-grid soft" /><text x={x} y={height - 14} className="chart-axis-label" textAnchor="middle">{formatProgressionTick(matchNumber)}</text></g>; })}
+        {xAxisTicks.map(matchNumber => { const x = xFor(matchNumber); return <g key={`x-${matchNumber}`}><line x1={x} y1={padTop} x2={x} y2={padTop + chartHeight} className="chart-grid soft" /><text x={x} y={height - 14} className="chart-axis-label" textAnchor="middle">{formatProgressionTick(matchNumber, matchLabelsByNumber)}</text></g>; })}
         <line x1={padLeft} y1={padTop} x2={padLeft} y2={padTop + chartHeight} className="chart-axis" />
         <line x1={padLeft} y1={padTop + chartHeight} x2={width - padRight} y2={padTop + chartHeight} className="chart-axis" />
         {series.map(user => { const points = user.data.map(point => `${xFor(point.match_number)},${yFor(point.points)}`).join(' '); return <g key={user.id} className={user.isMe ? 'my-chart-line' : ''}><polyline points={points} fill="none" stroke={user.color} strokeWidth={user.isMe ? '5.5' : '3.5'} strokeLinecap="round" strokeLinejoin="round" opacity={user.isMe ? '1' : '.82'} /></g>; })}
