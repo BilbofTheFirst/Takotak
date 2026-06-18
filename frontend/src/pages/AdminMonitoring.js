@@ -13,6 +13,8 @@ const emptySpecial2 = {
   missing: [],
   missing_count: 0,
   complete: false,
+  global_locked: false,
+  admin_unlocked: false,
   locked: false,
   urgent: false
 };
@@ -31,6 +33,7 @@ function AdminMonitoring() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [unlockSavingUserId, setUnlockSavingUserId] = useState(null);
+  const [specialUnlockSavingUserId, setSpecialUnlockSavingUserId] = useState(null);
 
   const loadMonitoring = async () => {
     try {
@@ -76,6 +79,20 @@ function AdminMonitoring() {
     }
   };
 
+  const toggleSpecial2Unlock = async (user) => {
+    const special2 = getSpecial2(user);
+    const nextUnlocked = !special2.admin_unlocked;
+    try {
+      setSpecialUnlockSavingUserId(user.id);
+      await api.patch(`/admin/users/${user.id}/special-unlock`, { matchday: 2, unlocked: nextUnlocked });
+      await loadMonitoring();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur lors de la modification de la réouverture des spéciaux J2');
+    } finally {
+      setSpecialUnlockSavingUserId(null);
+    }
+  };
+
   if (loading) {
     return <PageLoader title="Chargement du monitoring..." icon="📡" subtitle="Vérification des pronostics urgents" />;
   }
@@ -102,7 +119,7 @@ function AdminMonitoring() {
         <div>
           <span>📡 Monitoring</span>
           <h2>Pronostics à surveiller</h2>
-          <p>Vue rapide pour relancer les joueurs avant les matchs des prochaines 24h, contrôler les bonus incomplets et réouvrir ponctuellement un bonus long terme.</p>
+          <p>Vue rapide pour relancer les joueurs avant les matchs des prochaines 24h, contrôler les bonus incomplets, réouvrir un bonus long terme ou les spéciaux J2.</p>
         </div>
         <div className="monitoring-actions">
           <button type="button" className="button secondary" onClick={loadMonitoring}>Rafraîchir</button>
@@ -115,7 +132,7 @@ function AdminMonitoring() {
       <div className="monitoring-summary-grid">
         <div><strong>{summary.users_missing_today || 0}</strong><span>joueurs à relancer 24h</span></div>
         <div><strong>{summary.users_missing_bonus || 0}</strong><span>bonus long terme incomplets</span></div>
-        <div><strong>{summary.users_bonus_unlocked || 0}</strong><span>bonus réouverts admin</span></div>
+        <div><strong>{summary.users_bonus_unlocked || 0}/{summary.users_special2_unlocked || 0}</strong><span>réouverts bonus/J2</span></div>
         <div><strong>{summary.today_predictions_done || 0}/{summary.today_predictions_required || 0}</strong><span>pronos matchs 24h</span></div>
       </div>
 
@@ -197,6 +214,7 @@ function AdminMonitoring() {
               ...(special2.urgent ? special2.missing.map(item => `Spécial J2 : ${item}`) : [])
             ];
             const showBonusToggle = user.bonus.global_locked || user.bonus.admin_unlocked;
+            const showSpecial2Toggle = special2.global_locked || special2.admin_unlocked;
 
             return (
               <div key={user.id} className={`monitoring-row ${needsReminder ? 'needs-reminder' : 'is-ok'}`}>
@@ -217,7 +235,20 @@ function AdminMonitoring() {
                   )}
                 </div>
                 <span className={user.special.complete ? '' : 'incomplete-value'}>{user.special.completed}/{user.special.total}{user.special.locked ? ' 🔒' : ''}</span>
-                <span className={special2.complete ? '' : 'incomplete-value'}>{special2.completed}/{special2.total}{special2.locked ? ' 🔒' : ''}</span>
+                <div className={`bonus-table-cell ${special2.complete ? '' : 'incomplete-value'}`}>
+                  <span>{special2.completed}/{special2.total}{special2.locked ? ' 🔒' : ''}</span>
+                  {showSpecial2Toggle && (
+                    <button
+                      type="button"
+                      className={`bonus-lock-toggle special2-lock-toggle ${special2.admin_unlocked ? 'is-on' : ''}`}
+                      disabled={specialUnlockSavingUserId === user.id}
+                      title={special2.admin_unlocked ? 'Refermer les spéciaux J2 pour ce joueur' : 'Réouvrir les spéciaux J2 pour ce joueur'}
+                      onClick={() => toggleSpecial2Unlock(user)}
+                    >
+                      {specialUnlockSavingUserId === user.id ? '…' : special2.admin_unlocked ? '🔓' : '🔒'}
+                    </button>
+                  )}
+                </div>
                 <div className="missing-cell">
                   {needsReminder ? (
                     <details>
@@ -235,7 +266,7 @@ function AdminMonitoring() {
       </div>
 
       <p className="monitoring-help">
-        Bonus long terme : {summary.bonus_locked ? 'verrouillés globalement' : `ouverts jusqu’au ${formatDateTime(summary.bonus_deadline)}`} · Réouvertures admin : {summary.users_bonus_unlocked || 0} · Deadline spéciaux J1 : {formatDateTime(summary.first_matchday_deadline)} · {summary.first_matchday_locked ? 'verrouillés' : 'encore ouverts'} · Deadline spéciaux J2 : {formatDateTime(summary.second_matchday_deadline)} · {summary.second_matchday_locked ? 'verrouillés' : summary.special2_reminder_active ? 'relance active' : 'hors relance'}.
+        Bonus long terme : {summary.bonus_locked ? 'verrouillés globalement' : `ouverts jusqu’au ${formatDateTime(summary.bonus_deadline)}`} · Réouvertures admin : bonus {summary.users_bonus_unlocked || 0}, J2 {summary.users_special2_unlocked || 0} · Deadline spéciaux J1 : {formatDateTime(summary.first_matchday_deadline)} · {summary.first_matchday_locked ? 'verrouillés' : 'encore ouverts'} · Deadline spéciaux J2 : {formatDateTime(summary.second_matchday_deadline)} · {summary.second_matchday_locked ? 'verrouillés' : summary.special2_reminder_active ? 'relance active' : 'hors relance'}.
       </p>
 
       <style>{styles}</style>
