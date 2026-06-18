@@ -379,6 +379,7 @@ router.get('/leaderboard/progression', async (req, res) => {
   try {
     await ensureLeaderboardUserColumns();
 
+    const [{ scores: bonusScores }, { scores: specialScores }] = await Promise.all([getAllBonusScores(pool), getAllSpecialPredictionScores(pool)]);
     const usersResult = await pool.query(`SELECT id, username, avatar_data, avatar_updated_at FROM users ORDER BY username ASC`);
     const matchesResult = await pool.query(`
       SELECT m.id, m.start_time
@@ -398,21 +399,45 @@ router.get('/leaderboard/progression', async (req, res) => {
     });
 
     const orderedMatches = matchesResult.rows.map((match, index) => ({ match_number: index + 1, match_id: Number(match.id), start_time: match.start_time }));
+    const totalMarker = { match_number: orderedMatches.length + 1, match_id: null, start_time: null, label: 'Total' };
 
     const users = usersResult.rows.map(user => {
       let cumulative = 0;
       const id = Number(user.id);
-      const series = [{ match_number: 0, match_id: null, points: 0 }];
+      const bonusPoints = bonusScores.get(id)?.points || 0;
+      const specialBreakdown = buildSpecialBreakdown(specialScores.get(id));
+      const specialPoints = specialBreakdown.special_points;
+      const nonMatchPoints = bonusPoints + specialPoints;
+      const series = [{ match_number: 0, match_id: null, points: 0, label: 'Départ' }];
 
       orderedMatches.forEach(match => {
         cumulative += pointsByUserAndMatch.get(`${id}:${match.match_id}`) || 0;
         series.push({ match_number: match.match_number, match_id: match.match_id, points: cumulative });
       });
 
-      return { id, username: user.username, avatar_url: buildAvatarUrl(user), total_match_points: cumulative, series };
+      series.push({
+        match_number: totalMarker.match_number,
+        match_id: null,
+        points: cumulative + nonMatchPoints,
+        label: 'Total',
+        bonus_points: bonusPoints,
+        special_points: specialPoints,
+        ...specialBreakdown
+      });
+
+      return {
+        id,
+        username: user.username,
+        avatar_url: buildAvatarUrl(user),
+        total_match_points: cumulative,
+        bonus_points: bonusPoints,
+        ...specialBreakdown,
+        total_points: cumulative + nonMatchPoints,
+        series
+      };
     });
 
-    res.json({ matches: [{ match_number: 0, match_id: null, start_time: null }, ...orderedMatches], users });
+    res.json({ matches: [{ match_number: 0, match_id: null, start_time: null, label: 'Départ' }, ...orderedMatches, totalMarker], users });
   } catch (error) {
     console.error('Get leaderboard progression error:', error);
     res.status(500).json({ error: 'Server error' });
