@@ -22,6 +22,7 @@ const SECOND_MATCHDAY = 2;
 const REMINDER_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== '';
+const normalizeSpecialMatchday = (value) => Number(value) === SECOND_MATCHDAY ? SECOND_MATCHDAY : FIRST_MATCHDAY;
 
 const parseJsonValue = (value, fallback) => {
   if (value === null || value === undefined) return fallback;
@@ -37,6 +38,48 @@ const isDeadlineWithinReminderWindow = (deadline, locked = false) => {
   if (Number.isNaN(deadlineTime)) return false;
   const gap = deadlineTime - Date.now();
   return gap > 0 && gap <= REMINDER_WINDOW_MS;
+};
+
+const ensureSpecialUnlockTable = async (clientOrPool = pool) => {
+  await clientOrPool.query(`
+    CREATE TABLE IF NOT EXISTS special_prediction_unlocks (
+      user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      matchday integer NOT NULL,
+      unlocked_by integer REFERENCES users(id) ON DELETE SET NULL,
+      updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, matchday)
+    )
+  `);
+
+  await clientOrPool.query('CREATE INDEX IF NOT EXISTS idx_special_prediction_unlocks_matchday ON special_prediction_unlocks(matchday)');
+};
+
+const getSpecialUnlocks = async (clientOrPool = pool, matchday = SECOND_MATCHDAY) => {
+  await ensureSpecialUnlockTable(clientOrPool);
+  const normalizedMatchday = normalizeSpecialMatchday(matchday);
+  const result = await clientOrPool.query('SELECT user_id FROM special_prediction_unlocks WHERE matchday = $1', [normalizedMatchday]);
+  return new Set(result.rows.map(row => Number(row.user_id)));
+};
+
+const setSpecialUnlockForUser = async (clientOrPool = pool, userId, matchday = SECOND_MATCHDAY, unlocked = false, adminId = null) => {
+  await ensureSpecialUnlockTable(clientOrPool);
+  const normalizedMatchday = normalizeSpecialMatchday(matchday);
+
+  if (!unlocked) {
+    await clientOrPool.query('DELETE FROM special_prediction_unlocks WHERE user_id = $1 AND matchday = $2', [userId, normalizedMatchday]);
+    return { user_id: userId, matchday: normalizedMatchday, admin_unlocked: false };
+  }
+
+  const result = await clientOrPool.query(
+    `INSERT INTO special_prediction_unlocks (user_id, matchday, unlocked_by, updated_at)
+     VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+     ON CONFLICT (user_id, matchday)
+     DO UPDATE SET unlocked_by = EXCLUDED.unlocked_by, updated_at = CURRENT_TIMESTAMP
+     RETURNING user_id, matchday, unlocked_by, updated_at`,
+    [userId, normalizedMatchday, adminId]
+  );
+
+  return { ...result.rows[0], admin_unlocked: true };
 };
 
 const buildPublicUser = (user) => ({
@@ -90,7 +133,7 @@ const buildBonusProgress = (row, globalLocked = false, adminUnlocked = false) =>
   };
 };
 
-const buildSpecialProgress = (definitions, rows = [], locked = false, canRemind = true) => {
+const buildSpecialProgress = (definitions, rows = [], globalLocked = false, canRemind = true, adminUnlocked = false) => {
   const valueByCode = new Map(rows.map(row => [row.code, row.predicted_value]));
   const missing = [];
   let completed = 0;
@@ -100,12 +143,16 @@ const buildSpecialProgress = (definitions, rows = [], locked = false, canRemind 
     else missing.push(definition.label);
   });
 
+  const locked = Boolean(globalLocked && !adminUnlocked);
+
   return {
     completed,
     total: definitions.length,
     missing,
     missing_count: missing.length,
     complete: missing.length === 0,
+    global_locked: Boolean(globalLocked),
+    admin_unlocked: Boolean(adminUnlocked),
     locked,
     urgent: Boolean(canRemind && !locked && missing.length > 0)
   };
@@ -115,14 +162,15 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
   try {
     await Promise.all([
       ensureBonusPredictionTable(pool),
-      ensureSpecialPredictionsTable(pool)
+      ensureSpecialPredictionsTable(pool),
+      ensureSpecialUnlockTable(pool)
     ]);
 
     const firstDefinitions = getSpecialMatchdayDefinitions(FIRST_MATCHDAY);
     const secondDefinitions = getSpecialMatchdayDefinitions(SECOND_MATCHDAY);
     const allSpecialCodes = [...firstDefinitions, ...secondDefinitions].map(definition => definition.code);
 
-    const [usersResult, nextMatchesResult, bonusResult, specialResult, bonusDeadline, bonusUnlocks, firstMatchdayStatus, secondMatchdayStatus] = await Promise.all([
+    const [usersResult, nextMatchesResult, bonusResult, specialResult, bonusDeadline, bonusUnlocks, firstMatchdayStatus, secondMatchdayStatus, special2Unlocks] = await Promise.all([
       pool.query(`
         SELECT id, username, email, is_admin, created_at
         FROM users
@@ -155,7 +203,8 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       getBonusDeadline(pool),
       getBonusUnlocks(pool),
       getSpecialMatchdayStatus(pool, FIRST_MATCHDAY),
-      getSpecialMatchdayStatus(pool, SECOND_MATCHDAY)
+      getSpecialMatchdayStatus(pool, SECOND_MATCHDAY),
+      getSpecialUnlocks(pool, SECOND_MATCHDAY)
     ]);
 
     const users = usersResult.rows.map(buildPublicUser);
@@ -212,7 +261,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
 
       const bonus = buildBonusProgress(bonusByUser.get(user.id), bonusLocked, bonusUnlocks.has(Number(user.id)));
       const special = buildSpecialProgress(firstDefinitions, specialRowsByUser.get(user.id), specialLocked);
-      const special2 = buildSpecialProgress(secondDefinitions, special2RowsByUser.get(user.id), special2Locked, special2ReminderActive);
+      const special2 = buildSpecialProgress(secondDefinitions, special2RowsByUser.get(user.id), special2Locked, special2ReminderActive, special2Unlocks.has(Number(user.id)));
       const urgent_missing_count = missingMatches.length
         + (bonus.urgent ? bonus.missing.length : 0)
         + (special.urgent ? special.missing.length : 0)
@@ -256,6 +305,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       users_complete_special2: special2CompleteUsers.length,
       users_missing_special2: special2IncompleteUsers.length,
       users_missing_special2_urgent: special2IncompleteUsers.filter(user => user.special2.urgent).length,
+      users_special2_unlocked: userMonitoring.filter(user => user.special2.admin_unlocked).length,
       special2_reminder_active: special2ReminderActive,
       bonus_deadline: bonusDeadline.first_match_time,
       bonus_locked: bonusLocked,
@@ -274,6 +324,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       bonus_incomplete_users: bonusIncompleteUsers,
       bonus_unlocked_users: userMonitoring.filter(user => user.bonus.admin_unlocked),
       special_incomplete_users: specialIncompleteUsers,
+      special2_unlocked_users: userMonitoring.filter(user => user.special2.admin_unlocked),
       special2_complete_users: special2CompleteUsers,
       special2_incomplete_users: special2IncompleteUsers
     });
@@ -316,6 +367,29 @@ router.patch('/users/:userId/bonus-unlock', authenticateAdmin, async (req, res) 
     });
   } catch (error) {
     console.error('Admin bonus unlock error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.patch('/users/:userId/special-unlock', authenticateAdmin, async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    if (!Number.isInteger(userId) || userId <= 0) return res.status(400).json({ error: 'Invalid user id' });
+
+    const matchday = normalizeSpecialMatchday(req.body?.matchday || SECOND_MATCHDAY);
+    const existingUser = await pool.query('SELECT id, username, email, is_admin, created_at FROM users WHERE id = $1', [userId]);
+    if (existingUser.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+
+    const unlocked = Boolean(req.body?.unlocked);
+    const specialUnlock = await setSpecialUnlockForUser(pool, userId, matchday, unlocked, req.user?.id || null);
+
+    res.json({
+      user: buildPublicUser(existingUser.rows[0]),
+      special_unlock: specialUnlock,
+      message: unlocked ? `Pronostics spéciaux J${matchday} réouverts pour ce joueur.` : `Pronostics spéciaux J${matchday} refermés pour ce joueur.`
+    });
+  } catch (error) {
+    console.error('Admin special unlock error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
