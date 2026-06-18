@@ -1,6 +1,8 @@
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+export const AUTH_SESSION_EXPIRED_EVENT = 'takotak:auth-session-expired';
+let authExpirationDispatched = false;
 
 export const buildApiAssetUrl = (path) => {
   if (!path) return null;
@@ -8,6 +10,20 @@ export const buildApiAssetUrl = (path) => {
   const apiRoot = API_URL.endsWith('/api') ? API_URL.slice(0, -4) : API_URL;
   const normalizedPath = path.startsWith('/') ? path : '/' + path;
   return apiRoot + '/api' + normalizedPath;
+};
+
+const expireLocalSession = () => {
+  if (!localStorage.getItem('token')) return;
+
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+
+  if (authExpirationDispatched) return;
+  authExpirationDispatched = true;
+
+  window.dispatchEvent(new CustomEvent(AUTH_SESSION_EXPIRED_EVENT, {
+    detail: { reason: 'auth_failed' }
+  }));
 };
 
 const api = axios.create({
@@ -28,8 +44,10 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => response,
   error => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      console.warn('Authentication/authorization error', error.response?.data);
+    const status = error.response?.status;
+    if ((status === 401 || status === 403) && localStorage.getItem('token')) {
+      console.warn('Authentication/authorization error, expiring local session', error.response?.data);
+      expireLocalSession();
     }
     return Promise.reject(error);
   }
