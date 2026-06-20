@@ -10,6 +10,7 @@ const {
 } = require('../utils/specialPredictions');
 
 const router = express.Router();
+let predictionAuditReady = false;
 
 const isValidScore = (value) => {
   const n = Number(value);
@@ -24,6 +25,50 @@ const parseJsonValue = (value, fallback) => {
     try { return JSON.parse(value); } catch (_) { return fallback; }
   }
   return value;
+};
+
+const ensurePredictionAuditTables = async (clientOrPool = pool) => {
+  if (predictionAuditReady) return;
+
+  await clientOrPool.query(`
+    ALTER TABLE predictions
+      ADD COLUMN IF NOT EXISTS created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at timestamp DEFAULT CURRENT_TIMESTAMP
+  `);
+
+  await clientOrPool.query(`
+    CREATE TABLE IF NOT EXISTS prediction_blocked_attempts (
+      id serial PRIMARY KEY,
+      user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      match_id integer NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+      team1_goals integer,
+      team2_goals integer,
+      reason varchar(80) NOT NULL,
+      attempted_at timestamp DEFAULT CURRENT_TIMESTAMP,
+      ip_address varchar(80),
+      user_agent text
+    )
+  `);
+
+  await clientOrPool.query('CREATE INDEX IF NOT EXISTS idx_prediction_blocked_attempts_user_match ON prediction_blocked_attempts(user_id, match_id)');
+  predictionAuditReady = true;
+};
+
+const recordBlockedPredictionAttempt = async (clientOrPool, req, { userId, matchId, team1Goals, team2Goals, reason }) => {
+  await ensurePredictionAuditTables(clientOrPool);
+  await clientOrPool.query(
+    `INSERT INTO prediction_blocked_attempts (user_id, match_id, team1_goals, team2_goals, reason, ip_address, user_agent)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      userId,
+      matchId,
+      Number.isInteger(Number(team1Goals)) ? Number(team1Goals) : null,
+      Number.isInteger(Number(team2Goals)) ? Number(team2Goals) : null,
+      reason,
+      req.ip || null,
+      req.get('user-agent') || null
+    ]
+  );
 };
 
 const buildAvatarUrl = (user) => {
@@ -176,60 +221,102 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     const { match_id, team1_goals, team2_goals } = req.body;
     const user_id = req.user.id;
+    const matchId = Number(match_id);
 
-    if (!match_id) {
-      return res.status(400).json({ error: 'Match required' });
+    if (!Number.isInteger(matchId)) {
+      return res.status(400).json({ error: 'Valid match required' });
     }
 
     if (!isValidScore(team1_goals) || !isValidScore(team2_goals)) {
       return res.status(400).json({ error: 'Goals must be integers between 0 and 99' });
     }
 
-    const match = await client.query('SELECT * FROM matches WHERE id = $1', [match_id]);
+    await client.query('BEGIN');
+    await ensurePredictionAuditTables(client);
+
+    const match = await client.query(
+      `SELECT
+        m.*,
+        to_char(m.start_time, 'YYYY-MM-DD"T"HH24:MI:SS') AS start_time_label,
+        CASE
+          WHEN (m.start_time AT TIME ZONE 'Europe/Brussels') <= NOW()
+            OR COALESCE(m.status, 'scheduled') = 'finished'
+          THEN true
+          ELSE false
+        END AS prediction_locked
+       FROM matches m
+       WHERE m.id = $1`,
+      [matchId]
+    );
+
     if (match.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Match not found' });
     }
 
     const selectedMatch = match.rows[0];
 
     if (!selectedMatch.team1_id || !selectedMatch.team2_id) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Teams are not known yet for this match' });
     }
 
-    const now = new Date();
-    const matchTime = new Date(selectedMatch.start_time);
-    if (now >= matchTime) {
-      return res.status(400).json({ error: 'Match already started' });
+    if (selectedMatch.prediction_locked) {
+      await recordBlockedPredictionAttempt(client, req, {
+        userId: user_id,
+        matchId,
+        team1Goals: team1_goals,
+        team2Goals: team2_goals,
+        reason: 'match_started'
+      });
+      await client.query('COMMIT');
+      return res.status(409).json({ error: 'Match already started', locked: true, start_time: selectedMatch.start_time_label });
     }
 
-    await client.query('BEGIN');
-
-    const updateResult = await client.query(
-      `UPDATE predictions
-       SET team1_goals = $3,
-           team2_goals = $4
-       WHERE user_id = $1
-         AND match_id = $2
+    const saveResult = await client.query(
+      `INSERT INTO predictions (user_id, match_id, team1_goals, team2_goals, created_at, updated_at)
+       SELECT $1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+       WHERE EXISTS (
+         SELECT 1
+         FROM matches m
+         WHERE m.id = $2
+           AND m.team1_id IS NOT NULL
+           AND m.team2_id IS NOT NULL
+           AND (m.start_time AT TIME ZONE 'Europe/Brussels') > NOW()
+           AND COALESCE(m.status, 'scheduled') <> 'finished'
+       )
+       ON CONFLICT (user_id, match_id)
+       DO UPDATE SET
+         team1_goals = EXCLUDED.team1_goals,
+         team2_goals = EXCLUDED.team2_goals,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE EXISTS (
+         SELECT 1
+         FROM matches m
+         WHERE m.id = $2
+           AND m.team1_id IS NOT NULL
+           AND m.team2_id IS NOT NULL
+           AND (m.start_time AT TIME ZONE 'Europe/Brussels') > NOW()
+           AND COALESCE(m.status, 'scheduled') <> 'finished'
+       )
        RETURNING *`,
-      [user_id, match_id, Number(team1_goals), Number(team2_goals)]
+      [user_id, matchId, Number(team1_goals), Number(team2_goals)]
     );
 
-    let prediction;
-
-    if (updateResult.rows.length > 0) {
-      prediction = updateResult.rows[0];
-    } else {
-      const insertResult = await client.query(
-        `INSERT INTO predictions (user_id, match_id, team1_goals, team2_goals)
-         VALUES ($1, $2, $3, $4)
-         RETURNING *`,
-        [user_id, match_id, Number(team1_goals), Number(team2_goals)]
-      );
-      prediction = insertResult.rows[0];
+    if (saveResult.rows.length === 0) {
+      await recordBlockedPredictionAttempt(client, req, {
+        userId: user_id,
+        matchId,
+        team1Goals: team1_goals,
+        team2Goals: team2_goals,
+        reason: 'match_started_during_save'
+      });
+      await client.query('COMMIT');
+      return res.status(409).json({ error: 'Match already started', locked: true, start_time: selectedMatch.start_time_label });
     }
 
     await client.query('COMMIT');
-    res.json(prediction);
+    res.json(saveResult.rows[0]);
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('Create prediction error:', error);
