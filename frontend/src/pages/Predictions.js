@@ -45,7 +45,6 @@ function Predictions() {
   const [tempScores, setTempScores] = useState({});
   const [saveStatus, setSaveStatus] = useState({});
   const [showPastDays, setShowPastDays] = useState(false);
-  const [pastSortOrder, setPastSortOrder] = useState('desc');
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedMatchday, setSelectedMatchday] = useState('all');
   const [isMobile, setIsMobile] = useState(() => isMobileViewport());
@@ -65,7 +64,7 @@ function Predictions() {
     return () => media.removeEventListener?.('change', update);
   }, []);
 
-  useEffect(() => { setVisibleMobileDayCount(MOBILE_INITIAL_DAYS); }, [showPastDays, selectedMatchday, pastSortOrder]);
+  useEffect(() => { setVisibleMobileDayCount(MOBILE_INITIAL_DAYS); }, [showPastDays, selectedMatchday]);
 
   const formatDateBelge = (timestamp) => {
     if (!timestamp) return '';
@@ -135,25 +134,31 @@ function Predictions() {
     return matches.filter(match => competitionDayByMatch[match.id] === day);
   }, [competitionDayByMatch, matches, selectedMatchday]);
 
-  const visibleMatchesForGroups = useMemo(() => {
-    const matchesToShow = showPastDays
-      ? filteredMatches
-      : filteredMatches.filter(match => !isPastOrClosedMatch(match));
+  const upcomingMatches = useMemo(() => filteredMatches
+    .filter(match => !isPastOrClosedMatch(match))
+    .slice()
+    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time) || Number(a.id) - Number(b.id)),
+  [filteredMatches, isPastOrClosedMatch]);
 
-    return matchesToShow.slice().sort((a, b) => {
-      const aPast = isPastOrClosedMatch(a);
-      const bPast = isPastOrClosedMatch(b);
-      const aTime = new Date(a.start_time).getTime();
-      const bTime = new Date(b.start_time).getTime();
-      const fallback = Number(a.id) - Number(b.id);
+  const pastMatches = useMemo(() => filteredMatches
+    .filter(isPastOrClosedMatch)
+    .slice()
+    .sort((a, b) => new Date(b.start_time) - new Date(a.start_time) || Number(b.id) - Number(a.id)),
+  [filteredMatches, isPastOrClosedMatch]);
 
-      if (showPastDays && aPast !== bPast) return aPast ? 1 : -1;
-      if (showPastDays && aPast && bPast && pastSortOrder === 'desc') return bTime - aTime || Number(b.id) - Number(a.id);
-      return aTime - bTime || fallback;
+  const buildDayGroups = useCallback((matchList) => {
+    const grouped = new Map();
+    matchList.forEach(match => {
+      const key = getDateKey(match.start_time);
+      if (!grouped.has(key)) grouped.set(key, { key, label: formatDateBelge(match.start_time), date: new Date(`${key}T00:00:00`), matches: [] });
+      grouped.get(key).matches.push(match);
     });
-  }, [filteredMatches, isPastOrClosedMatch, pastSortOrder, showPastDays]);
+    return Array.from(grouped.values());
+  }, []);
 
-  const pastMatchesCount = useMemo(() => filteredMatches.filter(isPastOrClosedMatch).length, [filteredMatches, isPastOrClosedMatch]);
+  const upcomingDayGroups = useMemo(() => buildDayGroups(upcomingMatches), [buildDayGroups, upcomingMatches]);
+  const pastDayGroups = useMemo(() => buildDayGroups(pastMatches), [buildDayGroups, pastMatches]);
+  const pastMatchesCount = pastMatches.length;
   const hiddenPastMatchesCount = showPastDays ? 0 : pastMatchesCount;
 
   const matchdayCounts = useMemo(() => ({
@@ -279,19 +284,9 @@ function Predictions() {
     return <><input type="text" inputMode="numeric" maxLength="2" value={scores.team1} onFocus={onFocus} onChange={(e) => handleScoreChange(originalMatch, 'team1', e.target.value)} onBlur={() => commitScore(originalMatch)} disabled={disabled} aria-label={`Score ${match.team1}`} /><span className="score-separator">-</span><input type="text" inputMode="numeric" maxLength="2" value={scores.team2} onFocus={onFocus} onChange={(e) => handleScoreChange(originalMatch, 'team2', e.target.value)} onBlur={() => commitScore(originalMatch)} disabled={disabled} aria-label={`Score ${match.team2}`} /></>;
   };
 
-  const dayGroups = useMemo(() => {
-    const grouped = new Map();
-    visibleMatchesForGroups.forEach(match => {
-      const key = getDateKey(match.start_time);
-      if (!grouped.has(key)) grouped.set(key, { key, label: formatDateBelge(match.start_time), date: new Date(`${key}T00:00:00`), matches: [] });
-      grouped.get(key).matches.push(match);
-    });
-    return Array.from(grouped.values());
-  }, [visibleMatchesForGroups]);
-
   const isPastGroup = useCallback((group) => group.matches.every(isPastOrClosedMatch), [isPastOrClosedMatch]);
-  const renderedDayGroups = isMobile ? dayGroups.slice(0, visibleMobileDayCount) : dayGroups;
-  const hiddenMobileDayCount = Math.max(dayGroups.length - renderedDayGroups.length, 0);
+  const renderedUpcomingDayGroups = isMobile ? upcomingDayGroups.slice(0, visibleMobileDayCount) : upcomingDayGroups;
+  const hiddenMobileDayCount = Math.max(upcomingDayGroups.length - renderedUpcomingDayGroups.length, 0);
   const displayMatches = useMemo(() => filteredMatches.map(getDisplayMatch), [filteredMatches, getDisplayMatch]);
   const totalPredictions = Object.keys(predictions).length;
   const playableMatches = displayMatches.filter(m => m.team1 && m.team2 && !hasResult(m) && new Date(m.start_time) > currentNow).length;
@@ -300,12 +295,12 @@ function Predictions() {
 
   const firstGroupIndexByMatchday = useMemo(() => {
     const result = { 1: -1, 2: -1 };
-    renderedDayGroups.forEach((group, index) => {
+    renderedUpcomingDayGroups.forEach((group, index) => {
       if (result[1] === -1 && group.matches.some(match => competitionDayByMatch[match.id] === 1)) result[1] = index;
       if (result[2] === -1 && group.matches.some(match => competitionDayByMatch[match.id] === 2)) result[2] = index;
     });
     return result;
-  }, [competitionDayByMatch, renderedDayGroups]);
+  }, [competitionDayByMatch, renderedUpcomingDayGroups]);
 
   const getStatusConfig = (match, scores) => {
     const status = saveStatus[match.id];
@@ -331,23 +326,12 @@ function Predictions() {
     return <>{index === firstGroupIndexByMatchday[1] && <SpecialPredictionsPanel matchday={1} />}{index === firstGroupIndexByMatchday[2] && <SpecialPredictionsPanel matchday={2} />}</>;
   };
 
-  if (loading) return <div className="predictions-page loading-page"><div className="loading-card"><div className="loading-ball">⚽</div><p>Chargement des matchs...</p></div><style>{styles}</style></div>;
-
-  return (
-    <div className="predictions-page">
-      <div className="predictions-container">
-        <section className="predictions-hero"><div><span className="eyebrow">Coupe du Monde 2026</span><h1>🎯 Mes pronostics</h1><p>Filtre par journée pour remplir tes scores et tes pronostics spéciaux liés aux journées de compétition.</p></div><div className="prediction-summary"><div><strong>{totalPredictions}</strong><span>pronos saisis</span></div><div><strong>{playableMatches}</strong><span>matchs jouables</span></div><div><strong>{lockedMatches}</strong><span>fermés/résultats</span></div></div></section>
-        {isMockMode && <div className="mock-mode-banner">🧪 Simulation active : {formatMockDate(currentNow)}{mockResultsEnabled ? ' · résultats simulés visibles' : ''}</div>}
-        <div className="matchday-filter-card"><div><span>Filtre compétition</span><strong>{selectedFilterLabel}</strong></div><div className="matchday-filter-buttons">{MATCHDAY_FILTERS.map(filter => <button key={filter.value} type="button" className={selectedMatchday === filter.value ? 'active' : ''} onClick={() => setSelectedMatchday(filter.value)}>{filter.label}<em>{matchdayCounts[filter.value] || 0}</em></button>)}</div></div>
-        {selectedMatchday === '1' && <SpecialPredictionsPanel matchday={1} />}
-        {selectedMatchday === '2' && <SpecialPredictionsPanel matchday={2} />}
-        <div className="prediction-toolbar">
-          {pastMatchesCount > 0 && <button type="button" onClick={() => setShowPastDays(prev => !prev)}>{showPastDays ? 'Masquer les matchs passés' : `Afficher les matchs passés (${hiddenPastMatchesCount})`}</button>}
-          {showPastDays && pastMatchesCount > 0 && <div className="past-sort-toggle"><span>Résultats passés</span><button type="button" className={pastSortOrder === 'desc' ? 'active' : ''} onClick={() => setPastSortOrder('desc')}>Plus récents d’abord</button><button type="button" className={pastSortOrder === 'asc' ? 'active' : ''} onClick={() => setPastSortOrder('asc')}>Chronologique</button></div>}
-          <div className="autosave-inline"><span>💾</span> Sauvegarde en quittant le champ</div>
-        </div>
-        {renderedDayGroups.length === 0 && <div className="empty-filter-card">Aucun match à pronostiquer dans ce filtre.</div>}
-        {renderedDayGroups.map((group, index) => <React.Fragment key={group.key}>{renderSpecialsForGroup(index)}<section className={`match-day-card ${isPastGroup(group) ? 'past-day-card' : ''}`}><div className="match-day-header"><div><span>{isPastGroup(group) ? '✅ Résultats passés' : '📅 Journée calendrier'}</span><h2>{group.label}</h2></div><span className="match-count">{group.matches.length} match{group.matches.length > 1 ? 's' : ''}</span></div><div className="match-list">{group.matches.map(match => {
+  const renderMatchDayGroup = (group, index, options = {}) => (
+    <React.Fragment key={group.key}>
+      {options.showSpecials && renderSpecialsForGroup(index)}
+      <section className={`match-day-card ${isPastGroup(group) ? 'past-day-card' : ''}`}>
+        <div className="match-day-header"><div><span>{isPastGroup(group) ? '✅ Résultats passés' : '📅 Journée calendrier'}</span><h2>{group.label}</h2></div><span className="match-count">{group.matches.length} match{group.matches.length > 1 ? 's' : ''}</span></div>
+        <div className="match-list">{group.matches.map(match => {
           const displayMatch = getDisplayMatch(match);
           const scores = getScoresForMatch(match.id);
           const isClosed = new Date(match.start_time) <= currentNow;
@@ -358,8 +342,37 @@ function Predictions() {
           const resultAvailable = hasResult(displayMatch);
           const canRevealPublicPredictions = hasKnownTeams && (isClosed || resultAvailable);
           return <article key={match.id} className={`match-row ${disabled ? 'match-row-disabled' : ''} ${resultAvailable ? 'match-row-result' : ''}`}><div className="match-meta"><span className="match-label">{getMatchLabel(displayMatch)}</span><span className="match-time">{formatTimeBelge(displayMatch.start_time)}</span></div><div className="match-main">{renderTeamBlock(displayMatch, 'team1', 'right')}<div className="score-zone">{renderScoreZone(displayMatch, match, scores, hasKnownTeams, disabled)}</div>{renderTeamBlock(displayMatch, 'team2')}</div><div className="match-status-zone">{knockout && <span className="match-number">M{match.id}</span>}{statusConfig && <div className={statusConfig.className} title={statusConfig.detail || ''}><span>{statusConfig.icon}</span>{statusConfig.label}</div>}</div>{canRevealPublicPredictions && <PublicMatchPredictionsPanel match={displayMatch} />}</article>;
-        })}</div></section></React.Fragment>)}
-        {isMobile && hiddenMobileDayCount > 0 && <div className="mobile-load-more-wrap"><button type="button" className="mobile-load-more-button" onClick={() => setVisibleMobileDayCount(prev => prev + MOBILE_DAYS_STEP)}>Afficher plus de journées ({hiddenMobileDayCount} restantes)</button></div>}
+        })}</div>
+      </section>
+    </React.Fragment>
+  );
+
+  if (loading) return <div className="predictions-page loading-page"><div className="loading-card"><div className="loading-ball">⚽</div><p>Chargement des matchs...</p></div><style>{styles}</style></div>;
+
+  return (
+    <div className="predictions-page">
+      <div className="predictions-container">
+        <section className="predictions-hero"><div><span className="eyebrow">Coupe du Monde 2026</span><h1>🎯 Mes pronostics</h1><p>Filtre par journée pour remplir tes scores et tes pronostics spéciaux liés aux journées de compétition.</p></div><div className="prediction-summary"><div><strong>{totalPredictions}</strong><span>pronos saisis</span></div><div><strong>{playableMatches}</strong><span>matchs jouables</span></div><div><strong>{lockedMatches}</strong><span>fermés/résultats</span></div></div></section>
+        {isMockMode && <div className="mock-mode-banner">🧪 Simulation active : {formatMockDate(currentNow)}{mockResultsEnabled ? ' · résultats simulés visibles' : ''}</div>}
+        <div className="matchday-filter-card"><div><span>Filtre compétition</span><strong>{selectedFilterLabel}</strong></div><div className="matchday-filter-buttons">{MATCHDAY_FILTERS.map(filter => <button key={filter.value} type="button" className={selectedMatchday === filter.value ? 'active' : ''} onClick={() => setSelectedMatchday(filter.value)}>{filter.label}<em>{matchdayCounts[filter.value] || 0}</em></button>)}</div></div>
+        {selectedMatchday === '1' && <SpecialPredictionsPanel matchday={1} />}
+        {selectedMatchday === '2' && <SpecialPredictionsPanel matchday={2} />}
+        <div className="prediction-toolbar"><div className="autosave-inline"><span>💾</span> Sauvegarde en quittant le champ</div></div>
+
+        <div className="match-section-title"><div><span>Matchs à venir</span><strong>{upcomingMatches.length} match{upcomingMatches.length > 1 ? 's' : ''}</strong></div><em>Ordre chronologique</em></div>
+        {renderedUpcomingDayGroups.length === 0 && <div className="empty-filter-card">Aucun match à venir dans ce filtre.</div>}
+        {renderedUpcomingDayGroups.map((group, index) => renderMatchDayGroup(group, index, { showSpecials: true }))}
+        {isMobile && hiddenMobileDayCount > 0 && <div className="mobile-load-more-wrap"><button type="button" className="mobile-load-more-button" onClick={() => setVisibleMobileDayCount(prev => prev + MOBILE_DAYS_STEP)}>Afficher plus de journées à venir ({hiddenMobileDayCount} restantes)</button></div>}
+
+        {pastMatchesCount > 0 && (
+          <section className={`past-results-panel ${showPastDays ? 'is-open' : ''}`}>
+            <button type="button" className="past-results-toggle" onClick={() => setShowPastDays(prev => !prev)}>
+              <div><span>Résultats passés</span><strong>{pastMatchesCount} match{pastMatchesCount > 1 ? 's' : ''}</strong></div>
+              <em>{showPastDays ? 'Masquer' : `Afficher (${hiddenPastMatchesCount})`}</em>
+            </button>
+            {showPastDays && <div className="past-results-content">{pastDayGroups.map((group, index) => renderMatchDayGroup(group, index, { showSpecials: false }))}</div>}
+          </section>
+        )}
       </div>
       {selectedTeam && <TeamInfoModal teamId={selectedTeam.name} teamName={selectedTeam.name} onClose={() => setSelectedTeam(null)} />}
       <style>{styles}</style>
@@ -375,26 +388,28 @@ const styles = `
   .predictions-hero h1 { margin: 0 0 7px; font-size: clamp(28px, 3.4vw, 44px); line-height: 1; letter-spacing: -.04em; }
   .predictions-hero p { margin: 0; max-width: 670px; color: rgba(255,255,255,.76); font-size: 14px; line-height: 1.5; }
   .prediction-summary { display: grid; grid-template-columns: repeat(3, minmax(82px,1fr)); gap: 8px; min-width: 330px; }
-  .prediction-summary div, .matchday-filter-card, .prediction-toolbar, .empty-filter-card { background: rgba(255,255,255,.95); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 18px 45px rgba(0,0,0,.19); }
+  .prediction-summary div, .matchday-filter-card, .prediction-toolbar, .empty-filter-card, .match-section-title, .past-results-panel { background: rgba(255,255,255,.95); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 18px 45px rgba(0,0,0,.19); }
   .prediction-summary div { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.16); border-radius: 14px; padding: 12px; backdrop-filter: blur(10px); }
   .prediction-summary strong { display: block; font-size: 25px; color: #fde68a; line-height: 1; }
   .prediction-summary span { display: block; margin-top: 6px; color: rgba(255,255,255,.7); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
   .mock-mode-banner { margin: -4px 0 14px; padding: 10px 14px; border-radius: 14px; color: #713f12; background: #fef3c7; border: 1px solid rgba(251, 191, 36, .45); font-size: 12px; font-weight: 900; box-shadow: 0 12px 30px rgba(0,0,0,.12); }
   .matchday-filter-card { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 12px; align-items: center; border-radius: 18px; padding: 12px; margin-bottom: 14px; }
-  .matchday-filter-card span { display: block; color: ${PRIMARY}; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .07em; }
-  .matchday-filter-card strong { display: block; margin-top: 3px; color: ${DARK}; font-size: 20px; }
+  .matchday-filter-card span, .match-section-title span, .past-results-toggle span { display: block; color: ${PRIMARY}; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .07em; }
+  .matchday-filter-card strong, .match-section-title strong, .past-results-toggle strong { display: block; margin-top: 3px; color: ${DARK}; font-size: 20px; }
   .matchday-filter-buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
   .matchday-filter-buttons button { border: 0; border-radius: 999px; padding: 8px 11px; color: #334155; background: #e2e8f0; font-size: 12px; font-weight: 950; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
   .matchday-filter-buttons button.active { color: white; background: ${GRADIENT}; box-shadow: 0 9px 18px rgba(15,118,110,.2); }
   .matchday-filter-buttons em { min-width: 20px; height: 20px; border-radius: 999px; display: grid; place-items: center; font-style: normal; background: rgba(255,255,255,.75); color: #0f172a; font-size: 10px; }
-  .prediction-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border-radius: 16px; padding: 10px 12px; margin-bottom: 16px; }
-  .prediction-toolbar button { border: 0; border-radius: 999px; padding: 8px 12px; background: ${GRADIENT}; color: white; font-size: 12px; font-weight: 900; cursor: pointer; box-shadow: 0 8px 18px rgba(15,118,110,.18); }
-  .past-sort-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 4px; border-radius: 999px; background: #f1f5f9; border: 1px solid #e2e8f0; }
-  .past-sort-toggle span { padding: 0 6px; color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
-  .past-sort-toggle button { background: transparent; color: #475569; box-shadow: none; padding: 6px 9px; font-size: 11px; }
-  .past-sort-toggle button.active { background: #0f766e; color: white; box-shadow: 0 6px 14px rgba(15,118,110,.18); }
-  .autosave-inline { margin-left: auto; color: #64748b; font-size: 12px; font-weight: 800; }
-  .empty-filter-card { border-radius: 18px; padding: 18px; color: #475569; font-weight: 900; text-align: center; }
+  .prediction-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; border-radius: 16px; padding: 10px 12px; margin-bottom: 14px; }
+  .autosave-inline { color: #64748b; font-size: 12px; font-weight: 800; }
+  .match-section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 18px; padding: 12px 14px; margin-bottom: 14px; }
+  .match-section-title em { color: #64748b; font-size: 12px; font-style: normal; font-weight: 900; }
+  .past-results-panel { border-radius: 18px; margin-top: 16px; overflow: hidden; }
+  .past-results-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; background: transparent; color: ${DARK}; padding: 13px 15px; cursor: pointer; text-align: left; }
+  .past-results-toggle em { display: inline-flex; padding: 8px 12px; border-radius: 999px; background: ${GRADIENT}; color: white; font-size: 12px; font-style: normal; font-weight: 950; white-space: nowrap; box-shadow: 0 8px 18px rgba(15,118,110,.18); }
+  .past-results-content { padding: 0 12px 12px; }
+  .past-results-content .match-day-card { margin-bottom: 12px; box-shadow: none; border-color: #e2e8f0; }
+  .empty-filter-card { border-radius: 18px; padding: 18px; color: #475569; font-weight: 900; text-align: center; margin-bottom: 14px; }
   .mobile-load-more-wrap { display: none; }
   .match-day-card { background: rgba(255,255,255,.94); border-radius: 18px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 18px 55px rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.55); scroll-margin-top: 18px; }
   .past-day-card { opacity: .92; }
@@ -447,9 +462,9 @@ const styles = `
   .loading-ball { font-size: 42px; margin-bottom: 12px; animation: bounce 1s infinite; }
   @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   @media (max-width: 1060px) { .match-row { grid-template-columns: 1fr; gap: 10px; } .match-meta, .match-status-zone { justify-content: center; } }
-  @media (max-width: 920px) { .predictions-hero { flex-direction: column; } .prediction-summary { min-width: 0; } .matchday-filter-card { grid-template-columns: 1fr; } .matchday-filter-buttons { justify-content: flex-start; } .match-main { grid-template-columns: 1fr; gap: 8px; } .team-block, .team-block-right { justify-content: center; text-align: center; } .team-block-right { flex-direction: row-reverse; } .autosave-inline { margin-left: 0; } }
+  @media (max-width: 920px) { .predictions-hero { flex-direction: column; } .prediction-summary { min-width: 0; } .matchday-filter-card { grid-template-columns: 1fr; } .matchday-filter-buttons { justify-content: flex-start; } .match-main { grid-template-columns: 1fr; gap: 8px; } .team-block, .team-block-right { justify-content: center; text-align: center; } .team-block-right { flex-direction: row-reverse; } }
   @media (max-width: 760px) { .mobile-load-more-wrap { display: flex; justify-content: center; margin: 14px 0 4px; } .mobile-load-more-button { width: 100%; min-height: 46px; border: 0; border-radius: 16px; background: ${GRADIENT}; color: white; font-size: 14px; font-weight: 950; box-shadow: 0 12px 28px rgba(0,0,0,.18); } .match-row { grid-template-columns: minmax(0, 1fr) auto; gap: 7px 8px; padding: 9px 8px; } .match-meta { grid-column: 1; grid-row: 1; justify-content: flex-start; gap: 6px; } .match-status-zone { grid-column: 2; grid-row: 1; justify-content: flex-end; gap: 5px; } .match-main { grid-column: 1 / -1; grid-row: 2; grid-template-columns: minmax(0, 1fr) 94px minmax(0, 1fr); gap: 6px; align-items: center; } .team-block, .team-block-right { justify-content: flex-start; text-align: left; padding: 2px; gap: 5px; border-radius: 10px; } .team-block-right { justify-content: flex-end; text-align: right; flex-direction: row; } .team-name { white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 12px; line-height: 1.08; } .flag-shell { width: 24px; height: 24px; border-width: 1px; } .score-zone, .result-zone, .unknown-match-note { min-width: 94px; } .score-zone { gap: 4px; } .score-zone input { width: 34px; height: 32px; font-size: 14px; border-radius: 10px; } .prediction-status { min-width: 0; padding: 5px 8px; font-size: 10px; } .match-number { display: none; } }
-  @media (max-width: 560px) { .predictions-page { padding: 18px 10px 36px; } .prediction-summary { grid-template-columns: 1fr; } .match-day-header { align-items: flex-start; flex-direction: column; gap: 8px; } .prediction-toolbar button { width: 100%; } .matchday-filter-buttons button { flex: 1 1 130px; justify-content: center; } .past-sort-toggle { width: 100%; justify-content: center; border-radius: 14px; flex-wrap: wrap; } .past-sort-toggle button { width: auto; } }
+  @media (max-width: 560px) { .predictions-page { padding: 18px 10px 36px; } .prediction-summary { grid-template-columns: 1fr; } .match-day-header { align-items: flex-start; flex-direction: column; gap: 8px; } .matchday-filter-buttons button { flex: 1 1 130px; justify-content: center; } .match-section-title, .past-results-toggle { align-items: flex-start; flex-direction: column; } .past-results-toggle em { width: 100%; justify-content: center; } }
 `;
 
 export default Predictions;
