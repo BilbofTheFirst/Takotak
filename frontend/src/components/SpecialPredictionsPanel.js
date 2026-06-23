@@ -23,8 +23,21 @@ const getAutoPlacement = () => {
 };
 
 const getMatchdayCopy = (matchday, isBonusPlacement) => {
-  const isSecond = Number(matchday) === 2;
-  if (isSecond) {
+  const normalizedMatchday = Number(matchday);
+
+  if (normalizedMatchday === 3) {
+    return {
+      eyebrow: '⚡ Spéciaux troisième journée',
+      title: isBonusPlacement ? 'Résultat des spéciaux troisième journée' : 'Paris globaux sur la troisième journée',
+      description: isBonusPlacement
+        ? 'Les spéciaux de troisième journée sont verrouillés. Tu peux suivre ton score dès que les résultats sont calculés.'
+        : 'Troisième journée = le troisième match de chaque équipe, donc 24 matchs au total.',
+      lockedText: '🔒 Les pronostics spéciaux de troisième journée sont verrouillés. Tu peux maintenant consulter les pronos du groupe dans un tableau global.',
+      unlockedText: '🔓 Un admin a temporairement réouvert tes pronostics spéciaux de troisième journée. Pense à sauvegarder tes corrections.'
+    };
+  }
+
+  if (normalizedMatchday === 2) {
     return {
       eyebrow: '⚡ Spéciaux deuxième journée',
       title: isBonusPlacement ? 'Résultat des spéciaux deuxième journée' : 'Paris globaux sur la deuxième journée',
