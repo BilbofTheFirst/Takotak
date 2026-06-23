@@ -6,6 +6,7 @@ const { ensureSchema } = require('./db/ensureSchema');
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const adminUsersRoutes = require('./routes/adminUsers');
+const adminRankingsRoutes = require('./routes/adminRankings');
 const matchesRoutes = require('./routes/matches');
 const predictionsRoutes = require('./routes/predictions');
 const bonusPredictionsRoutes = require('./routes/bonusPredictions');
@@ -30,6 +31,7 @@ app.use(express.json({ limit: '5mb' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/admin/rankings', adminRankingsRoutes);
 app.use('/api/admin', adminUsersRoutes);
 app.use('/api/matches', matchesRoutes);
 app.use('/api/predictions', predictionsRoutes);
