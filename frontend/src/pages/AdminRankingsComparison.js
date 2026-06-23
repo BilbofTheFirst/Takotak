@@ -98,8 +98,8 @@ function AdminRankingsComparison() {
                     <th>Pts</th>
                     <th>Δ actuel</th>
                     <th>Exact</th>
-                    <th>Résultat</th>
-                    <th>Écart</th>
+                    <th>Bon écart</th>
+                    <th>Bon vainqueur</th>
                     {system.key === 'detailed' && <th>Buts 1/2</th>}
                   </tr>
                 </thead>
@@ -111,8 +111,8 @@ function AdminRankingsComparison() {
                       <td><strong className="points-pill">{row.points}</strong></td>
                       <td><span className={`delta-pill ${getDeltaClass(row.rank_delta_vs_current)}`}>{formatDelta(row.rank_delta_vs_current)}</span></td>
                       <td>{row.exact_scores}</td>
-                      <td>{row.correct_results}</td>
                       <td>{row.correct_differences}</td>
+                      <td>{row.correct_results}</td>
                       {system.key === 'detailed' && <td>{row.correct_team1_goals}/{row.correct_team2_goals}</td>}
                     </tr>
                   ))}
@@ -124,6 +124,10 @@ function AdminRankingsComparison() {
       </div>
 
       <div className="admin-rankings-note">
+        <strong>Lecture des colonnes :</strong> Exact / Bon écart / Bon vainqueur sont exclusifs. Un score exact n’est donc plus aussi compté dans bon écart et bon vainqueur. Le total de ces colonnes peut maintenant être comparé au nombre de matchs scorés.
+      </div>
+
+      <div className="admin-rankings-note secondary">
         <strong>Lecture du Δ actuel :</strong> +2 veut dire que le joueur gagne deux places avec ce système par rapport au classement match actuel. 0 veut dire aucun changement de rang.
       </div>
 
@@ -134,7 +138,9 @@ function AdminRankingsComparison() {
 
 const styles = `
   .admin-rankings-card {
-    width: min(1220px, 100%);
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
     margin: 0 auto 16px;
     background: rgba(255,255,255,.96);
     border: 1px solid rgba(255,255,255,.55);
@@ -326,6 +332,13 @@ const styles = `
     border: 1px solid #bfdbfe;
     font-size: 12px;
     font-weight: 850;
+  }
+
+  .admin-rankings-note.secondary {
+    margin-top: 8px;
+    background: #f8fafc;
+    color: #475569;
+    border-color: #e2e8f0;
   }
 
   .admin-rankings-error p { margin: 0; color: #991b1b; font-weight: 900; }
