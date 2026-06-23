@@ -17,6 +17,7 @@ const UserStats = lazy(() => import('./pages/UserStats'));
 const Admin = lazy(() => import('./pages/Admin'));
 const AdminUsers = lazy(() => import('./pages/AdminUsers'));
 const AdminMonitoring = lazy(() => import('./pages/AdminMonitoring'));
+const AdminRankingsComparison = lazy(() => import('./pages/AdminRankingsComparison'));
 const Rules = lazy(() => import('./pages/Rules'));
 const Simulation = lazy(() => import('./pages/Simulation'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -155,6 +156,7 @@ function Navigation({ user, onLogout, hasBonusAttention, hasPredictionAttention 
 
 const ADMIN_TABS = [
   { value: 'monitoring', label: 'Monitoring', icon: '📡' },
+  { value: 'rankings', label: 'Classements', icon: '🏆' },
   { value: 'matches', label: 'Matches', icon: '⚽' },
   { value: 'users', label: 'Utilisateurs', icon: '👥' }
 ];
@@ -168,7 +170,7 @@ function AdminPanel() {
         <div>
           <span className="admin-tabs-eyebrow">Administration</span>
           <h1>⚙️ Panel Admin</h1>
-          <p>Monitoring, encodage des matchs et gestion des utilisateurs au même endroit.</p>
+          <p>Monitoring, classements comparatifs, encodage des matchs et gestion des utilisateurs au même endroit.</p>
         </div>
 
         <div className="admin-tabs-nav" role="tablist" aria-label="Sections admin">
@@ -190,6 +192,7 @@ function AdminPanel() {
 
       <div className="admin-tab-content">
         {activeTab === 'monitoring' && <AdminMonitoring />}
+        {activeTab === 'rankings' && <AdminRankingsComparison />}
         {activeTab === 'matches' && <Admin />}
         {activeTab === 'users' && <AdminUsers />}
       </div>
@@ -339,86 +342,87 @@ function AppContent() {
     setHasPredictionAttention(pendingSpecial);
   }, []);
 
-  const loadReminderStatus = useCallback(async () => {
-    if (!localStorage.getItem('token') || sessionStorage.getItem(REMINDER_SESSION_KEY) === '1') {
-      return;
-    }
+  useEffect(() => {
+    if (!user) return undefined;
 
-    try {
-      const response = await api.get('/predictions/attention-status');
-      if (response.data?.has_attention) {
-        setReminderStatus(response.data);
-        setShowReminder(true);
-        sessionStorage.setItem(REMINDER_SESSION_KEY, '1');
+    let mounted = true;
+    const refresh = async () => {
+      try {
+        await refreshBonusStatus();
+      } catch (error) {
+        console.warn('Unable to refresh bonus status', error);
+        if (mounted) {
+          setHasBonusAttention(false);
+          setHasPredictionAttention(false);
+        }
       }
-    } catch (error) {
-      console.warn('Prediction reminder status unavailable', error.response?.data || error);
-    }
-  }, []);
+    };
+
+    refresh();
+    const listener = () => refresh();
+    window.addEventListener(BONUS_STATUS_REFRESH_EVENT, listener);
+    return () => {
+      mounted = false;
+      window.removeEventListener(BONUS_STATUS_REFRESH_EVENT, listener);
+    };
+  }, [refreshBonusStatus, user]);
 
   useEffect(() => {
-    if (!user) {
-      setHasBonusAttention(false);
-      setHasPredictionAttention(false);
-      setReminderStatus(null);
-      setShowReminder(false);
-      return undefined;
-    }
+    if (!user) return undefined;
+    const sessionKey = `${REMINDER_SESSION_KEY}:${user.id}`;
+    if (sessionStorage.getItem(sessionKey)) return undefined;
 
-    refreshBonusStatus();
-    loadReminderStatus();
-    const intervalId = window.setInterval(refreshBonusStatus, 60000);
-    window.addEventListener(BONUS_STATUS_REFRESH_EVENT, refreshBonusStatus);
-    window.addEventListener('focus', refreshBonusStatus);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener(BONUS_STATUS_REFRESH_EVENT, refreshBonusStatus);
-      window.removeEventListener('focus', refreshBonusStatus);
+    let mounted = true;
+    const loadReminder = async () => {
+      try {
+        const response = await api.get('/predictions/attention-status');
+        const status = response.data || {};
+        if (mounted && status.has_attention) {
+          setReminderStatus(status);
+          setShowReminder(true);
+          sessionStorage.setItem(sessionKey, '1');
+        }
+      } catch (error) {
+        console.warn('Unable to load prediction reminder', error);
+      }
     };
-  }, [user, refreshBonusStatus, loadReminderStatus]);
 
-  const handleUserUpdate = useCallback((userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-  }, []);
+    loadReminder();
+    return () => { mounted = false; };
+  }, [user]);
 
   const handleLogin = (userData) => {
-    sessionStorage.removeItem(REMINDER_SESSION_KEY);
-    handleUserUpdate(userData);
+    setUser(userData);
     navigate('/predictions');
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    sessionStorage.removeItem(REMINDER_SESSION_KEY);
     setUser(null);
     setHasBonusAttention(false);
     setHasPredictionAttention(false);
-    setReminderStatus(null);
     setShowReminder(false);
+    setReminderStatus(null);
     navigate('/');
   };
 
   return (
     <>
       <Navigation user={user} onLogout={handleLogout} hasBonusAttention={hasBonusAttention} hasPredictionAttention={hasPredictionAttention} />
-      {showReminder && <PredictionReminderModal status={reminderStatus} onClose={() => setShowReminder(false)} />}
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/predictions" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
-          <Route path="/bonus" element={user ? <BonusPredictions /> : <Home onLogin={handleLogin} />} />
-          <Route path="/rankings" element={user ? <Rankings currentUser={user} /> : <Home onLogin={handleLogin} />} />
-          <Route path="/stats" element={user ? <UserStats /> : <Home onLogin={handleLogin} />} />
-          <Route path="/simulation" element={user ? <Simulation /> : <Home onLogin={handleLogin} />} />
-          <Route path="/profile" element={user ? <Profile user={user} onUserUpdate={handleUserUpdate} /> : <Home onLogin={handleLogin} />} />
-          <Route path="/rules" element={<Rules />} />
-          <Route path="/admin" element={user?.is_admin ? <AdminPanel /> : <Predictions />} />
-        </Routes>
-      </Suspense>
+      {showReminder && reminderStatus && <PredictionReminderModal status={reminderStatus} onClose={() => setShowReminder(false)} />}
+      <Routes>
+        <Route path="/" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/predictions" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
+        <Route path="/bonus" element={user ? <BonusPredictions /> : <Home onLogin={handleLogin} />} />
+        <Route path="/rankings" element={user ? <Rankings currentUser={user} /> : <Home onLogin={handleLogin} />} />
+        <Route path="/stats" element={user ? <UserStats /> : <Home onLogin={handleLogin} />} />
+        <Route path="/simulation" element={user ? <Simulation /> : <Home onLogin={handleLogin} />} />
+        <Route path="/rules" element={user ? <Rules /> : <Home onLogin={handleLogin} />} />
+        <Route path="/profile" element={user ? <Profile currentUser={user} onUserUpdate={setUser} /> : <Home onLogin={handleLogin} />} />
+        <Route path="/admin" element={user?.is_admin ? <AdminPanel /> : <Predictions />} />
+      </Routes>
     </>
   );
 }
@@ -426,7 +430,9 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <Suspense fallback={<PageLoader />}>
+        <AppContent />
+      </Suspense>
     </BrowserRouter>
   );
 }
