@@ -53,11 +53,13 @@ const getSpecialPointsByPrefix = (specialScore, prefix) => (
 const buildSpecialBreakdown = (specialScore) => {
   const specialJ1Points = getSpecialPointsByPrefix(specialScore, 'FIRST_MATCHDAY_');
   const specialJ2Points = getSpecialPointsByPrefix(specialScore, 'SECOND_MATCHDAY_');
+  const specialJ3Points = getSpecialPointsByPrefix(specialScore, 'THIRD_MATCHDAY_');
 
   return {
     special_points: Number(specialScore?.points || 0),
     special_j1_points: specialJ1Points,
-    special_j2_points: specialJ2Points
+    special_j2_points: specialJ2Points,
+    special_j3_points: specialJ3Points
   };
 };
 
