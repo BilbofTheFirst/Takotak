@@ -8,6 +8,13 @@ const formatActual = (definition, currentActual) => {
   return `Actuel : ${value}${definition.unit ? ` ${definition.unit}` : ''}`;
 };
 
+const getTitle = (matchday) => {
+  const normalized = Number(matchday);
+  if (normalized === 3) return 'Spéciaux J3';
+  if (normalized === 2) return 'Spéciaux J2';
+  return 'Spéciaux J1';
+};
+
 function PublicSpecialPredictionsTable({ locked, currentUserId, matchday = 1 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -16,7 +23,7 @@ function PublicSpecialPredictionsTable({ locked, currentUserId, matchday = 1 }) 
 
   const definitions = payload?.definitions || [];
   const currentActual = payload?.current_actual || payload?.actual || {};
-  const title = Number(matchday) === 2 ? 'Spéciaux J2' : 'Spéciaux J1';
+  const title = getTitle(matchday);
 
   const rows = useMemo(() => {
     if (!payload?.locked) return [];
