@@ -89,32 +89,38 @@ const emptyStats = (user) => ({
   correct_results: 0,
   correct_differences: 0,
   correct_team1_goals: 0,
-  correct_team2_goals: 0
+  correct_team2_goals: 0,
+  wrong_predictions: 0
 });
+
+const addExclusiveOutcomeStats = (stats, { isExact, hasCorrectDifference, hasCorrectResult }) => {
+  if (isExact) stats.exact_scores += 1;
+  else if (hasCorrectDifference) stats.correct_differences += 1;
+  else if (hasCorrectResult) stats.correct_results += 1;
+  else stats.wrong_predictions += 1;
+};
 
 const addStats = (stats, scored, systemKey) => {
   stats.points += scored.points;
   stats.matches_scored += 1;
 
   if (systemKey === 'detailed') {
-    if (scored.category.correct_result) stats.correct_results += 1;
-    if (scored.category.correct_difference) stats.correct_differences += 1;
+    const isExact = Boolean(scored.category.correct_team1_goals && scored.category.correct_team2_goals);
     if (scored.category.correct_team1_goals) stats.correct_team1_goals += 1;
     if (scored.category.correct_team2_goals) stats.correct_team2_goals += 1;
-    if (scored.points === 6) stats.exact_scores += 1;
+    addExclusiveOutcomeStats(stats, {
+      isExact,
+      hasCorrectDifference: Boolean(scored.category.correct_difference),
+      hasCorrectResult: Boolean(scored.category.correct_result)
+    });
     return;
   }
 
-  if (scored.category === 'exact_score') {
-    stats.exact_scores += 1;
-    stats.correct_results += 1;
-    stats.correct_differences += 1;
-  } else if (scored.category === 'correct_difference') {
-    stats.correct_differences += 1;
-    stats.correct_results += 1;
-  } else if (scored.category === 'correct_result') {
-    stats.correct_results += 1;
-  }
+  addExclusiveOutcomeStats(stats, {
+    isExact: scored.category === 'exact_score',
+    hasCorrectDifference: scored.category === 'correct_difference',
+    hasCorrectResult: scored.category === 'correct_result'
+  });
 };
 
 router.get('/', authenticateAdmin, async (req, res) => {
