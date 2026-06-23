@@ -10,6 +10,7 @@ const {
 const { getAllBonusScores } = require('../utils/bonusScoring');
 const {
   getAllSpecialPredictionScores,
+  getSpecialMatchdayMatches,
   recalculateAllSpecialPredictionPoints
 } = require('../utils/specialPredictions');
 const { invalidateStatsOverviewCache, warmStatsOverviewCache } = require('../utils/statsOverview');
@@ -61,6 +62,12 @@ const buildSpecialBreakdown = (specialScore) => {
     special_j2_points: specialJ2Points,
     special_j3_points: specialJ3Points
   };
+};
+
+const buildSpecialMatchdayMilestone = (matchNumberById, specialMatches = []) => {
+  const ids = specialMatches.map(match => Number(match.id)).filter(Number.isInteger);
+  if (!ids.length || ids.some(id => !matchNumberById.has(id))) return null;
+  return Math.max(...ids.map(id => matchNumberById.get(id)));
 };
 
 const ensureLeaderboardUserColumns = async (clientOrPool = pool) => {
@@ -381,7 +388,13 @@ router.get('/leaderboard/progression', async (req, res) => {
   try {
     await ensureLeaderboardUserColumns();
 
-    const [{ scores: bonusScores }, { scores: specialScores }] = await Promise.all([getAllBonusScores(pool), getAllSpecialPredictionScores(pool)]);
+    const [{ scores: bonusScores }, { scores: specialScores }, specialJ1Matches, specialJ2Matches, specialJ3Matches] = await Promise.all([
+      getAllBonusScores(pool),
+      getAllSpecialPredictionScores(pool),
+      getSpecialMatchdayMatches(pool, 1),
+      getSpecialMatchdayMatches(pool, 2),
+      getSpecialMatchdayMatches(pool, 3)
+    ]);
     const usersResult = await pool.query(`SELECT id, username, avatar_data, avatar_updated_at FROM users ORDER BY username ASC`);
     const matchesResult = await pool.query(`
       SELECT m.id, m.start_time
@@ -401,26 +414,57 @@ router.get('/leaderboard/progression', async (req, res) => {
     });
 
     const orderedMatches = matchesResult.rows.map((match, index) => ({ match_number: index + 1, match_id: Number(match.id), start_time: match.start_time }));
+    const matchNumberById = new Map(orderedMatches.map(match => [match.match_id, match.match_number]));
+    const specialMilestones = [
+      { key: 'special_j1_points', label: 'Spéciaux J1', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialJ1Matches) },
+      { key: 'special_j2_points', label: 'Spéciaux J2', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialJ2Matches) },
+      { key: 'special_j3_points', label: 'Spéciaux J3', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialJ3Matches) }
+    ].filter(milestone => Number.isInteger(milestone.match_number));
     const totalMarker = { match_number: orderedMatches.length + 1, match_id: null, start_time: null, label: 'Total' };
 
     const users = usersResult.rows.map(user => {
-      let cumulative = 0;
+      let matchCumulative = 0;
+      let chartCumulative = 0;
+      let injectedSpecialPoints = 0;
       const id = Number(user.id);
       const bonusPoints = bonusScores.get(id)?.points || 0;
       const specialBreakdown = buildSpecialBreakdown(specialScores.get(id));
       const specialPoints = specialBreakdown.special_points;
-      const nonMatchPoints = bonusPoints + specialPoints;
+      const milestonesByMatchNumber = new Map();
+      specialMilestones.forEach(milestone => {
+        const points = Number(specialBreakdown[milestone.key] || 0);
+        if (!points) return;
+        if (!milestonesByMatchNumber.has(milestone.match_number)) milestonesByMatchNumber.set(milestone.match_number, []);
+        milestonesByMatchNumber.get(milestone.match_number).push({ ...milestone, points });
+      });
       const series = [{ match_number: 0, match_id: null, points: 0, label: 'Départ' }];
 
       orderedMatches.forEach(match => {
-        cumulative += pointsByUserAndMatch.get(`${id}:${match.match_id}`) || 0;
-        series.push({ match_number: match.match_number, match_id: match.match_id, points: cumulative });
+        const matchPoints = pointsByUserAndMatch.get(`${id}:${match.match_id}`) || 0;
+        matchCumulative += matchPoints;
+        chartCumulative += matchPoints;
+        series.push({ match_number: match.match_number, match_id: match.match_id, points: chartCumulative });
+
+        (milestonesByMatchNumber.get(match.match_number) || []).forEach(milestone => {
+          chartCumulative += milestone.points;
+          injectedSpecialPoints += milestone.points;
+          series.push({
+            match_number: milestone.match_number,
+            match_id: null,
+            points: chartCumulative,
+            label: milestone.label,
+            special_points: milestone.points
+          });
+        });
       });
+
+      const remainingSpecialPoints = Math.max(0, specialPoints - injectedSpecialPoints);
+      const finalPoints = chartCumulative + bonusPoints + remainingSpecialPoints;
 
       series.push({
         match_number: totalMarker.match_number,
         match_id: null,
-        points: cumulative + nonMatchPoints,
+        points: finalPoints,
         label: 'Total',
         bonus_points: bonusPoints,
         special_points: specialPoints,
@@ -431,10 +475,10 @@ router.get('/leaderboard/progression', async (req, res) => {
         id,
         username: user.username,
         avatar_url: buildAvatarUrl(user),
-        total_match_points: cumulative,
+        total_match_points: matchCumulative,
         bonus_points: bonusPoints,
         ...specialBreakdown,
-        total_points: cumulative + nonMatchPoints,
+        total_points: matchCumulative + bonusPoints + specialPoints,
         series
       };
     });
