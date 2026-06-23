@@ -294,10 +294,11 @@ function Predictions() {
   const selectedFilterLabel = MATCHDAY_FILTERS.find(filter => filter.value === selectedMatchday)?.label || 'Tous';
 
   const firstGroupIndexByMatchday = useMemo(() => {
-    const result = { 1: -1, 2: -1 };
+    const result = { 1: -1, 2: -1, 3: -1 };
     renderedUpcomingDayGroups.forEach((group, index) => {
       if (result[1] === -1 && group.matches.some(match => competitionDayByMatch[match.id] === 1)) result[1] = index;
       if (result[2] === -1 && group.matches.some(match => competitionDayByMatch[match.id] === 2)) result[2] = index;
+      if (result[3] === -1 && group.matches.some(match => competitionDayByMatch[match.id] === 3)) result[3] = index;
     });
     return result;
   }, [competitionDayByMatch, renderedUpcomingDayGroups]);
@@ -323,7 +324,7 @@ function Predictions() {
 
   const renderSpecialsForGroup = (index) => {
     if (selectedMatchday !== 'all') return null;
-    return <>{index === firstGroupIndexByMatchday[1] && <SpecialPredictionsPanel matchday={1} />}{index === firstGroupIndexByMatchday[2] && <SpecialPredictionsPanel matchday={2} />}</>;
+    return <>{index === firstGroupIndexByMatchday[1] && <SpecialPredictionsPanel matchday={1} />}{index === firstGroupIndexByMatchday[2] && <SpecialPredictionsPanel matchday={2} />}{index === firstGroupIndexByMatchday[3] && <SpecialPredictionsPanel matchday={3} />}</>;
   };
 
   const renderMatchDayGroup = (group, index, options = {}) => (
@@ -357,12 +358,8 @@ function Predictions() {
         <div className="matchday-filter-card"><div><span>Filtre compétition</span><strong>{selectedFilterLabel}</strong></div><div className="matchday-filter-buttons">{MATCHDAY_FILTERS.map(filter => <button key={filter.value} type="button" className={selectedMatchday === filter.value ? 'active' : ''} onClick={() => setSelectedMatchday(filter.value)}>{filter.label}<em>{matchdayCounts[filter.value] || 0}</em></button>)}</div></div>
         {selectedMatchday === '1' && <SpecialPredictionsPanel matchday={1} />}
         {selectedMatchday === '2' && <SpecialPredictionsPanel matchday={2} />}
+        {selectedMatchday === '3' && <SpecialPredictionsPanel matchday={3} />}
         <div className="prediction-toolbar"><div className="autosave-inline"><span>💾</span> Sauvegarde en quittant le champ</div></div>
-
-        <div className="match-section-title"><div><span>Matchs à venir</span><strong>{upcomingMatches.length} match{upcomingMatches.length > 1 ? 's' : ''}</strong></div><em>Ordre chronologique</em></div>
-        {renderedUpcomingDayGroups.length === 0 && <div className="empty-filter-card">Aucun match à venir dans ce filtre.</div>}
-        {renderedUpcomingDayGroups.map((group, index) => renderMatchDayGroup(group, index, { showSpecials: true }))}
-        {isMobile && hiddenMobileDayCount > 0 && <div className="mobile-load-more-wrap"><button type="button" className="mobile-load-more-button" onClick={() => setVisibleMobileDayCount(prev => prev + MOBILE_DAYS_STEP)}>Afficher plus de journées à venir ({hiddenMobileDayCount} restantes)</button></div>}
 
         {pastMatchesCount > 0 && (
           <section className={`past-results-panel ${showPastDays ? 'is-open' : ''}`}>
@@ -373,6 +370,11 @@ function Predictions() {
             {showPastDays && <div className="past-results-content">{pastDayGroups.map((group, index) => renderMatchDayGroup(group, index, { showSpecials: false }))}</div>}
           </section>
         )}
+
+        <div className="match-section-title"><div><span>Matchs à venir</span><strong>{upcomingMatches.length} match{upcomingMatches.length > 1 ? 's' : ''}</strong></div><em>Ordre chronologique</em></div>
+        {renderedUpcomingDayGroups.length === 0 && <div className="empty-filter-card">Aucun match à venir dans ce filtre.</div>}
+        {renderedUpcomingDayGroups.map((group, index) => renderMatchDayGroup(group, index, { showSpecials: true }))}
+        {isMobile && hiddenMobileDayCount > 0 && <div className="mobile-load-more-wrap"><button type="button" className="mobile-load-more-button" onClick={() => setVisibleMobileDayCount(prev => prev + MOBILE_DAYS_STEP)}>Afficher plus de journées à venir ({hiddenMobileDayCount} restantes)</button></div>}
       </div>
       {selectedTeam && <TeamInfoModal teamId={selectedTeam.name} teamName={selectedTeam.name} onClose={() => setSelectedTeam(null)} />}
       <style>{styles}</style>
@@ -404,7 +406,7 @@ const styles = `
   .autosave-inline { color: #64748b; font-size: 12px; font-weight: 800; }
   .match-section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 18px; padding: 12px 14px; margin-bottom: 14px; }
   .match-section-title em { color: #64748b; font-size: 12px; font-style: normal; font-weight: 900; }
-  .past-results-panel { border-radius: 18px; margin-top: 16px; overflow: hidden; }
+  .past-results-panel { border-radius: 18px; margin-bottom: 16px; overflow: hidden; }
   .past-results-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; background: transparent; color: ${DARK}; padding: 13px 15px; cursor: pointer; text-align: left; }
   .past-results-toggle em { display: inline-flex; padding: 8px 12px; border-radius: 999px; background: ${GRADIENT}; color: white; font-size: 12px; font-style: normal; font-weight: 950; white-space: nowrap; box-shadow: 0 8px 18px rgba(15,118,110,.18); }
   .past-results-content { padding: 0 12px 12px; }
