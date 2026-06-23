@@ -12,7 +12,12 @@ const {
 
 const router = express.Router();
 
-const normalizeMatchday = (value) => Number(value) === 2 ? 2 : 1;
+const normalizeMatchday = (value) => {
+  const matchday = Number(value || 1);
+  if (matchday === 2) return 2;
+  if (matchday === 3) return 3;
+  return 1;
+};
 
 const ensureSpecialUnlockTable = async (clientOrPool = pool) => {
   await clientOrPool.query(`
