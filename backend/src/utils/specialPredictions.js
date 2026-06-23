@@ -1,6 +1,7 @@
 const SPECIAL_MATCHDAYS = {
   FIRST: 1,
-  SECOND: 2
+  SECOND: 2,
+  THIRD: 3
 };
 
 const SPECIAL_PREDICTION_CODES = {
@@ -9,7 +10,10 @@ const SPECIAL_PREDICTION_CODES = {
   CLEAN_SHEET_COUNT: 'FIRST_MATCHDAY_CLEAN_SHEET_COUNT',
   SECOND_TOTAL_GOALS: 'SECOND_MATCHDAY_TOTAL_GOALS',
   SECOND_SIX_POINT_TEAMS: 'SECOND_MATCHDAY_SIX_POINT_TEAMS',
-  SECOND_BOTH_TEAMS_SCORE_COUNT: 'SECOND_MATCHDAY_BOTH_TEAMS_SCORE_COUNT'
+  SECOND_BOTH_TEAMS_SCORE_COUNT: 'SECOND_MATCHDAY_BOTH_TEAMS_SCORE_COUNT',
+  THIRD_TOTAL_GOALS: 'THIRD_MATCHDAY_TOTAL_GOALS',
+  THIRD_UNBEATEN_TEAMS: 'THIRD_MATCHDAY_UNBEATEN_TEAMS',
+  THIRD_SCORED_ALL_MATCHES_TEAMS: 'THIRD_MATCHDAY_SCORED_ALL_MATCHES_TEAMS'
 };
 
 const FIRST_MATCHDAY_SPECIAL_DEFINITIONS = [
@@ -72,21 +76,55 @@ const SECOND_MATCHDAY_SPECIAL_DEFINITIONS = [
   }
 ];
 
+const THIRD_MATCHDAY_SPECIAL_DEFINITIONS = [
+  {
+    code: SPECIAL_PREDICTION_CODES.THIRD_TOTAL_GOALS,
+    matchday: SPECIAL_MATCHDAYS.THIRD,
+    label: 'Nombre total de buts J3',
+    description: 'Combien de buts seront marqués lors de la troisième journée complète (24 matchs) ?',
+    max_points: 10,
+    point_loss_per_gap: 1,
+    unit: 'buts'
+  },
+  {
+    code: SPECIAL_PREDICTION_CODES.THIRD_UNBEATEN_TEAMS,
+    matchday: SPECIAL_MATCHDAYS.THIRD,
+    label: 'Équipes invaincues',
+    description: 'Combien d’équipes termineront la phase de groupes sans aucune défaite après leurs 3 matchs ?',
+    max_points: 5,
+    point_loss_per_gap: 1,
+    unit: 'équipes'
+  },
+  {
+    code: SPECIAL_PREDICTION_CODES.THIRD_SCORED_ALL_MATCHES_TEAMS,
+    matchday: SPECIAL_MATCHDAYS.THIRD,
+    label: 'Équipes qui marquent à chaque match',
+    description: 'Combien d’équipes auront marqué au moins un but dans chacun de leurs 3 matchs de groupe ?',
+    max_points: 5,
+    point_loss_per_gap: 1,
+    unit: 'équipes'
+  }
+];
+
 // Backward-compatible name: first matchday definitions only.
 const SPECIAL_PREDICTION_DEFINITIONS = FIRST_MATCHDAY_SPECIAL_DEFINITIONS;
 const ALL_SPECIAL_PREDICTION_DEFINITIONS = [
   ...FIRST_MATCHDAY_SPECIAL_DEFINITIONS,
-  ...SECOND_MATCHDAY_SPECIAL_DEFINITIONS
+  ...SECOND_MATCHDAY_SPECIAL_DEFINITIONS,
+  ...THIRD_MATCHDAY_SPECIAL_DEFINITIONS
 ];
 
 const MATCHDAY_DEFINITIONS = {
   [SPECIAL_MATCHDAYS.FIRST]: FIRST_MATCHDAY_SPECIAL_DEFINITIONS,
-  [SPECIAL_MATCHDAYS.SECOND]: SECOND_MATCHDAY_SPECIAL_DEFINITIONS
+  [SPECIAL_MATCHDAYS.SECOND]: SECOND_MATCHDAY_SPECIAL_DEFINITIONS,
+  [SPECIAL_MATCHDAYS.THIRD]: THIRD_MATCHDAY_SPECIAL_DEFINITIONS
 };
 
 const normalizeSpecialMatchday = (value = SPECIAL_MATCHDAYS.FIRST) => {
   const matchday = Number(value || SPECIAL_MATCHDAYS.FIRST);
-  return matchday === SPECIAL_MATCHDAYS.SECOND ? SPECIAL_MATCHDAYS.SECOND : SPECIAL_MATCHDAYS.FIRST;
+  if (matchday === SPECIAL_MATCHDAYS.SECOND) return SPECIAL_MATCHDAYS.SECOND;
+  if (matchday === SPECIAL_MATCHDAYS.THIRD) return SPECIAL_MATCHDAYS.THIRD;
+  return SPECIAL_MATCHDAYS.FIRST;
 };
 
 const getSpecialMatchdayDefinitions = (matchday = SPECIAL_MATCHDAYS.FIRST) => (
@@ -208,35 +246,42 @@ const isMatchResultEncoded = (match) => (
 
 const getEmptyActualValues = (definitions) => Object.fromEntries(definitions.map(definition => [definition.code, null]));
 
-const calculateSixPointTeams = (matchesUntilSecondMatchday) => {
-  const stats = new Map();
-  const ensureTeam = (teamId) => {
-    const key = Number(teamId);
-    if (!stats.has(key)) stats.set(key, { played: 0, points: 0 });
-    return stats.get(key);
-  };
+const updateTeamGroupStats = (stats, teamId, goalsFor, goalsAgainst) => {
+  const key = Number(teamId);
+  if (!stats.has(key)) stats.set(key, { played: 0, points: 0, losses: 0, scored_matches: 0 });
+  const team = stats.get(key);
+  team.played += 1;
+  if (goalsFor > goalsAgainst) team.points += 3;
+  else if (goalsFor === goalsAgainst) team.points += 1;
+  else team.losses += 1;
+  if (goalsFor > 0) team.scored_matches += 1;
+  return team;
+};
 
-  matchesUntilSecondMatchday.filter(isMatchResultEncoded).forEach(match => {
-    const team1 = ensureTeam(match.team1_id);
-    const team2 = ensureTeam(match.team2_id);
+const buildGroupStats = (matchesUntilMatchday) => {
+  const stats = new Map();
+
+  matchesUntilMatchday.filter(isMatchResultEncoded).forEach(match => {
     const goals1 = Number(match.team1_goals);
     const goals2 = Number(match.team2_goals);
-
-    team1.played += 1;
-    team2.played += 1;
-
-    if (goals1 > goals2) {
-      team1.points += 3;
-    } else if (goals2 > goals1) {
-      team2.points += 3;
-    } else {
-      team1.points += 1;
-      team2.points += 1;
-    }
+    updateTeamGroupStats(stats, match.team1_id, goals1, goals2);
+    updateTeamGroupStats(stats, match.team2_id, goals2, goals1);
   });
 
-  return Array.from(stats.values()).filter(team => team.played >= 2 && team.points === 6).length;
+  return stats;
 };
+
+const calculateSixPointTeams = (matchesUntilSecondMatchday) => (
+  Array.from(buildGroupStats(matchesUntilSecondMatchday).values()).filter(team => team.played >= 2 && team.points === 6).length
+);
+
+const calculateUnbeatenTeams = (matchesUntilThirdMatchday) => (
+  Array.from(buildGroupStats(matchesUntilThirdMatchday).values()).filter(team => team.played >= 3 && team.losses === 0).length
+);
+
+const calculateTeamsScoredInAllGroupMatches = (matchesUntilThirdMatchday) => (
+  Array.from(buildGroupStats(matchesUntilThirdMatchday).values()).filter(team => team.played >= 3 && team.scored_matches >= 3).length
+);
 
 const calculateValuesFromEncodedMatches = (matchday, matches, matchesUntilMatchday = matches) => {
   const normalizedMatchday = normalizeSpecialMatchday(matchday);
@@ -257,6 +302,14 @@ const calculateValuesFromEncodedMatches = (matchday, matches, matchesUntilMatchd
     if (team1Goals > 0 && team2Goals > 0) bothTeamsScoreCount += 1;
   });
 
+  if (normalizedMatchday === SPECIAL_MATCHDAYS.THIRD) {
+    return {
+      [SPECIAL_PREDICTION_CODES.THIRD_TOTAL_GOALS]: totalGoals,
+      [SPECIAL_PREDICTION_CODES.THIRD_UNBEATEN_TEAMS]: calculateUnbeatenTeams(matchesUntilMatchday),
+      [SPECIAL_PREDICTION_CODES.THIRD_SCORED_ALL_MATCHES_TEAMS]: calculateTeamsScoredInAllGroupMatches(matchesUntilMatchday)
+    };
+  }
+
   if (normalizedMatchday === SPECIAL_MATCHDAYS.SECOND) {
     return {
       [SPECIAL_PREDICTION_CODES.SECOND_TOTAL_GOALS]: totalGoals,
@@ -275,7 +328,7 @@ const calculateValuesFromEncodedMatches = (matchday, matches, matchesUntilMatchd
 const calculateActualValuesFromMatches = (matchday, matches, definitions, matchesUntilMatchday = matches) => {
   const encodedMatches = matches.filter(isMatchResultEncoded);
   const encodedUntilMatchday = matchesUntilMatchday.filter(isMatchResultEncoded);
-  const requiresContextComplete = normalizeSpecialMatchday(matchday) === SPECIAL_MATCHDAYS.SECOND;
+  const requiresContextComplete = normalizeSpecialMatchday(matchday) !== SPECIAL_MATCHDAYS.FIRST;
   const complete = matches.length > 0
     && encodedMatches.length === matches.length
     && (!requiresContextComplete || encodedUntilMatchday.length === matchesUntilMatchday.length);
@@ -394,7 +447,8 @@ const recalculateSpecialPredictionPointsForMatchday = async (clientOrPool, match
 const recalculateAllSpecialPredictionPoints = async (clientOrPool) => {
   const first = await recalculateSpecialPredictionPointsForMatchday(clientOrPool, SPECIAL_MATCHDAYS.FIRST);
   const second = await recalculateSpecialPredictionPointsForMatchday(clientOrPool, SPECIAL_MATCHDAYS.SECOND);
-  return { first, second };
+  const third = await recalculateSpecialPredictionPointsForMatchday(clientOrPool, SPECIAL_MATCHDAYS.THIRD);
+  return { first, second, third };
 };
 
 const recalculateFirstMatchdaySpecialPredictionPoints = (clientOrPool) => recalculateSpecialPredictionPointsForMatchday(clientOrPool, SPECIAL_MATCHDAYS.FIRST);
@@ -408,12 +462,13 @@ const normalizeSpecialPredictionValue = (value) => {
 
 const getAllSpecialPredictionScores = async (clientOrPool) => {
   await ensureSpecialPredictionsTable(clientOrPool);
-  const [firstStatus, secondStatus] = await Promise.all([
+  const [firstStatus, secondStatus, thirdStatus] = await Promise.all([
     getSpecialMatchdayStatus(clientOrPool, SPECIAL_MATCHDAYS.FIRST),
-    getSpecialMatchdayStatus(clientOrPool, SPECIAL_MATCHDAYS.SECOND)
+    getSpecialMatchdayStatus(clientOrPool, SPECIAL_MATCHDAYS.SECOND),
+    getSpecialMatchdayStatus(clientOrPool, SPECIAL_MATCHDAYS.THIRD)
   ]);
-  const actual = { ...firstStatus.actual, ...secondStatus.actual };
-  const currentActual = { ...firstStatus.current_actual, ...secondStatus.current_actual };
+  const actual = { ...firstStatus.actual, ...secondStatus.actual, ...thirdStatus.actual };
+  const currentActual = { ...firstStatus.current_actual, ...secondStatus.current_actual, ...thirdStatus.current_actual };
   const codes = ALL_SPECIAL_PREDICTION_DEFINITIONS.map(definition => definition.code);
   const result = await clientOrPool.query('SELECT * FROM special_predictions WHERE code = ANY($1::varchar[])', [codes]);
 
@@ -432,7 +487,7 @@ const getAllSpecialPredictionScores = async (clientOrPool) => {
   return {
     actual,
     current_actual: currentActual,
-    complete: firstStatus.complete && secondStatus.complete,
+    complete: firstStatus.complete && secondStatus.complete && thirdStatus.complete,
     scores
   };
 };
@@ -443,6 +498,7 @@ module.exports = {
   SPECIAL_PREDICTION_DEFINITIONS,
   FIRST_MATCHDAY_SPECIAL_DEFINITIONS,
   SECOND_MATCHDAY_SPECIAL_DEFINITIONS,
+  THIRD_MATCHDAY_SPECIAL_DEFINITIONS,
   ALL_SPECIAL_PREDICTION_DEFINITIONS,
   ensureSpecialPredictionsTable,
   getSpecialMatchdayDefinitions,
