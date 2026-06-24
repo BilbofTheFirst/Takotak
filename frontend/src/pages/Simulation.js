@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { matchesService, predictionsService } from '../services/api';
 import { getFlag } from '../utils/countryFlags';
+import { rankGroupTeams } from '../utils/groupTieBreakers';
 import TournamentBracket from '../components/TournamentBracket';
 import TeamInfoModal from '../components/TeamInfoModal';
 
@@ -186,11 +187,16 @@ function Simulation() {
     return stats;
   };
 
+  const getScoredGroupMatches = (groupLetter) => getGroupMatches(groupLetter).map(match => ({
+    ...match,
+    ...getEffectiveGroupSimulation(match)
+  }));
+
   const getGroupClassification = (groupLetter) => {
     const stats = calculateGroupStats(groupLetter);
-    return getTeamsInGroup(groupLetter)
-      .map(team => ({ team, group: groupLetter, ...stats[team], diff: stats[team].goalsFor - stats[team].goalsAgainst }))
-      .sort((a, b) => b.points - a.points || b.diff - a.diff || b.goalsFor - a.goalsFor || b.won - a.won || a.team.localeCompare(b.team, 'fr'));
+    const teams = getTeamsInGroup(groupLetter)
+      .map(team => ({ team, group: groupLetter, ...stats[team], diff: stats[team].goalsFor - stats[team].goalsAgainst }));
+    return rankGroupTeams(teams, getScoredGroupMatches(groupLetter));
   };
 
   const groupsData = useMemo(() => {
