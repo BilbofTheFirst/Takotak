@@ -16,7 +16,7 @@ const {
 } = require('../utils/specialPredictions');
 
 const router = express.Router();
-const TEMPORARY_PASSWORD = process.env.ADMIN_RESET_PASSWORD;
+const TEMPORARY_PASSWORD = process.env.ADMIN_RESET_PASSWORD || 'takotak';
 const FIRST_MATCHDAY = 1;
 const SECOND_MATCHDAY = 2;
 const THIRD_MATCHDAY = 3;
@@ -177,19 +177,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
     const thirdDefinitions = getSpecialMatchdayDefinitions(THIRD_MATCHDAY);
     const allSpecialCodes = [...firstDefinitions, ...secondDefinitions, ...thirdDefinitions].map(definition => definition.code);
 
-    const [
-      usersResult,
-      nextMatchesResult,
-      bonusResult,
-      specialResult,
-      bonusDeadline,
-      bonusUnlocks,
-      firstMatchdayStatus,
-      secondMatchdayStatus,
-      thirdMatchdayStatus,
-      special2Unlocks,
-      special3Unlocks
-    ] = await Promise.all([
+    const [usersResult, nextMatchesResult, bonusResult, specialResult, bonusDeadline, bonusUnlocks, firstMatchdayStatus, secondMatchdayStatus, thirdMatchdayStatus, special2Unlocks, special3Unlocks] = await Promise.all([
       pool.query(`
         SELECT id, username, email, is_admin, created_at
         FROM users
@@ -260,13 +248,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
 
     specialResult.rows.forEach(row => {
       const userId = Number(row.user_id);
-      const targetMap = thirdCodeSet.has(row.code)
-        ? special3RowsByUser
-        : secondCodeSet.has(row.code)
-          ? special2RowsByUser
-          : firstCodeSet.has(row.code)
-            ? specialRowsByUser
-            : null;
+      const targetMap = thirdCodeSet.has(row.code) ? special3RowsByUser : secondCodeSet.has(row.code) ? special2RowsByUser : firstCodeSet.has(row.code) ? specialRowsByUser : null;
       if (!targetMap) return;
       if (!targetMap.has(userId)) targetMap.set(userId, []);
       targetMap.get(userId).push(row);
@@ -444,7 +426,6 @@ router.post('/users/:userId/reset-password', authenticateAdmin, async (req, res)
   try {
     const userId = Number(req.params.userId);
     if (!Number.isInteger(userId) || userId <= 0) return res.status(400).json({ error: 'Invalid user id' });
-    if (!TEMPORARY_PASSWORD) return res.status(500).json({ error: 'Temporary reset password is not configured' });
 
     const existingUser = await pool.query('SELECT id, username, email, is_admin, created_at FROM users WHERE id = $1', [userId]);
     if (existingUser.rows.length === 0) return res.status(404).json({ error: 'User not found' });
@@ -460,6 +441,7 @@ router.post('/users/:userId/reset-password', authenticateAdmin, async (req, res)
 
     res.json({
       user: buildPublicUser(result.rows[0]),
+      temporary_password: TEMPORARY_PASSWORD,
       message: 'Mot de passe réinitialisé.'
     });
   } catch (error) {
