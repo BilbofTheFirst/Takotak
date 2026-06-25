@@ -135,7 +135,9 @@ const buildCommunityMatches = (finishedMatches, predictionRows, scoreRows) => {
       number(prediction.team1_goals) === number(match.team1_goals) &&
       number(prediction.team2_goals) === number(match.team2_goals)
     ).length;
+    const zeroCount = scores.filter(score => number(score.points) === 0).length;
     const avgPoints = scores.length ? scores.reduce((sum, score) => sum + number(score.points), 0) / scores.length : 0;
+    const mostPopularOutcomeCount = Math.max(predictedOutcomes.home, predictedOutcomes.draw, predictedOutcomes.away);
 
     return {
       match_id: match.id,
@@ -145,7 +147,10 @@ const buildCommunityMatches = (finishedMatches, predictionRows, scoreRows) => {
       total_predictions: total,
       exact_count: exactCount,
       exact_percent: percent(exactCount, total),
+      zero_count: zeroCount,
+      zero_percent: percent(zeroCount, scores.length || total),
       average_points: round(avgPoints, 2),
+      consensus_percent: percent(mostPopularOutcomeCount, total),
       most_predicted_score: scoreDistribution[0] || null,
       predicted_outcomes: {
         home: { count: predictedOutcomes.home, percent: percent(predictedOutcomes.home, total) },
@@ -159,11 +164,13 @@ const buildCommunityMatches = (finishedMatches, predictionRows, scoreRows) => {
 const buildBadges = (user, context) => {
   const badges = [];
   if (number(user.best_exact_streak) >= 3) badges.push({ code: 'sniper', icon: '🎯', title: 'Sniper', description: '3 scores exacts consécutifs.' });
+  if (number(user.exact_scores) >= 5) badges.push({ code: 'elite_sniper', icon: '🏹', title: 'Tireur d’élite', description: 'Au moins 5 scores exacts au total.' });
   if (number(user.best_streak) >= 3) badges.push({ code: 'hot_streak', icon: '🔥', title: 'Série chaude', description: `Points sur ${user.best_streak} matchs d’affilée.` });
   if (number(user.draw_hits) >= 2) badges.push({ code: 'draw_king', icon: '🤝', title: 'Roi du nul', description: 'Plusieurs matchs nuls bien lus.' });
+  if (number(user.near_misses) >= 3) badges.push({ code: 'nearly_there', icon: '🐈‍⬛', title: 'Presque...', description: 'Souvent à un but du score exact.' });
   if (context.finishedMatches > 0 && number(user.scored_predictions) >= context.finishedMatches) badges.push({ code: 'assidu', icon: '🧱', title: 'Assidu', description: 'Présent sur tous les matchs scorés.' });
   if (number(user.bonus_points) > 0) badges.push({ code: 'strategist', icon: '🎁', title: 'Stratège', description: 'Des points marqués via les bonus.' });
-  if (number(user.special_points) > 0) badges.push({ code: 'specialist', icon: '⚡', title: 'Spécialiste', description: 'Des points marqués sur les pronostics spéciaux.' });
+  if (number(user.special_points) > 0) badges.push({ code: 'specialist', icon: '⚡', title: 'Spécialiste journée', description: 'Des points marqués sur les pronostics spéciaux de journée.' });
   if (number(user.rank) <= 3 && number(user.total_points) > 0) badges.push({ code: 'podium', icon: '🏆', title: 'Podium', description: 'Dans le top 3 du classement général.' });
   return badges;
 };
@@ -179,6 +186,7 @@ const buildInsights = (user, context) => {
   if (exactRate >= 0.2) insights.push({ type: 'good', icon: '🎯', title: 'Très précis', text: 'Tu transformes pas mal de pronos en scores exacts.' });
   if (number(user.correct_winners) > number(user.exact_scores) + number(user.correct_differences)) insights.push({ type: 'good', icon: '✅', title: 'Bon lecteur de vainqueur', text: 'Tu sécurises souvent au moins le bon résultat.' });
   if (number(user.best_streak) >= 3) insights.push({ type: 'good', icon: '🔥', title: 'Bonne série', text: `Ta meilleure série est de ${user.best_streak} matchs avec points.` });
+  if (number(user.near_misses) >= 3) insights.push({ type: 'neutral', icon: '🐈‍⬛', title: 'Pas passé loin', text: `Tu as déjà ${user.near_misses} prono(s) à un seul but du score exact.` });
   if (wrongRate >= 0.5 && number(user.scored_predictions) >= 3) insights.push({ type: 'warning', icon: '💀', title: 'Zone rouge', text: 'Beaucoup de pronos finissent encore à 0 point.' });
   if (context.totalDraws > 0 && number(user.draw_hits) === 0) insights.push({ type: 'warning', icon: '🤝', title: 'Les nuls te résistent', text: 'Aucun nul trouvé pour le moment.' });
   if (!insights.length) insights.push({ type: 'neutral', icon: '🧪', title: 'Échantillon en cours', text: 'Encore trop peu de résultats pour tirer une vraie tendance.' });
@@ -231,10 +239,14 @@ const buildOverview = async (pool) => {
     const matchPoints = number(row.match_points);
     const bonusPoints = bonusScores.get(id)?.points || 0;
     const specialPoints = specialScores.get(id)?.points || 0;
-    const drawHits = predictionRowsResult.rows.filter(prediction =>
-      Number(prediction.user_id) === id &&
+    const userFinishedPredictions = predictionRowsResult.rows.filter(prediction => Number(prediction.user_id) === id);
+    const drawHits = userFinishedPredictions.filter(prediction =>
       number(prediction.team1_goals) === number(prediction.team2_goals) &&
       number(prediction.result_team1_goals) === number(prediction.result_team2_goals)
+    ).length;
+    const nearMisses = userFinishedPredictions.filter(prediction =>
+      Math.abs(number(prediction.team1_goals) - number(prediction.result_team1_goals)) +
+      Math.abs(number(prediction.team2_goals) - number(prediction.result_team2_goals)) === 1
     ).length;
 
     return {
@@ -252,6 +264,7 @@ const buildOverview = async (pool) => {
       correct_winners: number(row.correct_winners),
       wrong_predictions: number(row.wrong_predictions),
       draw_hits: drawHits,
+      near_misses: nearMisses,
       efficiency: number(row.scored_predictions) > 0 ? round((matchPoints + bonusPoints + specialPoints) / number(row.scored_predictions), 2) : 0
     };
   });
@@ -271,8 +284,16 @@ const buildOverview = async (pool) => {
 
   const scoreDistribution = buildScoreDistribution(predictionRowsResult.rows);
   const communityMatches = buildCommunityMatches(orderedMatches, predictionRowsResult.rows, scoreRowsResult.rows);
-  const hardestMatch = [...communityMatches].filter(match => match.total_predictions > 0).sort((a, b) => a.average_points - b.average_points)[0] || null;
-  const easiestMatch = [...communityMatches].filter(match => match.total_predictions > 0).sort((a, b) => b.average_points - a.average_points)[0] || null;
+  const scoredCommunityMatches = [...communityMatches].filter(match => match.total_predictions > 0);
+  const hardestAverage = scoredCommunityMatches.reduce((min, match) => Math.min(min, number(match.average_points)), Number.POSITIVE_INFINITY);
+  const easiestAverage = scoredCommunityMatches.reduce((max, match) => Math.max(max, number(match.average_points)), 0);
+  const hardestMatches = scoredCommunityMatches.filter(match => number(match.average_points) === hardestAverage).sort((a, b) => new Date(b.date) - new Date(a.date) || Number(b.match_id) - Number(a.match_id));
+  const easiestMatches = scoredCommunityMatches.filter(match => number(match.average_points) === easiestAverage).sort((a, b) => new Date(b.date) - new Date(a.date) || Number(b.match_id) - Number(a.match_id));
+  const hardestMatch = hardestMatches[0] || null;
+  const easiestMatch = easiestMatches[0] || null;
+  const zeroPointMatches = scoredCommunityMatches.filter(match => number(match.average_points) === 0).sort((a, b) => new Date(b.date) - new Date(a.date) || Number(b.match_id) - Number(a.match_id));
+  const consensusMatch = [...scoredCommunityMatches].sort((a, b) => number(b.consensus_percent) - number(a.consensus_percent) || new Date(b.date) - new Date(a.date))[0] || null;
+  const chaosMatch = [...scoredCommunityMatches].sort((a, b) => number(a.consensus_percent) - number(b.consensus_percent) || new Date(b.date) - new Date(a.date))[0] || null;
 
   const context = { finishedMatches, totalDraws };
   const usersWithBadges = rankedUsers.map(user => ({ ...user, badges: buildBadges(user, context) }));
@@ -296,7 +317,10 @@ const buildOverview = async (pool) => {
     awards: [
       resolveAward({ code: 'match_boss', title: 'Boss des matchs', icon: '⚽', definition: 'Le joueur qui a marqué le plus de points uniquement sur les matchs.', unit: 'pts', rows: rankedUsers, field: 'match_points' }),
       resolveAward({ code: 'bonus_king', title: 'Roi du bonus', icon: '🎁', definition: 'Le joueur qui a marqué le plus de points sur les pronostics bonus.', unit: 'pts', rows: rankedUsers, field: 'bonus_points' }),
-      resolveAward({ code: 'specialist', title: 'Spécialiste J1', icon: '⚡', definition: 'Le joueur qui a marqué le plus de points sur les pronostics spéciaux de première journée.', unit: 'pts', rows: rankedUsers, field: 'special_points' }),
+      resolveAward({ code: 'specialist', title: 'Spécialiste journée', icon: '⚡', definition: 'Le joueur qui a marqué le plus de points sur les pronostics spéciaux de journée.', unit: 'pts', rows: rankedUsers, field: 'special_points' }),
+      resolveAward({ code: 'exact_scores', title: 'Chirurgien du score', icon: '🎯', definition: 'Le joueur qui a trouvé le plus de scores exacts.', unit: 'exacts', rows: rankedUsers, field: 'exact_scores', minValue: 2 }),
+      resolveAward({ code: 'near_miss', title: 'Chat noir', icon: '🐈‍⬛', definition: 'Le joueur le plus souvent à un seul but du score exact.', unit: 'presque', rows: rankedUsers, field: 'near_misses', minValue: 2 }),
+      resolveAward({ code: 'draw_oracle', title: 'Oracle des nuls', icon: '🤝', definition: 'Le joueur qui lit le mieux les matchs nuls.', unit: 'nuls', rows: rankedUsers, field: 'draw_hits', minValue: 1 }),
       resolveAward({ code: 'assiduous', title: 'Le plus assidu', icon: '🧱', definition: 'Le joueur qui a encodé le plus de pronostics au total.', unit: 'pronos', rows: rankedUsers, field: 'total_predictions' }),
       resolveAward({ code: 'efficiency', title: 'Meilleur rendement', icon: '🧪', definition: `Meilleure moyenne de points par match scoré, avec minimum ${minEfficiencyMatches} match(s) scoré(s).`, unit: 'pt/match', rows: efficiencyRows, field: 'efficiency', decimals: 2 }),
       resolveAward({ code: 'best_streak', title: 'Meilleure série', icon: '🔥', definition: 'Plus longue série de matchs consécutifs avec au moins 1 point.', unit: 'matchs', rows: rankedUsers, field: 'best_streak' })
@@ -307,6 +331,7 @@ const buildOverview = async (pool) => {
       correct_differences: sortByValue(rankedUsers, 'correct_differences'),
       correct_winners: sortByValue(rankedUsers, 'correct_winners'),
       draw_hits: sortByValue(rankedUsers, 'draw_hits'),
+      near_misses: sortByValue(rankedUsers, 'near_misses'),
       best_streak: sortByValue(rankedUsers, 'best_streak'),
       efficiency: sortByValue(efficiencyRows, 'efficiency'),
       bonus_points: sortByValue(rankedUsers, 'bonus_points'),
@@ -320,7 +345,12 @@ const buildOverview = async (pool) => {
     community: {
       most_predicted_score: scoreDistribution[0] || null,
       hardest_match: hardestMatch,
+      hardest_matches: hardestMatches.slice(0, 8),
       easiest_match: easiestMatch,
+      easiest_matches: easiestMatches.slice(0, 8),
+      zero_point_matches: zeroPointMatches.slice(0, 8),
+      consensus_match: consensusMatch,
+      chaos_match: chaosMatch,
       recent_matches: communityMatches.slice(-8).reverse()
     },
     users: usersWithBadges
