@@ -42,6 +42,15 @@ const BADGE_DEFINITIONS = [
   { code: 'podium', icon: '🏆', title: 'Podium', description: 'Dans le top 3 du classement général.' }
 ];
 
+const DEFAULT_POINT_BREAKDOWN_CATEGORIES = [
+  { key: 'matchday1', label: 'Matchs J1', icon: '1️⃣' },
+  { key: 'matchday2', label: 'Matchs J2', icon: '2️⃣' },
+  { key: 'matchday3', label: 'Matchs J3', icon: '3️⃣' },
+  { key: 'knockout', label: 'Phase finale', icon: '🏟️' },
+  { key: 'special', label: 'Spéciaux', icon: '⚡' },
+  { key: 'bonus', label: 'Bonus', icon: '🎁' }
+];
+
 const number = (value) => Number(value || 0);
 const pct = (value, total) => total > 0 ? Math.round((number(value) / total) * 100) : 0;
 const formatValue = (value) => Number(value || 0).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
@@ -130,6 +139,50 @@ function MatchMiniRow({ match }) {
   );
 }
 
+function StackedPointsBars({ rows = [], categories = DEFAULT_POINT_BREAKDOWN_CATEGORIES }) {
+  if (!rows.length) return <p className="empty-note">Aucune répartition à afficher pour le moment.</p>;
+
+  return (
+    <div className="stacked-points-section">
+      <div className="stacked-legend">
+        {categories.map(category => <span key={category.key} className={`legend-${category.key}`}><b />{category.icon} {category.label}</span>)}
+      </div>
+      <div className="stacked-points-list">
+        {rows.slice(0, 10).map(user => {
+          const total = Math.max(1, number(user.total_points));
+          return (
+            <div key={user.id} className="stacked-points-row">
+              <div className="stacked-player"><UserAvatar user={user} size={30} /><strong>{user.username}</strong></div>
+              <div className="stacked-bar" title={`${user.username} · ${user.total_points || 0} pts`}>
+                {categories.map(category => {
+                  const value = number(user.point_breakdown?.[category.key]);
+                  if (value <= 0) return null;
+                  return <span key={category.key} className={`stacked-segment segment-${category.key}`} style={{ width: `${Math.max(5, pct(value, total))}%` }} title={`${category.label} : ${value} pts`} />;
+                })}
+              </div>
+              <em>{user.total_points || 0} pts</em>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CommunityProfileRow({ profile }) {
+  if (!profile) return null;
+  return (
+    <div className="community-player-row">
+      <div className="community-player-main"><UserAvatar user={profile} size={34} /><strong>{profile.username}</strong></div>
+      <div className="community-metrics">
+        <span title="Part de pronostics qui suivent l’issue la plus jouée par le groupe">🐑 {profile.consensus_rate || 0}%</span>
+        <span title="Part de pronostics différents de l’issue majoritaire">🦊 {profile.contrarian_rate || 0}%</span>
+        <span title="Pronos contre le groupe qui rapportent au moins 1 point">🎲 {profile.bold_hits || 0}</span>
+      </div>
+    </div>
+  );
+}
+
 function UserStats() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -166,6 +219,8 @@ function UserStats() {
   ];
   const topFive = rankings.total_points?.slice(0, 5) || [];
   const distributionTotal = number(overview.total_match_points) + number(overview.total_special_points) + number(overview.total_bonus_points);
+  const pointBreakdownRows = data?.point_breakdown || rankings.total_points || [];
+  const pointCategories = overview.point_breakdown_categories || DEFAULT_POINT_BREAKDOWN_CATEGORIES;
 
   if (loading) return <PageLoader title="Chargement des stats..." icon="📊" subtitle="Analyse du jeu et des performances" />;
   if (!data) return <div className="stats-page"><div className="stats-container"><div className="stats-card">Pas de stats pour le moment</div></div><style>{styles}</style></div>;
@@ -227,6 +282,10 @@ function UserStats() {
                     <div className="distribution-row bonus"><span>🎁 Bonus</span><div><em style={{ width: `${pct(overview.total_bonus_points, distributionTotal)}%` }} /></div><strong>{overview.total_bonus_points || 0} pts</strong></div>
                   </div>
                 </section>
+                <section className="stats-card">
+                  <div className="stats-card-title"><div><span>Barres empilées</span><h2>Points par joueur et par catégorie</h2></div><p className="card-help">Top 10 du classement général, découpé par journées, phase finale, spéciaux et bonus.</p></div>
+                  <StackedPointsBars rows={pointBreakdownRows} categories={pointCategories} />
+                </section>
               </div>
               <aside className="side-column single">
                 <section className="stats-card">
@@ -286,9 +345,18 @@ function UserStats() {
                   <FunCard icon="🔮" label="Score le plus joué" value={community.most_predicted_score?.score || '-'} detail={community.most_predicted_score ? `${community.most_predicted_score.count} fois pronostiqué` : 'Aucun prono analysé'} />
                   <FunCard icon="💀" label="Match le plus dur" value={community.hardest_match?.label || '-'} detail={community.hardest_match ? `${formatValue(community.hardest_match.average_points)} pt de moyenne · résultat ${community.hardest_match.result}` : 'Aucun match terminé'} />
                   <FunCard icon="🧊" label="Matchs à zéro" value={community.zero_point_matches?.length || 0} detail="Matchs où personne n’a vraiment scoré" />
-                  <FunCard icon="🐑" label="Plus gros consensus" value={community.consensus_match?.label || '-'} detail={community.consensus_match ? `${community.consensus_match.consensus_percent}% sur le même résultat` : 'Aucun consensus'} />
+                  <FunCard icon="🐑" label="Match consensus" value={community.consensus_match?.label || '-'} detail={community.consensus_match ? `${community.consensus_match.consensus_percent}% sur le même résultat` : 'Aucun consensus'} />
                   <FunCard icon="🌪️" label="Match chaos" value={community.chaos_match?.label || '-'} detail={community.chaos_match ? `${community.chaos_match.consensus_percent}% max sur un résultat` : 'Aucun match analysé'} />
-                  <FunCard icon="😎" label="Match le plus facile" value={community.easiest_match?.label || '-'} detail={community.easiest_match ? `${formatValue(community.easiest_match.average_points)} pt de moyenne · résultat ${community.easiest_match.result}` : 'Aucun match terminé'} />
+                  <FunCard icon="😎" label="Match facile" value={community.easiest_match?.label || '-'} detail={community.easiest_match ? `${formatValue(community.easiest_match.average_points)} pt de moyenne · résultat ${community.easiest_match.result}` : 'Aucun match terminé'} />
+                  <FunCard icon="🐑" label="Mouton du groupe" value={community.mouton?.username || '-'} detail={community.mouton ? `${community.mouton.consensus_rate}% de pronos avec la majorité` : 'Pas assez de données'} />
+                  <FunCard icon="🦊" label="Contrarien" value={community.contrarian?.username || '-'} detail={community.contrarian ? `${community.contrarian.contrarian_rate}% de pronos contre la majorité` : 'Pas assez de données'} />
+                  <FunCard icon="🎲" label="Coup audacieux" value={community.bold_player?.username || '-'} detail={community.bold_player ? `${community.bold_player.bold_hits} prono(s) contre le groupe avec points` : 'Pas encore de coup gagnant'} />
+                </div>
+              </section>
+              <section className="stats-card">
+                <div className="stats-card-title"><div><span>Profils</span><h2>Moutons, contrarians et coups osés</h2></div><p className="card-help">Calculé sur les joueurs ayant au moins {community.community_profile_min_predictions || 2} pronostics analysés.</p></div>
+                <div className="community-player-list">
+                  {(community.profiles || []).slice(0, 10).map(profile => <CommunityProfileRow key={profile.id} profile={profile} />)}
                 </div>
               </section>
               <section className="stats-card">
@@ -314,6 +382,10 @@ function UserStats() {
                 <div className="my-card-header"><UserAvatar user={me} size={58} /><div><span>Mon bilan</span><strong>{me?.username || 'Moi'}</strong></div></div>
                 <div className="personal-grid">{personalCards.map(card => <StatPill key={card.label} {...card} />)}</div>
                 <div className="chase-box">{me?.player_ahead ? <p>Encore <strong>{me.points_to_next_rank} point{me.points_to_next_rank > 1 ? 's' : ''}</strong> pour dépasser <strong>{me.player_ahead.username}</strong>.</p> : <p>Tu es devant dans ce filtre. Il faut tenir maintenant 😎</p>}{me?.player_behind && <small>{me.player_behind.username} est juste derrière avec {me.player_behind.total_points || 0} pts.</small>}</div>
+              </section>
+              <section className="stats-card">
+                <div className="stats-card-title"><div><span>Répartition perso</span><h2>Mes points par catégorie</h2></div></div>
+                <StackedPointsBars rows={me ? [me] : []} categories={pointCategories} />
               </section>
               <section className="stats-card">
                 <div className="stats-card-title"><div><span>Ce que tu fais bien / mal</span><h2>Lecture perso</h2></div></div>
@@ -367,6 +439,7 @@ const styles = `
   .stats-card-title { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 13px; }
   .stats-card-title h2 { margin: 2px 0 0; color: ${DARK}; font-size: 22px; letter-spacing: -.03em; }
   .stats-card-title.compact h2 { font-size: 17px; margin-bottom: 0; }
+  .card-help { margin: 0; max-width: 380px; color: #64748b; font-size: 12px; font-weight: 800; line-height: 1.45; }
   .awards-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .award-card { display: grid; gap: 10px; min-width: 0; padding: 12px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; }
   .award-card.is-tie { background: #fff7ed; border-color: #fed7aa; }
@@ -375,7 +448,7 @@ const styles = `
   .info-dot { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 999px; background: #e2e8f0; color: #334155; font-size: 10px; }
   .award-user { display: flex; gap: 9px; align-items: center; min-width: 0; }
   .award-user strong, .award-tie strong { display: block; color: ${DARK}; font-size: 13px; }
-  .distribution-list, .mini-ranking, .community-list, .player-badges-list, .insight-list { display: grid; gap: 9px; }
+  .distribution-list, .mini-ranking, .community-list, .player-badges-list, .insight-list, .community-player-list, .stacked-points-list { display: grid; gap: 9px; }
   .distribution-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 80px; gap: 12px; align-items: center; }
   .distribution-row span { color: #334155; font-size: 13px; font-weight: 950; }
   .distribution-row > div { height: 12px; overflow: hidden; border-radius: 999px; background: #e2e8f0; }
@@ -383,7 +456,23 @@ const styles = `
   .distribution-row.special em { background: #2563eb; }
   .distribution-row.bonus em { background: ${SECONDARY}; }
   .distribution-row strong { text-align: right; color: ${DARK}; font-size: 13px; }
-  .mini-ranking-row, .community-row, .player-badges-row, .insight-row { display: grid; align-items: center; gap: 9px; padding: 10px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
+  .stacked-points-section { display: grid; gap: 12px; }
+  .stacked-legend { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stacked-legend span { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 999px; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; font-size: 10px; font-weight: 950; }
+  .stacked-legend b { width: 9px; height: 9px; border-radius: 999px; display: inline-block; }
+  .legend-matchday1 b, .segment-matchday1 { background: #0f766e; }
+  .legend-matchday2 b, .segment-matchday2 { background: #2563eb; }
+  .legend-matchday3 b, .segment-matchday3 { background: #7c3aed; }
+  .legend-knockout b, .segment-knockout { background: #db2777; }
+  .legend-special b, .segment-special { background: #ea580c; }
+  .legend-bonus b, .segment-bonus { background: #d97706; }
+  .stacked-points-row { display: grid; grid-template-columns: minmax(140px, 210px) minmax(0, 1fr) 58px; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
+  .stacked-player { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .stacked-player strong { min-width: 0; color: ${DARK}; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stacked-bar { height: 18px; display: flex; overflow: hidden; border-radius: 999px; background: #e2e8f0; box-shadow: inset 0 0 0 1px rgba(15,23,42,.06); }
+  .stacked-segment { min-width: 5px; height: 100%; }
+  .stacked-points-row em { text-align: right; color: ${DARK}; font-style: normal; font-size: 11px; font-weight: 950; }
+  .mini-ranking-row, .community-row, .player-badges-row, .insight-row, .community-player-row { display: grid; align-items: center; gap: 9px; padding: 10px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
   .mini-ranking-row { grid-template-columns: 34px 36px minmax(0, 1fr) auto; }
   .mini-ranking-row > span { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 999px; background: #ecfdf5; color: ${PRIMARY}; font-size: 12px; font-weight: 950; }
   .mini-ranking-row strong, .player-badges-row strong, .community-row strong, .insight-row strong { min-width: 0; color: ${DARK}; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -403,11 +492,16 @@ const styles = `
   .player-badges-row div:last-child span { width: 29px; height: 29px; border-radius: 999px; display: grid; place-items: center; background: #fff7ed; border: 1px solid #fed7aa; font-size: 15px; }
   .player-badges-row div:last-child em { color: #94a3b8; font-style: normal; font-size: 11px; font-weight: 850; }
   .fun-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-  .community-fun-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .community-fun-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .community-row { grid-template-columns: minmax(0, 1fr) auto; }
   .community-row span { display: block; margin-top: 4px; color: #64748b; font-size: 11px; font-weight: 800; }
   .community-row.compact { background: #fff7ed; border-color: #fed7aa; }
   .highlight-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .community-player-row { grid-template-columns: minmax(160px, 1fr) auto; }
+  .community-player-main { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .community-player-main strong { min-width: 0; color: ${DARK}; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .community-metrics { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .community-metrics span { display: inline-flex; align-items: center; padding: 5px 8px; border-radius: 999px; background: #fff7ed; border: 1px solid #fed7aa; color: #92400e; font-size: 11px; font-weight: 950; }
   .my-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .personal-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
   .chase-box { margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; }
@@ -418,8 +512,8 @@ const styles = `
   .insight-row.good { border-color: #bbf7d0; background: #f0fdf4; }
   .insight-row.warning { border-color: #fecaca; background: #fff1f2; }
   .empty-note { margin: 0; color: #64748b; font-weight: 850; }
-  @media (max-width: 1100px) { .game-overview, .community-fun-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .awards-grid, .ranking-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stats-layout, .stats-layout.badges-layout { grid-template-columns: 1fr; } .badge-catalog.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 760px) { .stats-page { padding: 18px 10px 36px; } .stats-hero { flex-direction: column; } .game-overview, .fun-grid, .community-fun-grid, .awards-grid, .ranking-grid, .badge-catalog, .badge-catalog.compact, .personal-grid, .highlight-list { grid-template-columns: 1fr; } .distribution-row { grid-template-columns: 1fr; } .distribution-row strong { text-align: left; } .player-badges-row { grid-template-columns: 38px minmax(0, 1fr); } .player-badges-row div:last-child { grid-column: 1 / -1; justify-content: flex-start; } .community-row { grid-template-columns: 1fr; } }
+  @media (max-width: 1100px) { .game-overview { grid-template-columns: repeat(3, minmax(0, 1fr)); } .awards-grid, .ranking-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stats-layout, .stats-layout.badges-layout { grid-template-columns: 1fr; } .badge-catalog.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 760px) { .stats-page { padding: 18px 10px 36px; } .stats-hero { flex-direction: column; } .game-overview, .fun-grid, .community-fun-grid, .awards-grid, .ranking-grid, .badge-catalog, .badge-catalog.compact, .personal-grid, .highlight-list { grid-template-columns: 1fr; } .distribution-row, .stacked-points-row, .community-player-row { grid-template-columns: 1fr; } .distribution-row strong, .stacked-points-row em { text-align: left; } .community-metrics { justify-content: flex-start; } .player-badges-row { grid-template-columns: 38px minmax(0, 1fr); } .player-badges-row div:last-child { grid-column: 1 / -1; justify-content: flex-start; } .community-row { grid-template-columns: 1fr; } }
 `;
 
 export default UserStats;
