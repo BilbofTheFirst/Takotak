@@ -15,7 +15,7 @@ const getTrendConfig = (trend) => {
   return { label: '0', icon: '•', className: 'trend-flat' };
 };
 
-const getUniqueNumbers = (values) => [...new Set(values)].sort((a, b) => a - b);
+const getUniqueNumbers = (values) => [...new Set(values)].filter(value => Number.isFinite(Number(value))).map(Number).sort((a, b) => a - b);
 
 const buildProgressionTicks = (values) => {
   const uniqueValues = getUniqueNumbers(values);
@@ -61,11 +61,47 @@ const buildAvatarMarkerItems = (series) => {
   });
 };
 
+const getMilestoneKey = (label = '') => {
+  const normalized = String(label).toLowerCase();
+  if (normalized.includes('j1')) return 'j1';
+  if (normalized.includes('j2')) return 'j2';
+  if (normalized.includes('j3')) return 'j3';
+  if (normalized.includes('total')) return 'total';
+  return null;
+};
+
 function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMode, setChartMode, selectedUserIds, hiddenUserIds, toggleChartUser, clearChartOverrides }) {
+  const [chartRange, setChartRange] = useState('all');
   const usersById = useMemo(() => new Map((progression?.users || []).map(user => [Number(user.id), user])), [progression]);
   const currentUserId = Number(currentUser?.id || 0);
   const hiddenIds = useMemo(() => new Set(hiddenUserIds.map(Number)), [hiddenUserIds]);
-  const matchLabelsByNumber = useMemo(() => new Map((progression?.matches || []).filter(match => match.label).map(match => [Number(match.match_number), match.label])), [progression]);
+
+  const milestoneMarkers = useMemo(() => {
+    const byKey = new Map();
+
+    (progression?.matches || []).forEach(match => {
+      const key = getMilestoneKey(match.label);
+      if (key) byKey.set(key, { key, label: match.label, match_number: Number(match.match_number) });
+    });
+
+    (progression?.users || []).forEach(user => {
+      (user.series || []).forEach(point => {
+        const key = getMilestoneKey(point.label);
+        if (!key || byKey.has(key)) return;
+        byKey.set(key, { key, label: point.label, match_number: Number(point.match_number) });
+      });
+    });
+
+    return [...byKey.values()].filter(marker => Number.isFinite(marker.match_number)).sort((a, b) => a.match_number - b.match_number);
+  }, [progression]);
+
+  const markerByKey = useMemo(() => new Map(milestoneMarkers.map(marker => [marker.key, marker])), [milestoneMarkers]);
+
+  const matchLabelsByNumber = useMemo(() => {
+    const map = new Map((progression?.matches || []).filter(match => match.label).map(match => [Number(match.match_number), match.label]));
+    milestoneMarkers.forEach(marker => map.set(Number(marker.match_number), marker.label));
+    return map;
+  }, [milestoneMarkers, progression]);
 
   const chartUsers = useMemo(() => {
     const selected = rankedUsers.filter(user => selectedUserIds.includes(Number(user.id)));
@@ -76,35 +112,64 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
     return merged.filter(user => !hiddenIds.has(Number(user.id)));
   }, [rankedUsers, selectedUserIds, hiddenIds, chartMode, currentUserId]);
 
-  const series = chartUsers
-    .map((user, index) => ({
-      ...user,
-      isMe: Number(user.id) === currentUserId,
-      color: CHART_COLORS[index % CHART_COLORS.length],
-      data: usersById.get(Number(user.id))?.series || []
-    }))
-    .filter(user => user.data.length > 0);
-
   const xValues = useMemo(() => {
     const matchNumbers = (progression?.matches || []).map(match => Number(match.match_number)).filter(value => Number.isFinite(value));
-    return getUniqueNumbers([0, ...matchNumbers]);
-  }, [progression]);
+    return getUniqueNumbers([0, ...matchNumbers, ...milestoneMarkers.map(marker => marker.match_number)]);
+  }, [milestoneMarkers, progression]);
 
-  const xAxisTicks = useMemo(() => buildProgressionTicks(xValues), [xValues]);
-  const maxX = Math.max(1, ...xValues);
+  const globalMinX = 0;
+  const globalMaxX = Math.max(1, ...xValues);
+  const j1End = markerByKey.get('j1')?.match_number;
+  const j2End = markerByKey.get('j2')?.match_number;
+  const j3End = markerByKey.get('j3')?.match_number;
+  const totalEnd = markerByKey.get('total')?.match_number || globalMaxX;
+
+  const rangeOptions = useMemo(() => {
+    const options = [{ value: 'all', label: 'Tout', start: globalMinX, end: totalEnd }];
+    if (Number.isFinite(j1End) && j1End > 0) options.push({ value: 'j1', label: 'J1', start: 0, end: j1End });
+    if (Number.isFinite(j2End) && j2End > (j1End || 0)) options.push({ value: 'j2', label: 'J2', start: j1End || 0, end: j2End });
+    if (Number.isFinite(j3End) && j3End > (j2End || j1End || 0)) options.push({ value: 'j3', label: 'J3', start: j2End || j1End || 0, end: j3End });
+    if (totalEnd > (j3End || j2End || j1End || 0)) options.push({ value: 'final', label: 'Bonus / total', start: j3End || j2End || j1End || 0, end: totalEnd });
+    return options.filter(option => option.end > option.start);
+  }, [globalMinX, j1End, j2End, j3End, totalEnd]);
+
+  useEffect(() => {
+    if (!rangeOptions.some(option => option.value === chartRange)) setChartRange('all');
+  }, [chartRange, rangeOptions]);
+
+  const selectedRange = rangeOptions.find(option => option.value === chartRange) || rangeOptions[0];
+  const domainMinX = Number(selectedRange?.start || 0);
+  const domainMaxX = Math.max(domainMinX + 1, Number(selectedRange?.end || globalMaxX));
+
+  const series = chartUsers
+    .map((user, index) => {
+      const allData = usersById.get(Number(user.id))?.series || [];
+      const data = allData.filter(point => Number(point.match_number) >= domainMinX && Number(point.match_number) <= domainMaxX);
+      return {
+        ...user,
+        isMe: Number(user.id) === currentUserId,
+        color: CHART_COLORS[index % CHART_COLORS.length],
+        data
+      };
+    })
+    .filter(user => user.data.length > 0);
+
+  const visibleXValues = useMemo(() => getUniqueNumbers(xValues.filter(value => value >= domainMinX && value <= domainMaxX)), [domainMinX, domainMaxX, xValues]);
+  const xAxisTicks = useMemo(() => buildProgressionTicks(visibleXValues), [visibleXValues]);
   const maxY = Math.max(3, ...series.flatMap(user => user.data.map(point => Number(point.points || 0))));
   const width = 950;
   const height = 340;
   const padLeft = 44;
-  const padRight = 108;
-  const padTop = 24;
+  const padRight = 116;
+  const padTop = 34;
   const padBottom = 42;
   const chartWidth = width - padLeft - padRight;
   const chartHeight = height - padTop - padBottom;
-  const xFor = (value) => padLeft + (Number(value || 0) / maxX) * chartWidth;
+  const xFor = (value) => padLeft + ((Number(value || 0) - domainMinX) / Math.max(1, domainMaxX - domainMinX)) * chartWidth;
   const yFor = (value) => padTop + chartHeight - (Number(value || 0) / maxY) * chartHeight;
   const hasOverrides = selectedUserIds.length > 0 || hiddenUserIds.length > 0;
   const avatarMarkerItems = buildAvatarMarkerItems(series);
+  const visibleMarkers = milestoneMarkers.filter(marker => marker.match_number >= domainMinX && marker.match_number <= domainMaxX);
 
   const renderAvatarMarker = (user, lastPoint, offset = { x: 0, y: 0 }) => {
     if (!lastPoint) return null;
@@ -114,7 +179,7 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
     const radius = size / 2;
     const avatarUrl = buildApiAssetUrl(user.avatar_url);
     const initials = (user.username || '?').trim().slice(0, 2).toUpperCase();
-    const clipId = `progression-avatar-clip-${user.id}`;
+    const clipId = `progression-avatar-clip-${chartRange}-${user.id}`;
 
     return (
       <g key={`avatar-${user.id}`} className="chart-avatar-marker">
@@ -140,10 +205,12 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
 
   return (
     <div className="chart-card">
-      <div className="chart-header"><div><span>📈 Progression</span><h2>Évolution des scores</h2></div><p>{series.length} courbe{series.length > 1 ? 's' : ''} affichée{series.length > 1 ? 's' : ''}. Le dernier point “Total” inclut les points bonus et spéciaux.</p></div>
+      <div className="chart-header"><div><span>📈 Progression</span><h2>Évolution des scores</h2></div><p>{series.length} courbe{series.length > 1 ? 's' : ''} affichée{series.length > 1 ? 's' : ''}. Les repères indiquent les journées et les points spéciaux/bonus.</p></div>
       <div className="chart-controls"><button type="button" className={chartMode === 'top5' ? 'active' : ''} onClick={() => setChartMode('top5')}>Top 5</button><button type="button" className={chartMode === 'top8' ? 'active' : ''} onClick={() => setChartMode('top8')}>Top 8</button><button type="button" className={chartMode === 'all' ? 'active' : ''} onClick={() => setChartMode('all')}>Tous</button>{hasOverrides && <button type="button" className="ghost" onClick={clearChartOverrides}>Réinitialiser l’affichage</button>}</div>
+      <div className="chart-range-controls">{rangeOptions.map(option => <button key={option.value} type="button" className={chartRange === option.value ? 'active' : ''} onClick={() => setChartRange(option.value)}>{option.label}</button>)}</div>
       <div className="chart-scroll"><svg viewBox={`0 0 ${width} ${height}`} className="progression-chart" role="img" aria-label="Graphique d'évolution des scores">
         {[0, 0.25, 0.5, 0.75, 1].map(ratio => { const y = padTop + chartHeight - ratio * chartHeight; const value = Math.round(maxY * ratio); return <g key={ratio}><line x1={padLeft} y1={y} x2={width - padRight} y2={y} className="chart-grid" /><text x={padLeft - 10} y={y + 4} className="chart-axis-label" textAnchor="end">{value}</text></g>; })}
+        {visibleMarkers.map(marker => { const x = xFor(marker.match_number); return <g key={`marker-${marker.key}`}><line x1={x} y1={padTop - 12} x2={x} y2={padTop + chartHeight} className="chart-marker-line" /><text x={x + 4} y={padTop - 16} className="chart-marker-label">{marker.label}</text></g>; })}
         {xAxisTicks.map(matchNumber => { const x = xFor(matchNumber); return <g key={`x-${matchNumber}`}><line x1={x} y1={padTop} x2={x} y2={padTop + chartHeight} className="chart-grid soft" /><text x={x} y={height - 14} className="chart-axis-label" textAnchor="middle">{formatProgressionTick(matchNumber, matchLabelsByNumber)}</text></g>; })}
         <line x1={padLeft} y1={padTop} x2={padLeft} y2={padTop + chartHeight} className="chart-axis" />
         <line x1={padLeft} y1={padTop + chartHeight} x2={width - padRight} y2={padTop + chartHeight} className="chart-axis" />
@@ -291,14 +358,17 @@ const styles = `
   .player-cell span { display: block; margin-top: 2px; color: #64748b; font-size: 10px; font-weight: 800; }
   .total-score { color: #0f766e; font-size: 18px; }
   .special-day-score { display: inline-flex; min-width: 28px; justify-content: center; padding: 4px 7px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-weight: 950; }
-  .chart-controls { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px 0; }
-  .chart-controls button { border: 1px solid #cbd5e1; border-radius: 999px; background: white; color: #334155; padding: 7px 11px; font-size: 11px; font-weight: 950; cursor: pointer; }
-  .chart-controls button.active { background: #0f766e; border-color: #0f766e; color: white; }
+  .chart-controls, .chart-range-controls { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px 0; }
+  .chart-range-controls { padding-top: 8px; }
+  .chart-controls button, .chart-range-controls button { border: 1px solid #cbd5e1; border-radius: 999px; background: white; color: #334155; padding: 7px 11px; font-size: 11px; font-weight: 950; cursor: pointer; }
+  .chart-controls button.active, .chart-range-controls button.active { background: #0f766e; border-color: #0f766e; color: white; }
   .chart-controls button.ghost { margin-left: auto; color: #b91c1c; border-color: #fecaca; background: #fff1f2; }
   .chart-card { padding-bottom: 16px; }
   .chart-scroll { overflow-x: auto; padding: 12px 18px 4px; }
   .progression-chart { width: 100%; min-width: 760px; display: block; overflow: visible; }
   .chart-grid { stroke: #e2e8f0; stroke-width: 1; } .chart-grid.soft { stroke: #f1f5f9; } .chart-axis { stroke: #94a3b8; stroke-width: 1.2; } .chart-axis-label { fill: #64748b; font-size: 10px; font-weight: 800; }
+  .chart-marker-line { stroke: #d97706; stroke-width: 1.8; stroke-dasharray: 5 5; opacity: .72; }
+  .chart-marker-label { fill: #92400e; font-size: 10px; font-weight: 950; text-transform: uppercase; paint-order: stroke; stroke: white; stroke-width: 3px; stroke-linejoin: round; }
   .chart-avatar-marker { filter: drop-shadow(0 4px 8px rgba(15,23,42,.24)); pointer-events: none; }
   .my-chart-line { filter: drop-shadow(0 3px 6px rgba(15,118,110,.28)); }
   .chart-legend { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 18px; }
