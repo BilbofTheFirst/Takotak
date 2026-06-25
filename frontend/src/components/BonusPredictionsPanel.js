@@ -18,6 +18,7 @@ function BonusPredictionsPanel({ matches, currentUserId, collapsible = false, de
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [deadline, setDeadline] = useState(null);
   const [scoring, setScoring] = useState(null);
+  const [actual, setActual] = useState(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('idle');
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
@@ -63,6 +64,7 @@ function BonusPredictionsPanel({ matches, currentUserId, collapsible = false, de
         setAdminUnlocked(Boolean(response.data?.admin_unlocked));
         setDeadline(response.data?.deadline || null);
         setScoring(response.data?.scoring || null);
+        setActual(response.data?.actual || null);
       } catch (error) {
         console.error('Erreur chargement pronostics bonus:', error);
         if (mounted) setStatus('error');
@@ -125,6 +127,15 @@ function BonusPredictionsPanel({ matches, currentUserId, collapsible = false, de
     return flag ? <img src={flag} alt={team} /> : <span>⚽</span>;
   };
 
+  const renderGroupPoints = (group, selected) => {
+    const actualWinner = actual?.group_winners?.[group] || '';
+    const points = Number(scoring?.details?.group_winners?.[group] || 0);
+    if (!actualWinner) return <span className="bonus-points-chip pending" title="Groupe pas encore terminé">⏳</span>;
+    if (points > 0) return <span className="bonus-points-chip earned" title={`Bon prono : ${actualWinner}`}>+{points}</span>;
+    if (selected) return <span className="bonus-points-chip missed" title={`Vainqueur réel : ${actualWinner}`}>0</span>;
+    return <span className="bonus-points-chip missed" title={`Vainqueur réel : ${actualWinner}`}>—</span>;
+  };
+
   const completedGroupWinners = GROUP_CODES.filter(group => bonus.group_winners?.[group]).length;
   const completedSemis = bonus.semifinalists.filter(Boolean).length;
   const totalCompleted = completedGroupWinners + (bonus.champion ? 1 : 0) + (bonus.runner_up ? 1 : 0) + completedSemis;
@@ -181,6 +192,7 @@ function BonusPredictionsPanel({ matches, currentUserId, collapsible = false, de
                           {renderTeamOption('')}
                           {(groupTeams[group] || []).map(renderTeamOption)}
                         </select>
+                        {renderGroupPoints(group, selected)}
                       </label>
                     </div>
                   );
@@ -239,10 +251,14 @@ function BonusPredictionsPanel({ matches, currentUserId, collapsible = false, de
         .bonus-card-title strong { color: #d97706; font-size: 22px; white-space: nowrap; }
         .bonus-group-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: start; }
         .group-winner-box, .final-pick-box { display: grid; gap: 6px; min-width: 0; align-items: start; }
-        .group-winner-row { display: grid; grid-template-columns: 34px 32px minmax(0, 1fr); gap: 7px; align-items: center; min-width: 0; }
+        .group-winner-row { display: grid; grid-template-columns: 34px 32px minmax(0, 1fr) 44px; gap: 7px; align-items: center; min-width: 0; }
         .group-badge { width: 31px; height: 31px; border-radius: 10px; display: grid; place-items: center; background: #ecfdf5; color: #047857; font-size: 13px; font-weight: 950; }
         .group-flag, .bonus-flag { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #e2e8f0; overflow: hidden; border: 2px solid white; box-shadow: 0 5px 14px rgba(15,23,42,.14); color: #64748b; font-size: 14px; }
         .group-flag img, .bonus-flag img { width: 100%; height: 100%; object-fit: cover; }
+        .bonus-points-chip { min-width: 38px; min-height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; font-size: 11px; font-weight: 950; white-space: nowrap; }
+        .bonus-points-chip.earned { color: #047857; background: #dcfce7; box-shadow: inset 0 0 0 1px #bbf7d0; }
+        .bonus-points-chip.missed { color: #b91c1c; background: #fee2e2; box-shadow: inset 0 0 0 1px #fecaca; }
+        .bonus-points-chip.pending { color: #64748b; background: #f1f5f9; box-shadow: inset 0 0 0 1px #e2e8f0; }
         .bonus-panel label { color: #334155; font-size: 11px; font-weight: 900; }
         .bonus-panel select { width: 100%; min-width: 0; border: 1.5px solid #cbd5e1; border-radius: 11px; background: white; color: #0f172a; padding: 8px 9px; font-size: 13px; font-weight: 850; outline: none; box-shadow: 0 5px 12px rgba(15,23,42,.05); }
         .bonus-panel select:focus { border-color: #d97706; box-shadow: 0 8px 18px rgba(217,119,6,.13); }
