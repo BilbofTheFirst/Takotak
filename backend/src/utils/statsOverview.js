@@ -4,6 +4,15 @@ const { getAllSpecialPredictionScores } = require('./specialPredictions');
 let cachedOverview = null;
 let cachedAt = null;
 
+const POINT_BREAKDOWN_CATEGORIES = [
+  { key: 'matchday1', label: 'Matchs J1', icon: '1️⃣' },
+  { key: 'matchday2', label: 'Matchs J2', icon: '2️⃣' },
+  { key: 'matchday3', label: 'Matchs J3', icon: '3️⃣' },
+  { key: 'knockout', label: 'Phase finale', icon: '🏟️' },
+  { key: 'special', label: 'Spéciaux', icon: '⚡' },
+  { key: 'bonus', label: 'Bonus', icon: '🎁' }
+];
+
 const buildAvatarUrl = (user) => {
   if (!user?.avatar_data) return null;
   const rawVersion = user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : Date.now();
@@ -22,6 +31,8 @@ const publicUser = (user) => user ? ({
   username: user.username,
   avatar_url: user.avatar_url || buildAvatarUrl(user)
 }) : null;
+
+const emptyPointBreakdown = () => Object.fromEntries(POINT_BREAKDOWN_CATEGORIES.map(category => [category.key, 0]));
 
 const resolveAward = ({ code, title, icon, definition, unit, rows, field, minValue = 1, decimals = 0 }) => {
   const candidates = rows.filter(row => Number.isFinite(number(row[field])));
@@ -64,6 +75,35 @@ const getOutcome = (home, away) => {
   if (number(home) > number(away)) return 'home';
   if (number(home) < number(away)) return 'away';
   return 'draw';
+};
+
+const buildCompetitionDayMap = (matches) => {
+  const byMatch = {};
+  const appearances = {};
+
+  matches
+    .filter(match => Number(match.id) <= 72 && match.team1 && match.team2)
+    .slice()
+    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time) || Number(a.id) - Number(b.id))
+    .forEach(match => {
+      const team1Day = (appearances[match.team1] || 0) + 1;
+      const team2Day = (appearances[match.team2] || 0) + 1;
+      byMatch[Number(match.id)] = team1Day === team2Day ? team1Day : Math.max(team1Day, team2Day);
+      appearances[match.team1] = team1Day;
+      appearances[match.team2] = team2Day;
+    });
+
+  return byMatch;
+};
+
+const getMatchPointCategory = (match, competitionDayByMatch) => {
+  if (!match) return 'knockout';
+  if (Number(match.id) > 72) return 'knockout';
+  const day = Number(competitionDayByMatch[Number(match.id)] || 0);
+  if (day === 1) return 'matchday1';
+  if (day === 2) return 'matchday2';
+  if (day === 3) return 'matchday3';
+  return 'matchday1';
 };
 
 const computeStreaks = (users, orderedMatches, scoreRows) => {
@@ -161,6 +201,60 @@ const buildCommunityMatches = (finishedMatches, predictionRows, scoreRows) => {
   });
 };
 
+const buildCommunityProfiles = (users, predictionRows, scoreRows, communityMatches) => {
+  const profilesByUser = new Map(users.map(user => [Number(user.id), {
+    ...publicUser(user),
+    total_predictions: 0,
+    consensus_predictions: 0,
+    contrarian_predictions: 0,
+    bold_hits: 0
+  }]));
+  const matchById = new Map(communityMatches.map(match => [Number(match.match_id), match]));
+  const scoreByUserMatch = new Map(scoreRows.map(row => [`${Number(row.user_id)}:${Number(row.match_id)}`, number(row.points)]));
+
+  predictionRows.forEach(prediction => {
+    const userId = Number(prediction.user_id);
+    const matchId = Number(prediction.match_id);
+    const profile = profilesByUser.get(userId);
+    const match = matchById.get(matchId);
+    if (!profile || !match || !match.total_predictions) return;
+
+    const predictedOutcome = getOutcome(prediction.team1_goals, prediction.team2_goals);
+    const counts = {
+      home: number(match.predicted_outcomes?.home?.count),
+      draw: number(match.predicted_outcomes?.draw?.count),
+      away: number(match.predicted_outcomes?.away?.count)
+    };
+    const majorityCount = Math.max(counts.home, counts.draw, counts.away);
+    const followsGroup = counts[predictedOutcome] === majorityCount;
+    const points = scoreByUserMatch.get(`${userId}:${matchId}`) || 0;
+
+    profile.total_predictions += 1;
+    if (followsGroup) profile.consensus_predictions += 1;
+    else {
+      profile.contrarian_predictions += 1;
+      if (points > 0) profile.bold_hits += 1;
+    }
+  });
+
+  const profiles = [...profilesByUser.values()]
+    .map(profile => ({
+      ...profile,
+      consensus_rate: percent(profile.consensus_predictions, profile.total_predictions),
+      contrarian_rate: percent(profile.contrarian_predictions, profile.total_predictions)
+    }))
+    .filter(profile => profile.total_predictions > 0)
+    .sort((a, b) => number(b.total_predictions) - number(a.total_predictions) || a.username.localeCompare(b.username, 'fr'));
+
+  const minPredictions = Math.max(2, Math.min(5, Math.ceil((communityMatches.length || 0) * 0.35)));
+  const eligible = profiles.filter(profile => profile.total_predictions >= minPredictions);
+  const mouton = [...eligible].sort((a, b) => number(b.consensus_rate) - number(a.consensus_rate) || number(b.total_predictions) - number(a.total_predictions))[0] || null;
+  const contrarian = [...eligible].sort((a, b) => number(b.contrarian_rate) - number(a.contrarian_rate) || number(b.total_predictions) - number(a.total_predictions))[0] || null;
+  const boldPlayer = [...eligible].sort((a, b) => number(b.bold_hits) - number(a.bold_hits) || number(b.contrarian_rate) - number(a.contrarian_rate))[0] || null;
+
+  return { profiles, mouton, contrarian, bold_player: boldPlayer, min_predictions: minPredictions };
+};
+
 const buildBadges = (user, context) => {
   const badges = [];
   if (number(user.best_exact_streak) >= 3) badges.push({ code: 'sniper', icon: '🎯', title: 'Sniper', description: '3 scores exacts consécutifs.' });
@@ -232,6 +326,14 @@ const buildOverview = async (pool) => {
 
   const totalPredictionsByUser = new Map(predictionCountsResult.rows.map(row => [Number(row.user_id), number(row.total_predictions)]));
   const orderedMatches = finishedMatchesResult.rows.map(row => ({ ...row, id: Number(row.id) }));
+  const matchById = new Map(orderedMatches.map(match => [Number(match.id), match]));
+  const competitionDayByMatch = buildCompetitionDayMap(orderedMatches);
+  const scoreRowsByUser = new Map();
+  scoreRowsResult.rows.forEach(row => {
+    const userId = Number(row.user_id);
+    if (!scoreRowsByUser.has(userId)) scoreRowsByUser.set(userId, []);
+    scoreRowsByUser.get(userId).push(row);
+  });
   const totalDraws = orderedMatches.filter(match => number(match.team1_goals) === number(match.team2_goals)).length;
 
   const users = usersResult.rows.map(row => {
@@ -239,6 +341,16 @@ const buildOverview = async (pool) => {
     const matchPoints = number(row.match_points);
     const bonusPoints = bonusScores.get(id)?.points || 0;
     const specialPoints = specialScores.get(id)?.points || 0;
+    const pointBreakdown = emptyPointBreakdown();
+    const userScoreRows = scoreRowsByUser.get(id) || [];
+    userScoreRows.forEach(scoreRow => {
+      const match = matchById.get(Number(scoreRow.match_id));
+      const category = getMatchPointCategory(match, competitionDayByMatch);
+      pointBreakdown[category] += number(scoreRow.points);
+    });
+    pointBreakdown.special = specialPoints;
+    pointBreakdown.bonus = bonusPoints;
+
     const userFinishedPredictions = predictionRowsResult.rows.filter(prediction => Number(prediction.user_id) === id);
     const drawHits = userFinishedPredictions.filter(prediction =>
       number(prediction.team1_goals) === number(prediction.team2_goals) &&
@@ -257,6 +369,7 @@ const buildOverview = async (pool) => {
       bonus_points: bonusPoints,
       special_points: specialPoints,
       total_points: matchPoints + bonusPoints + specialPoints,
+      point_breakdown: pointBreakdown,
       scored_predictions: number(row.scored_predictions),
       total_predictions: totalPredictionsByUser.get(id) || 0,
       exact_scores: number(row.exact_scores),
@@ -285,6 +398,7 @@ const buildOverview = async (pool) => {
   const scoreDistribution = buildScoreDistribution(predictionRowsResult.rows);
   const communityMatches = buildCommunityMatches(orderedMatches, predictionRowsResult.rows, scoreRowsResult.rows);
   const scoredCommunityMatches = [...communityMatches].filter(match => match.total_predictions > 0);
+  const communityProfiles = buildCommunityProfiles(rankedUsers, predictionRowsResult.rows, scoreRowsResult.rows, scoredCommunityMatches);
   const hardestAverage = scoredCommunityMatches.reduce((min, match) => Math.min(min, number(match.average_points)), Number.POSITIVE_INFINITY);
   const easiestAverage = scoredCommunityMatches.reduce((max, match) => Math.max(max, number(match.average_points)), 0);
   const hardestMatches = scoredCommunityMatches.filter(match => number(match.average_points) === hardestAverage).sort((a, b) => new Date(b.date) - new Date(a.date) || Number(b.match_id) - Number(a.match_id));
@@ -293,12 +407,19 @@ const buildOverview = async (pool) => {
   const easiestMatch = easiestMatches[0] || null;
   const zeroPointMatches = scoredCommunityMatches.filter(match => number(match.average_points) === 0).sort((a, b) => new Date(b.date) - new Date(a.date) || Number(b.match_id) - Number(a.match_id));
   const consensusMatch = [...scoredCommunityMatches].sort((a, b) => number(b.consensus_percent) - number(a.consensus_percent) || new Date(b.date) - new Date(a.date))[0] || null;
-  const chaosMatch = [...scoredCommunityMatches].sort((a, b) => number(a.consensus_percent) - number(b.consensus_percent) || new Date(b.date) - new Date(a.date))[0] || null;
+  const chaosMatch = [...scoredCommunityMatches].sort((a, b) => number(a.consensus_percent) - number(b.date ? 0 : 0) || number(a.consensus_percent) - number(b.consensus_percent) || new Date(b.date) - new Date(a.date))[0] || null;
 
   const context = { finishedMatches, totalDraws };
   const usersWithBadges = rankedUsers.map(user => ({ ...user, badges: buildBadges(user, context) }));
   const badgeCounts = new Map();
   usersWithBadges.forEach(user => user.badges.forEach(badge => badgeCounts.set(badge.code, { ...badge, count: (badgeCounts.get(badge.code)?.count || 0) + 1 })));
+
+  const pointBreakdown = usersWithBadges.map(user => ({
+    ...publicUser(user),
+    rank: user.rank,
+    total_points: user.total_points,
+    point_breakdown: user.point_breakdown
+  }));
 
   return {
     generated_at: new Date().toISOString(),
@@ -312,6 +433,7 @@ const buildOverview = async (pool) => {
       total_special_points: totalSpecialPoints,
       total_scored_predictions: totalScoredPredictions,
       average_points_per_player: rankedUsers.length ? round(totalPoints / rankedUsers.length, 1) : 0,
+      point_breakdown_categories: POINT_BREAKDOWN_CATEGORIES,
       leader: publicUser(rankedUsers[0]) ? { ...publicUser(rankedUsers[0]), total_points: rankedUsers[0].total_points } : null
     },
     awards: [
@@ -338,6 +460,7 @@ const buildOverview = async (pool) => {
       special_points: sortByValue(rankedUsers, 'special_points'),
       total_predictions: sortByValue(rankedUsers, 'total_predictions')
     },
+    point_breakdown: pointBreakdown,
     badges: {
       catalog: [...badgeCounts.values()].sort((a, b) => b.count - a.count || a.title.localeCompare(b.title, 'fr')),
       users: usersWithBadges.map(user => ({ ...publicUser(user), rank: user.rank, total_points: user.total_points, badges: user.badges }))
@@ -351,6 +474,11 @@ const buildOverview = async (pool) => {
       zero_point_matches: zeroPointMatches.slice(0, 8),
       consensus_match: consensusMatch,
       chaos_match: chaosMatch,
+      mouton: communityProfiles.mouton,
+      contrarian: communityProfiles.contrarian,
+      bold_player: communityProfiles.bold_player,
+      profiles: communityProfiles.profiles.slice(0, 12),
+      community_profile_min_predictions: communityProfiles.min_predictions,
       recent_matches: communityMatches.slice(-8).reverse()
     },
     users: usersWithBadges
