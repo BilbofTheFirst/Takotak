@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { statsService } from '../services/api';
 import PageLoader from '../components/PageLoader';
 import UserAvatar from '../components/UserAvatar';
@@ -22,20 +22,23 @@ const RANKING_CONFIGS = [
   { key: 'correct_differences', title: 'Bonnes différences', value: 'correct_differences', suffix: 'différences' },
   { key: 'correct_winners', title: 'Bons vainqueurs', value: 'correct_winners', suffix: 'bons résultats' },
   { key: 'draw_hits', title: 'Roi du nul', value: 'draw_hits', suffix: 'nuls trouvés' },
+  { key: 'near_misses', title: 'Presque exacts', value: 'near_misses', suffix: 'à 1 but' },
   { key: 'best_streak', title: 'Meilleure série', value: 'best_streak', suffix: 'matchs' },
   { key: 'efficiency', title: 'Rendement', value: 'efficiency', suffix: 'pt/match' },
   { key: 'bonus_points', title: 'Bonus', value: 'bonus_points', suffix: 'pts' },
-  { key: 'special_points', title: 'Spéciaux J1', value: 'special_points', suffix: 'pts' },
+  { key: 'special_points', title: 'Spéciaux journée', value: 'special_points', suffix: 'pts' },
   { key: 'total_predictions', title: 'Assiduité', value: 'total_predictions', suffix: 'pronos' }
 ];
 
 const BADGE_DEFINITIONS = [
   { code: 'sniper', icon: '🎯', title: 'Sniper', description: '3 scores exacts consécutifs.' },
+  { code: 'elite_sniper', icon: '🏹', title: 'Tireur d’élite', description: 'Au moins 5 scores exacts au total.' },
   { code: 'hot_streak', icon: '🔥', title: 'Série chaude', description: 'Au moins 3 matchs consécutifs avec points.' },
   { code: 'draw_king', icon: '🤝', title: 'Roi du nul', description: 'Au moins 2 matchs nuls bien lus.' },
+  { code: 'nearly_there', icon: '🐈‍⬛', title: 'Presque…', description: 'Souvent à un but du score exact.' },
   { code: 'assidu', icon: '🧱', title: 'Assidu', description: 'Présent sur tous les matchs scorés.' },
   { code: 'strategist', icon: '🎁', title: 'Stratège', description: 'Des points marqués via les bonus.' },
-  { code: 'specialist', icon: '⚡', title: 'Spécialiste', description: 'Des points marqués sur les pronostics spéciaux.' },
+  { code: 'specialist', icon: '⚡', title: 'Spécialiste journée', description: 'Des points marqués sur les pronostics spéciaux de journée.' },
   { code: 'podium', icon: '🏆', title: 'Podium', description: 'Dans le top 3 du classement général.' }
 ];
 
@@ -114,6 +117,19 @@ function RankingBlock({ title, rows = [], valueKey, suffix }) {
   );
 }
 
+function MatchMiniRow({ match }) {
+  if (!match) return null;
+  return (
+    <div className="community-row compact">
+      <div>
+        <strong>{match.label}</strong>
+        <span>Résultat {match.result} · {match.total_predictions} pronos · score favori : {match.most_predicted_score?.score || '-'}</span>
+      </div>
+      <em>{formatValue(match.average_points)} pt moy.</em>
+    </div>
+  );
+}
+
 function UserStats() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -140,10 +156,14 @@ function UserStats() {
   const community = data?.community || {};
   const badgeUsers = data?.badges?.users || [];
   const rawBadgeCatalog = data?.badges?.catalog || [];
-  const badgeCatalog = BADGE_DEFINITIONS.map(definition => {
-    const earned = rawBadgeCatalog.find(badge => badge.code === definition.code);
-    return { ...definition, ...(earned || {}), count: earned?.count || 0 };
-  });
+  const knownBadgeCodes = new Set(BADGE_DEFINITIONS.map(definition => definition.code));
+  const badgeCatalog = [
+    ...BADGE_DEFINITIONS.map(definition => {
+      const earned = rawBadgeCatalog.find(badge => badge.code === definition.code);
+      return { ...definition, ...(earned || {}), count: earned?.count || 0 };
+    }),
+    ...rawBadgeCatalog.filter(badge => !knownBadgeCodes.has(badge.code))
+  ];
   const topFive = rankings.total_points?.slice(0, 5) || [];
   const distributionTotal = number(overview.total_match_points) + number(overview.total_special_points) + number(overview.total_bonus_points);
 
@@ -156,6 +176,8 @@ function UserStats() {
     { label: 'Scores exacts', value: me?.exact_scores || 0, icon: '🎯' },
     { label: 'Meilleure série', value: me?.best_streak || 0, icon: '🔥' }
   ];
+
+  const impossibleMatches = community.zero_point_matches?.length ? community.zero_point_matches : community.hardest_matches || [];
 
   return (
     <div className="stats-page">
@@ -225,24 +247,30 @@ function UserStats() {
         )}
 
         {activeTab === 'badges' && (
-          <section className="stats-layout">
+          <section className="stats-layout badges-layout">
             <div className="main-column">
               <section className="stats-card">
-                <div className="stats-card-title"><div><span>Règles</span><h2>Comment lire les badges ?</h2></div></div>
-                <p className="badge-note">Les badges affichés ici sont des <strong>badges actuels</strong>, recalculés après chaque résultat. Certains peuvent donc être gagnés ou perdus selon les séries et le classement. Des trophées définitifs pourront être ajoutés plus tard avec un historique dédié.</p>
-              </section>
-              <section className="stats-card">
-                <div className="stats-card-title"><div><span>Catalogue</span><h2>Badges disponibles</h2></div></div>
-                <div className="badge-catalog">
-                  {badgeCatalog.map(badge => <div key={badge.code} className={`badge-chip ${badge.count === 0 ? 'is-locked' : ''}`} title={badge.description}><span>{badge.icon}</span><strong>{badge.title}</strong><em>{badge.description} · {badge.count > 0 ? `${badge.count} joueur${badge.count > 1 ? 's' : ''}` : '0 joueur'}</em></div>)}
+                <div className="stats-card-title"><div><span>Joueurs</span><h2>Badges par joueur</h2></div></div>
+                <div className="player-badges-list large">
+                  {badgeUsers.map(user => (
+                    <div key={user.id} className="player-badges-row">
+                      <UserAvatar user={user} size={38} />
+                      <strong>{user.username}</strong>
+                      <div>{user.badges?.length ? user.badges.map(badge => <span key={badge.code} title={`${badge.title} · ${badge.description}`}>{badge.icon}</span>) : <em>Aucun</em>}</div>
+                    </div>
+                  ))}
                 </div>
               </section>
             </div>
             <aside className="side-column single">
               <section className="stats-card">
-                <div className="stats-card-title"><div><span>Joueurs</span><h2>Badges par joueur</h2></div></div>
-                <div className="player-badges-list">
-                  {badgeUsers.map(user => <div key={user.id} className="player-badges-row"><UserAvatar user={user} size={34} /><strong>{user.username}</strong><div>{user.badges?.length ? user.badges.map(badge => <span key={badge.code} title={badge.description}>{badge.icon}</span>) : <em>Aucun</em>}</div></div>)}
+                <div className="stats-card-title"><div><span>Règles</span><h2>Comment lire les badges ?</h2></div></div>
+                <p className="badge-note">Les badges affichés ici sont des <strong>badges actuels</strong>, recalculés après chaque résultat. Certains peuvent donc être gagnés ou perdus selon les séries et le classement.</p>
+              </section>
+              <section className="stats-card">
+                <div className="stats-card-title"><div><span>Catalogue</span><h2>Badges disponibles</h2></div></div>
+                <div className="badge-catalog compact">
+                  {badgeCatalog.map(badge => <div key={badge.code} className={`badge-chip ${badge.count === 0 ? 'is-locked' : ''}`} title={badge.description}><span>{badge.icon}</span><strong>{badge.title}</strong><em>{badge.description} · {badge.count > 0 ? `${badge.count} joueur${badge.count > 1 ? 's' : ''}` : '0 joueur'}</em></div>)}
                 </div>
               </section>
             </aside>
@@ -254,16 +282,25 @@ function UserStats() {
             <div className="main-column">
               <section className="stats-card">
                 <div className="stats-card-title"><div><span>Stats fun</span><h2>La communauté en chiffres</h2></div></div>
-                <div className="fun-grid">
+                <div className="fun-grid community-fun-grid">
                   <FunCard icon="🔮" label="Score le plus joué" value={community.most_predicted_score?.score || '-'} detail={community.most_predicted_score ? `${community.most_predicted_score.count} fois pronostiqué` : 'Aucun prono analysé'} />
                   <FunCard icon="💀" label="Match le plus dur" value={community.hardest_match?.label || '-'} detail={community.hardest_match ? `${formatValue(community.hardest_match.average_points)} pt de moyenne · résultat ${community.hardest_match.result}` : 'Aucun match terminé'} />
+                  <FunCard icon="🧊" label="Matchs à zéro" value={community.zero_point_matches?.length || 0} detail="Matchs où personne n’a vraiment scoré" />
+                  <FunCard icon="🐑" label="Plus gros consensus" value={community.consensus_match?.label || '-'} detail={community.consensus_match ? `${community.consensus_match.consensus_percent}% sur le même résultat` : 'Aucun consensus'} />
+                  <FunCard icon="🌪️" label="Match chaos" value={community.chaos_match?.label || '-'} detail={community.chaos_match ? `${community.chaos_match.consensus_percent}% max sur un résultat` : 'Aucun match analysé'} />
                   <FunCard icon="😎" label="Match le plus facile" value={community.easiest_match?.label || '-'} detail={community.easiest_match ? `${formatValue(community.easiest_match.average_points)} pt de moyenne · résultat ${community.easiest_match.result}` : 'Aucun match terminé'} />
                 </div>
               </section>
               <section className="stats-card">
-                <div className="stats-card-title"><div><span>Par match</span><h2>Réactions de la communauté</h2></div></div>
+                <div className="stats-card-title"><div><span>Matchs piégeux</span><h2>Les matchs qui ont fait mal</h2></div></div>
+                <div className="community-list highlight-list">
+                  {impossibleMatches.slice(0, 8).map(match => <MatchMiniRow key={match.match_id} match={match} />)}
+                </div>
+              </section>
+              <section className="stats-card">
+                <div className="stats-card-title"><div><span>Par match</span><h2>Réactions récentes</h2></div></div>
                 <div className="community-list">
-                  {(community.recent_matches || []).map(match => <div key={match.match_id} className="community-row"><div><strong>{match.label}</strong><span>Résultat {match.result} · {match.total_predictions} pronos · score le plus joué : {match.most_predicted_score?.score || '-'}</span></div><em>{match.exact_count} exacts · {match.average_points} pt moy.</em></div>)}
+                  {(community.recent_matches || []).map(match => <div key={match.match_id} className="community-row"><div><strong>{match.label}</strong><span>Résultat {match.result} · {match.total_predictions} pronos · score le plus joué : {match.most_predicted_score?.score || '-'}</span></div><em>{match.exact_count} exacts · {formatValue(match.average_points)} pt moy.</em></div>)}
                 </div>
               </section>
             </div>
@@ -322,6 +359,7 @@ const styles = `
   .stat-pill.featured strong { color: white; }
   .stat-pill.featured em { color: rgba(255,255,255,.76); }
   .stats-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+  .stats-layout.badges-layout { grid-template-columns: minmax(0, 1fr) 420px; }
   .stats-layout.community-layout { grid-template-columns: 1fr; }
   .main-column, .side-column { display: grid; gap: 16px; }
   .side-column.single { grid-template-columns: 1fr; }
@@ -329,7 +367,7 @@ const styles = `
   .stats-card-title { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 13px; }
   .stats-card-title h2 { margin: 2px 0 0; color: ${DARK}; font-size: 22px; letter-spacing: -.03em; }
   .stats-card-title.compact h2 { font-size: 17px; margin-bottom: 0; }
-  .awards-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+  .awards-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .award-card { display: grid; gap: 10px; min-width: 0; padding: 12px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; }
   .award-card.is-tie { background: #fff7ed; border-color: #fed7aa; }
   .award-icon { width: 36px; height: 36px; border-radius: 13px; display: grid; place-items: center; background: white; box-shadow: inset 0 0 0 1px #e2e8f0; font-size: 20px; }
@@ -344,40 +382,44 @@ const styles = `
   .distribution-row em { display: block; height: 100%; min-width: 4px; border-radius: 999px; background: ${PRIMARY}; }
   .distribution-row.special em { background: #2563eb; }
   .distribution-row.bonus em { background: ${SECONDARY}; }
-  .distribution-row strong { color: ${DARK}; text-align: right; font-size: 13px; font-weight: 950; }
-  .ranking-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .mini-ranking-row, .community-row, .player-badges-row, .insight-row { display: grid; align-items: center; gap: 10px; padding: 10px; border-radius: 15px; background: #f8fafc; border: 1px solid #e2e8f0; }
-  .mini-ranking-row { grid-template-columns: 42px 34px minmax(0, 1fr) auto; }
-  .mini-ranking-row > span { display: grid; place-items: center; min-width: 38px; padding: 5px 7px; border-radius: 999px; background: #e2e8f0; color: #334155; font-size: 11px; font-weight: 950; }
-  .mini-ranking-row strong, .community-row strong, .player-badges-row strong, .insight-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${DARK}; font-size: 13px; }
-  .mini-ranking-row em, .community-row em, .player-badges-row em, .insight-row em { color: ${PRIMARY}; font-style: normal; font-size: 12px; font-weight: 900; }
-  .fun-grid { display: grid; grid-template-columns: repeat(3, minmax(230px, 1fr)); gap: 12px; }
+  .distribution-row strong { text-align: right; color: ${DARK}; font-size: 13px; }
+  .mini-ranking-row, .community-row, .player-badges-row, .insight-row { display: grid; align-items: center; gap: 9px; padding: 10px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
+  .mini-ranking-row { grid-template-columns: 34px 36px minmax(0, 1fr) auto; }
+  .mini-ranking-row > span { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 999px; background: #ecfdf5; color: ${PRIMARY}; font-size: 12px; font-weight: 950; }
+  .mini-ranking-row strong, .player-badges-row strong, .community-row strong, .insight-row strong { min-width: 0; color: ${DARK}; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini-ranking-row em, .community-row em, .insight-row em { color: #64748b; font-style: normal; font-size: 11px; font-weight: 850; }
+  .ranking-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .badge-note { color: #334155; font-size: 13px; line-height: 1.55; font-weight: 800; }
+  .badge-catalog { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+  .badge-catalog.compact { grid-template-columns: 1fr; }
+  .badge-chip { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 9px; align-items: center; padding: 9px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
+  .badge-chip.is-locked { opacity: .62; }
+  .badge-chip > span { grid-row: span 2; width: 34px; height: 34px; border-radius: 13px; display: grid; place-items: center; background: white; box-shadow: inset 0 0 0 1px #e2e8f0; }
+  .badge-chip strong { color: ${DARK}; font-size: 12px; }
+  .badge-chip em { color: #64748b; font-style: normal; font-size: 10px; font-weight: 800; line-height: 1.3; }
+  .player-badges-list.large { gap: 10px; }
+  .player-badges-row { grid-template-columns: 42px minmax(120px, 1fr) minmax(260px, auto); }
+  .player-badges-row div:last-child { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .player-badges-row div:last-child span { width: 29px; height: 29px; border-radius: 999px; display: grid; place-items: center; background: #fff7ed; border: 1px solid #fed7aa; font-size: 15px; }
+  .player-badges-row div:last-child em { color: #94a3b8; font-style: normal; font-size: 11px; font-weight: 850; }
+  .fun-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .community-fun-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .community-row { grid-template-columns: minmax(0, 1fr) auto; }
-  .community-row span { display: block; color: #64748b; font-size: 11px; font-weight: 850; margin-top: 2px; }
-  .badge-note { margin: 0; color: #334155; font-size: 13px; font-weight: 850; line-height: 1.55; }
-  .badge-catalog { display: flex; flex-wrap: wrap; gap: 10px; }
-  .badge-chip { display: inline-grid; grid-template-columns: 34px minmax(0, 1fr); gap: 2px 9px; align-items: center; padding: 10px 12px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; min-width: 220px; }
-  .badge-chip.is-locked { opacity: .68; background: #f1f5f9; }
-  .badge-chip > span { grid-row: span 2; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 12px; background: white; font-size: 18px; }
-  .badge-chip strong { color: ${DARK}; font-size: 13px; }
-  .badge-chip em { color: #64748b; font-style: normal; font-size: 11px; font-weight: 850; line-height: 1.25; }
-  .player-badges-row { grid-template-columns: 34px minmax(0, 1fr) auto; }
-  .player-badges-row div { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
-  .player-badges-row div span { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 999px; background: #fff7ed; border: 1px solid #fed7aa; }
+  .community-row span { display: block; margin-top: 4px; color: #64748b; font-size: 11px; font-weight: 800; }
+  .community-row.compact { background: #fff7ed; border-color: #fed7aa; }
+  .highlight-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .my-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-  .personal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-  .personal-grid .stat-pill { min-height: 84px; padding: 12px; }
-  .chase-box { margin-top: 12px; padding: 12px; border-radius: 16px; background: #fff7ed; border: 1px solid #fed7aa; color: #7c2d12; }
-  .chase-box p { margin: 0; font-size: 13px; line-height: 1.4; font-weight: 850; }
-  .chase-box small { display: block; margin-top: 6px; color: #9a3412; font-weight: 800; }
-  .insight-row { grid-template-columns: 42px minmax(0, 1fr); }
-  .insight-row > span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 14px; background: white; font-size: 20px; }
-  .insight-row.good { background: #ecfdf5; border-color: #bbf7d0; }
-  .insight-row.warning { background: #fff7ed; border-color: #fed7aa; }
-  .empty-note { color: #64748b; font-weight: 850; }
-  @media (max-width: 1180px) { .game-overview { grid-template-columns: repeat(3, minmax(0, 1fr)); } .leader-card { grid-column: span 3; } .stats-layout { grid-template-columns: 1fr; } .awards-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  @media (max-width: 900px) { .stats-hero { flex-direction: column; } .ranking-grid, .fun-grid { grid-template-columns: 1fr; } .awards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 620px) { .stats-page { padding: 18px 10px 36px; } .game-overview { grid-template-columns: 1fr; } .leader-card { grid-column: auto; } .awards-grid, .personal-grid { grid-template-columns: 1fr; } .distribution-row, .community-row { grid-template-columns: 1fr; gap: 6px; } .distribution-row strong { text-align: left; } .mini-ranking-row { grid-template-columns: 38px 34px minmax(0, 1fr); } .mini-ranking-row em { grid-column: 3; } }
+  .personal-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .chase-box { margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; }
+  .chase-box p { margin: 0; color: ${DARK}; font-weight: 850; }
+  .chase-box small { display: block; margin-top: 6px; color: #64748b; font-weight: 800; }
+  .insight-row { grid-template-columns: 34px minmax(0, 1fr); }
+  .insight-row > span { width: 31px; height: 31px; border-radius: 12px; display: grid; place-items: center; background: white; }
+  .insight-row.good { border-color: #bbf7d0; background: #f0fdf4; }
+  .insight-row.warning { border-color: #fecaca; background: #fff1f2; }
+  .empty-note { margin: 0; color: #64748b; font-weight: 850; }
+  @media (max-width: 1100px) { .game-overview, .community-fun-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .awards-grid, .ranking-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stats-layout, .stats-layout.badges-layout { grid-template-columns: 1fr; } .badge-catalog.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 760px) { .stats-page { padding: 18px 10px 36px; } .stats-hero { flex-direction: column; } .game-overview, .fun-grid, .community-fun-grid, .awards-grid, .ranking-grid, .badge-catalog, .badge-catalog.compact, .personal-grid, .highlight-list { grid-template-columns: 1fr; } .distribution-row { grid-template-columns: 1fr; } .distribution-row strong { text-align: left; } .player-badges-row { grid-template-columns: 38px minmax(0, 1fr); } .player-badges-row div:last-child { grid-column: 1 / -1; justify-content: flex-start; } .community-row { grid-template-columns: 1fr; } }
 `;
 
 export default UserStats;
