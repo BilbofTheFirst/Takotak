@@ -82,6 +82,7 @@ function Predictions() {
   const hasResult = (match) => match.team1_goals !== null && match.team1_goals !== undefined && match.team2_goals !== null && match.team2_goals !== undefined;
   const isValidScoreValue = (value) => /^[0-9]{1,2}$/.test(String(value)) && Number(value) >= 0 && Number(value) <= 99;
   const isPastOrClosedMatch = useCallback((match) => new Date(match.start_time) <= currentNow || hasResult(match), [currentNow]);
+  const isMatchPredictionBlockedByAccess = useCallback((match) => Boolean(match.knockout_prediction_blocked || (isKnockoutMatch(match.id) && match.can_predict === false && new Date(match.start_time) > currentNow && !hasResult(match))), [currentNow]);
 
   const getDisplayMatch = useCallback((match) => {
     if (!mockResultsEnabled || hasResult(match) || !match.team1 || !match.team2 || new Date(match.start_time) >= currentNow) return match;
@@ -160,6 +161,7 @@ function Predictions() {
   const pastDayGroups = useMemo(() => buildDayGroups(pastMatches), [buildDayGroups, pastMatches]);
   const pastMatchesCount = pastMatches.length;
   const hiddenPastMatchesCount = showPastDays ? 0 : pastMatchesCount;
+  const knockoutAccessBlocked = useMemo(() => matches.some(match => isMatchPredictionBlockedByAccess(match)), [isMatchPredictionBlockedByAccess, matches]);
 
   const matchdayCounts = useMemo(() => ({
     all: matches.length,
@@ -210,6 +212,11 @@ function Predictions() {
   };
 
   const savePrediction = useCallback(async (matchId, scores) => {
+    const targetMatch = matches.find(match => Number(match.id) === Number(matchId));
+    if (targetMatch && isMatchPredictionBlockedByAccess(targetMatch)) {
+      setSaveStatus(prev => ({ ...prev, [matchId]: 'phase_finale_fermee' }));
+      return;
+    }
     if (!isValidScoreValue(scores.team1) || !isValidScoreValue(scores.team2)) {
       setSaveStatus(prev => ({ ...prev, [matchId]: 'invalid' }));
       return;
@@ -229,13 +236,13 @@ function Predictions() {
       console.error('Save prediction error:', error.response?.data || error);
       setSaveStatus(prev => ({ ...prev, [matchId]: error.response?.data?.detail || error.response?.data?.error || 'error' }));
     }
-  }, [predictions]);
+  }, [isMatchPredictionBlockedByAccess, matches, predictions]);
 
   const handleScoreChange = (match, team, value) => {
     const matchId = match.id;
     const isClosed = new Date(match.start_time) <= currentNow;
     const hasKnownTeams = Boolean(match.team1 && match.team2);
-    if (isClosed || !hasKnownTeams || hasResult(match)) return;
+    if (isClosed || !hasKnownTeams || hasResult(match) || isMatchPredictionBlockedByAccess(match)) return;
     const cleanedValue = String(value).replace(/[^0-9]/g, '').slice(0, 2);
     const nextScores = { ...getScoresForMatch(matchId), [team]: cleanedValue };
     setTempScores(prev => ({ ...prev, [matchId]: nextScores }));
@@ -246,7 +253,7 @@ function Predictions() {
     const matchId = match.id;
     const isClosed = new Date(match.start_time) <= currentNow;
     const hasKnownTeams = Boolean(match.team1 && match.team2);
-    if (isClosed || !hasKnownTeams || hasResult(match)) return;
+    if (isClosed || !hasKnownTeams || hasResult(match) || isMatchPredictionBlockedByAccess(match)) return;
     savePrediction(matchId, getScoresForMatch(matchId));
   };
 
@@ -289,8 +296,8 @@ function Predictions() {
   const hiddenMobileDayCount = Math.max(upcomingDayGroups.length - renderedUpcomingDayGroups.length, 0);
   const displayMatches = useMemo(() => filteredMatches.map(getDisplayMatch), [filteredMatches, getDisplayMatch]);
   const totalPredictions = Object.keys(predictions).length;
-  const playableMatches = displayMatches.filter(m => m.team1 && m.team2 && !hasResult(m) && new Date(m.start_time) > currentNow).length;
-  const lockedMatches = displayMatches.filter(m => new Date(m.start_time) <= currentNow || hasResult(m)).length;
+  const playableMatches = displayMatches.filter(m => m.team1 && m.team2 && !hasResult(m) && new Date(m.start_time) > currentNow && !isMatchPredictionBlockedByAccess(m)).length;
+  const lockedMatches = displayMatches.filter(m => new Date(m.start_time) <= currentNow || hasResult(m) || isMatchPredictionBlockedByAccess(m)).length;
   const selectedFilterLabel = MATCHDAY_FILTERS.find(filter => filter.value === selectedMatchday)?.label || 'Tous';
 
   const firstGroupIndexByMatchday = useMemo(() => {
@@ -312,6 +319,7 @@ function Predictions() {
     const points = calculatePredictionPoints(match, prediction);
     if (!hasKnownTeams) return null;
     if (points !== null) return { label: `+${points} pt${points > 1 ? 's' : ''}`, icon: '🏆', className: `prediction-status points points-${points}` };
+    if (isMatchPredictionBlockedByAccess(match)) return { label: 'Phase finale fermée', icon: '🔒', className: 'prediction-status locked', detail: 'La phase finale doit être ouverte par un admin.' };
     if (isClosed) return { label: 'Fermé', icon: '🔒', className: 'prediction-status locked' };
     if (status === 'saving') return { label: 'Enregistrement...', icon: '⏳', className: 'prediction-status saving' };
     if (status === 'dirty') return { label: 'À enregistrer', icon: '✍️', className: 'prediction-status dirty' };
@@ -337,7 +345,8 @@ function Predictions() {
           const scores = getScoresForMatch(match.id);
           const isClosed = new Date(match.start_time) <= currentNow;
           const hasKnownTeams = Boolean(displayMatch.team1 && displayMatch.team2);
-          const disabled = isClosed || !hasKnownTeams || hasResult(displayMatch);
+          const accessBlocked = isMatchPredictionBlockedByAccess(displayMatch);
+          const disabled = isClosed || !hasKnownTeams || hasResult(displayMatch) || accessBlocked;
           const statusConfig = getStatusConfig(displayMatch, scores);
           const knockout = isKnockoutMatch(match.id);
           const resultAvailable = hasResult(displayMatch);
@@ -356,6 +365,7 @@ function Predictions() {
         <section className="predictions-hero"><div><span className="eyebrow">Coupe du Monde 2026</span><h1>🎯 Mes pronostics</h1><p>Filtre par journée pour remplir tes scores et tes pronostics spéciaux liés aux journées de compétition.</p></div><div className="prediction-summary"><div><strong>{totalPredictions}</strong><span>pronos saisis</span></div><div><strong>{playableMatches}</strong><span>matchs jouables</span></div><div><strong>{lockedMatches}</strong><span>fermés/résultats</span></div></div></section>
         {isMockMode && <div className="mock-mode-banner">🧪 Simulation active : {formatMockDate(currentNow)}{mockResultsEnabled ? ' · résultats simulés visibles' : ''}</div>}
         <div className="matchday-filter-card"><div><span>Filtre compétition</span><strong>{selectedFilterLabel}</strong></div><div className="matchday-filter-buttons">{MATCHDAY_FILTERS.map(filter => <button key={filter.value} type="button" className={selectedMatchday === filter.value ? 'active' : ''} onClick={() => setSelectedMatchday(filter.value)}>{filter.label}<em>{matchdayCounts[filter.value] || 0}</em></button>)}</div></div>
+        {knockoutAccessBlocked && (selectedMatchday === 'knockout' || selectedMatchday === 'all') && <div className="knockout-locked-banner">🔒 La phase finale est visible, mais les pronostics sont fermés tant qu’un admin ne l’a pas ouverte.</div>}
         {selectedMatchday === '1' && <SpecialPredictionsPanel matchday={1} />}
         {selectedMatchday === '2' && <SpecialPredictionsPanel matchday={2} />}
         {selectedMatchday === '3' && <SpecialPredictionsPanel matchday={3} />}
@@ -390,11 +400,12 @@ const styles = `
   .predictions-hero h1 { margin: 0 0 7px; font-size: clamp(28px, 3.4vw, 44px); line-height: 1; letter-spacing: -.04em; }
   .predictions-hero p { margin: 0; max-width: 670px; color: rgba(255,255,255,.76); font-size: 14px; line-height: 1.5; }
   .prediction-summary { display: grid; grid-template-columns: repeat(3, minmax(82px,1fr)); gap: 8px; min-width: 330px; }
-  .prediction-summary div, .matchday-filter-card, .prediction-toolbar, .empty-filter-card, .match-section-title, .past-results-panel { background: rgba(255,255,255,.95); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 18px 45px rgba(0,0,0,.19); }
+  .prediction-summary div, .matchday-filter-card, .prediction-toolbar, .empty-filter-card, .match-section-title, .past-results-panel, .knockout-locked-banner { background: rgba(255,255,255,.95); border: 1px solid rgba(255,255,255,.55); box-shadow: 0 18px 45px rgba(0,0,0,.19); }
   .prediction-summary div { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.16); border-radius: 14px; padding: 12px; backdrop-filter: blur(10px); }
   .prediction-summary strong { display: block; font-size: 25px; color: #fde68a; line-height: 1; }
   .prediction-summary span { display: block; margin-top: 6px; color: rgba(255,255,255,.7); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
   .mock-mode-banner { margin: -4px 0 14px; padding: 10px 14px; border-radius: 14px; color: #713f12; background: #fef3c7; border: 1px solid rgba(251, 191, 36, .45); font-size: 12px; font-weight: 900; box-shadow: 0 12px 30px rgba(0,0,0,.12); }
+  .knockout-locked-banner { margin-bottom: 14px; padding: 11px 14px; border-radius: 16px; color: #92400e; background: #fff7ed; border-color: #fed7aa; font-size: 13px; font-weight: 950; }
   .matchday-filter-card { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 12px; align-items: center; border-radius: 18px; padding: 12px; margin-bottom: 14px; }
   .matchday-filter-card span, .match-section-title span, .past-results-toggle span { display: block; color: ${PRIMARY}; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .07em; }
   .matchday-filter-card strong, .match-section-title strong, .past-results-toggle strong { display: block; margin-top: 3px; color: ${DARK}; font-size: 20px; }
