@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
+const { getKnockoutPredictionAccess } = require('../utils/knockoutPredictions');
 
 const router = express.Router();
 
@@ -19,6 +20,7 @@ const MATCH_CAN_PREDICT_SQL = `
 // Get all matches with team details
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    const knockoutAccess = await getKnockoutPredictionAccess(pool);
     const result = await pool.query(`
       SELECT
         m.id,
@@ -39,9 +41,16 @@ router.get('/', authenticateToken, async (req, res) => {
         r.winner_team_id,
         CASE
           WHEN ${MATCH_CAN_PREDICT_SQL}
+            AND ($1::boolean = true OR m.id <= 72)
           THEN true
           ELSE false
         END AS can_predict,
+        CASE
+          WHEN m.id > 72 AND $1::boolean = false
+          THEN true
+          ELSE false
+        END AS knockout_prediction_blocked,
+        $1::boolean AS knockout_predictions_open,
         CASE
           WHEN ${MATCH_HAS_STARTED_SQL}
             OR COALESCE(m.status, 'scheduled') = 'finished'
@@ -53,7 +62,7 @@ router.get('/', authenticateToken, async (req, res) => {
       LEFT JOIN teams t2 ON m.team2_id = t2.id
       LEFT JOIN results r ON m.id = r.match_id
       ORDER BY m.start_time
-    `);
+    `, [knockoutAccess.open]);
     res.json(result.rows);
   } catch (error) {
     console.error('Get matches error:', error);
@@ -65,6 +74,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const matchId = req.params.id;
+    const knockoutAccess = await getKnockoutPredictionAccess(pool);
     const match = await pool.query(`
       SELECT
         m.id,
@@ -84,6 +94,18 @@ router.get('/:id', authenticateToken, async (req, res) => {
         r.team2_penalty_goals,
         r.winner_team_id,
         CASE
+          WHEN ${MATCH_CAN_PREDICT_SQL}
+            AND ($2::boolean = true OR m.id <= 72)
+          THEN true
+          ELSE false
+        END AS can_predict,
+        CASE
+          WHEN m.id > 72 AND $2::boolean = false
+          THEN true
+          ELSE false
+        END AS knockout_prediction_blocked,
+        $2::boolean AS knockout_predictions_open,
+        CASE
           WHEN ${MATCH_HAS_STARTED_SQL}
             OR COALESCE(m.status, 'scheduled') = 'finished'
           THEN true
@@ -94,7 +116,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       LEFT JOIN teams t2 ON m.team2_id = t2.id
       LEFT JOIN results r ON m.id = r.match_id
       WHERE m.id = $1
-    `, [matchId]);
+    `, [matchId, knockoutAccess.open]);
 
     if (match.rows.length === 0) {
       return res.status(404).json({ error: 'Match not found' });
