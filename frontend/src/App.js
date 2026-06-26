@@ -18,6 +18,7 @@ const Admin = lazy(() => import('./pages/Admin'));
 const AdminUsers = lazy(() => import('./pages/AdminUsers'));
 const AdminMonitoring = lazy(() => import('./pages/AdminMonitoring'));
 const AdminRankingsComparison = lazy(() => import('./pages/AdminRankingsComparison'));
+const AdminSettings = lazy(() => import('./pages/AdminSettings'));
 const Rules = lazy(() => import('./pages/Rules'));
 const Simulation = lazy(() => import('./pages/Simulation'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -158,6 +159,7 @@ const ADMIN_TABS = [
   { value: 'monitoring', label: 'Monitoring', icon: '📡' },
   { value: 'rankings', label: 'Classements', icon: '🏆' },
   { value: 'matches', label: 'Matches', icon: '⚽' },
+  { value: 'settings', label: 'Réglages', icon: '⚙️' },
   { value: 'users', label: 'Utilisateurs', icon: '👥' }
 ];
 
@@ -170,7 +172,7 @@ function AdminPanel() {
         <div>
           <span className="admin-tabs-eyebrow">Administration</span>
           <h1>⚙️ Panel Admin</h1>
-          <p>Monitoring, classements comparatifs, encodage des matchs et gestion des utilisateurs au même endroit.</p>
+          <p>Monitoring, classements comparatifs, encodage des matchs, réglages globaux et gestion des utilisateurs au même endroit.</p>
         </div>
 
         <div className="admin-tabs-nav" role="tablist" aria-label="Sections admin">
@@ -194,6 +196,7 @@ function AdminPanel() {
         {activeTab === 'monitoring' && <AdminMonitoring />}
         {activeTab === 'rankings' && <AdminRankingsComparison />}
         {activeTab === 'matches' && <Admin />}
+        {activeTab === 'settings' && <AdminSettings />}
         {activeTab === 'users' && <AdminUsers />}
       </div>
 
