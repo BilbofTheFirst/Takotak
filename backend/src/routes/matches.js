@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
 const { getKnockoutPredictionAccess } = require('../utils/knockoutPredictions');
+const { KNOCKOUT_SLOTS, getThirdPlaceSnapshot } = require('../utils/knockoutPropagation');
 
 const router = express.Router();
 
@@ -17,10 +18,45 @@ const MATCH_CAN_PREDICT_SQL = `
   AND COALESCE(m.status, 'scheduled') <> 'finished'
 `;
 
+const isThirdPlaceToken = (token) => /^3[A-L]\//.test(String(token || ''));
+
+const maskUnresolvedThirdPlaceSlots = (rows, thirdPlaceSnapshot) => {
+  if (thirdPlaceSnapshot?.third_place_slots_ready) return rows;
+
+  return rows.map(row => {
+    const slots = KNOCKOUT_SLOTS[Number(row.id)];
+    if (!slots || (!isThirdPlaceToken(slots.team1) && !isThirdPlaceToken(slots.team2))) return row;
+
+    const masked = { ...row, third_place_slots_pending: true };
+
+    if (isThirdPlaceToken(slots.team1)) {
+      masked.team1_id = null;
+      masked.team1 = null;
+      masked.groupe1 = null;
+      masked.can_predict = false;
+    }
+
+    if (isThirdPlaceToken(slots.team2)) {
+      masked.team2_id = null;
+      masked.team2 = null;
+      masked.groupe2 = null;
+      masked.can_predict = false;
+    }
+
+    return masked;
+  });
+};
+
 // Get all matches with team details
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const knockoutAccess = await getKnockoutPredictionAccess(pool);
+    const [knockoutAccess, thirdPlaceSnapshot] = await Promise.all([
+      getKnockoutPredictionAccess(pool),
+      getThirdPlaceSnapshot(pool).catch(error => {
+        console.warn('Third-place snapshot unavailable while loading matches:', error.message || error);
+        return null;
+      })
+    ]);
     const result = await pool.query(`
       SELECT
         m.id,
@@ -63,7 +99,7 @@ router.get('/', authenticateToken, async (req, res) => {
       LEFT JOIN results r ON m.id = r.match_id
       ORDER BY m.start_time
     `, [knockoutAccess.open]);
-    res.json(result.rows);
+    res.json(maskUnresolvedThirdPlaceSlots(result.rows, thirdPlaceSnapshot));
   } catch (error) {
     console.error('Get matches error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -74,7 +110,13 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const matchId = req.params.id;
-    const knockoutAccess = await getKnockoutPredictionAccess(pool);
+    const [knockoutAccess, thirdPlaceSnapshot] = await Promise.all([
+      getKnockoutPredictionAccess(pool),
+      getThirdPlaceSnapshot(pool).catch(error => {
+        console.warn('Third-place snapshot unavailable while loading match:', error.message || error);
+        return null;
+      })
+    ]);
     const match = await pool.query(`
       SELECT
         m.id,
@@ -133,7 +175,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     );
 
     res.json({
-      match: match.rows[0],
+      match: maskUnresolvedThirdPlaceSlots([match.rows[0]], thirdPlaceSnapshot)[0],
       predictions: predictions.rows,
       result: result.rows[0] || null
     });
