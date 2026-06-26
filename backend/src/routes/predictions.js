@@ -8,6 +8,7 @@ const {
   ensureSpecialPredictionsTable,
   getFirstMatchdayStatus
 } = require('../utils/specialPredictions');
+const { getKnockoutPredictionAccess } = require('../utils/knockoutPredictions');
 
 const router = express.Router();
 let predictionAuditReady = false;
@@ -18,6 +19,7 @@ const isValidScore = (value) => {
 };
 
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== '';
+const isKnockoutMatchId = (matchId) => Number(matchId) > 72;
 
 const parseJsonValue = (value, fallback) => {
   if (value === null || value === undefined) return fallback;
@@ -261,6 +263,19 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Teams are not known yet for this match' });
     }
 
+    const knockoutAccess = await getKnockoutPredictionAccess(client);
+    if (isKnockoutMatchId(matchId) && !knockoutAccess.open) {
+      await recordBlockedPredictionAttempt(client, req, {
+        userId: user_id,
+        matchId,
+        team1Goals: team1_goals,
+        team2Goals: team2_goals,
+        reason: 'knockout_not_open'
+      });
+      await client.query('COMMIT');
+      return res.status(409).json({ error: 'Phase finale pas encore ouverte aux pronostics', locked: true, reason: 'knockout_not_open' });
+    }
+
     if (selectedMatch.prediction_locked) {
       await recordBlockedPredictionAttempt(client, req, {
         userId: user_id,
@@ -284,6 +299,7 @@ router.post('/', authenticateToken, async (req, res) => {
            AND m.team2_id IS NOT NULL
            AND (m.start_time AT TIME ZONE 'Europe/Brussels') > NOW()
            AND COALESCE(m.status, 'scheduled') <> 'finished'
+           AND ($5::boolean = true OR m.id <= 72)
        )
        ON CONFLICT (user_id, match_id)
        DO UPDATE SET
@@ -298,9 +314,10 @@ router.post('/', authenticateToken, async (req, res) => {
            AND m.team2_id IS NOT NULL
            AND (m.start_time AT TIME ZONE 'Europe/Brussels') > NOW()
            AND COALESCE(m.status, 'scheduled') <> 'finished'
+           AND ($5::boolean = true OR m.id <= 72)
        )
        RETURNING *`,
-      [user_id, matchId, Number(team1_goals), Number(team2_goals)]
+      [user_id, matchId, Number(team1_goals), Number(team2_goals), knockoutAccess.open]
     );
 
     if (saveResult.rows.length === 0) {
@@ -309,10 +326,10 @@ router.post('/', authenticateToken, async (req, res) => {
         matchId,
         team1Goals: team1_goals,
         team2Goals: team2_goals,
-        reason: 'match_started_during_save'
+        reason: isKnockoutMatchId(matchId) && !knockoutAccess.open ? 'knockout_not_open_during_save' : 'match_started_during_save'
       });
       await client.query('COMMIT');
-      return res.status(409).json({ error: 'Match already started', locked: true, start_time: selectedMatch.start_time_label });
+      return res.status(409).json({ error: 'Match already started or not open for predictions', locked: true, start_time: selectedMatch.start_time_label });
     }
 
     await client.query('COMMIT');
