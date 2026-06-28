@@ -9,7 +9,7 @@ const formatDateTime = (value) => {
 
 const emptySpecial = {
   completed: 0,
-  total: 3,
+  total: 0,
   missing: [],
   missing_count: 0,
   complete: false,
@@ -21,11 +21,12 @@ const emptySpecial = {
 
 const getSpecial2 = (user) => user.special2 || emptySpecial;
 const getSpecial3 = (user) => user.special3 || emptySpecial;
+const getSpecial4 = (user) => user.special4 || emptySpecial;
 
 const buildReminderText = (users) => {
   const names = users.map(user => user.username).join(', ');
   if (!names) return 'Tout le monde est à jour 🎉';
-  return `Petit rappel Takotak : ${names}, pensez à compléter vos pronostics des prochaines 24h${users.some(user => user.bonus.urgent || user.special.urgent || getSpecial2(user).urgent || getSpecial3(user).urgent) ? ' et les bonus/spéciaux encore ouverts' : ''}. Il y a beaucoup de points à prendre 🙂`;
+  return `Petit rappel Takotak : ${names}, pensez à compléter vos pronostics des prochaines 24h${users.some(user => user.bonus.urgent || user.special.urgent || getSpecial2(user).urgent || getSpecial3(user).urgent || getSpecial4(user).urgent) ? ' et les bonus/spéciaux encore ouverts' : ''}. Il y a beaucoup de points à prendre 🙂`;
 };
 
 function AdminMonitoring() {
@@ -80,8 +81,16 @@ function AdminMonitoring() {
     }
   };
 
+  const getSpecialByMatchday = (user, matchday) => {
+    if (matchday === 4) return getSpecial4(user);
+    if (matchday === 3) return getSpecial3(user);
+    return getSpecial2(user);
+  };
+
+  const getSpecialLabel = (matchday) => (matchday === 4 ? '16es' : `J${matchday}`);
+
   const toggleSpecialUnlock = async (user, matchday) => {
-    const special = matchday === 3 ? getSpecial3(user) : getSpecial2(user);
+    const special = getSpecialByMatchday(user, matchday);
     const nextUnlocked = !special.admin_unlocked;
     const savingKey = `${user.id}-${matchday}`;
     try {
@@ -89,10 +98,34 @@ function AdminMonitoring() {
       await api.patch(`/admin/users/${user.id}/special-unlock`, { matchday, unlocked: nextUnlocked });
       await loadMonitoring();
     } catch (err) {
-      setError(err.response?.data?.error || `Erreur lors de la modification de la réouverture des spéciaux J${matchday}`);
+      setError(err.response?.data?.error || `Erreur lors de la modification de la réouverture des spéciaux ${getSpecialLabel(matchday)}`);
     } finally {
       setSpecialUnlockSavingKey(null);
     }
+  };
+
+  const renderSpecialCell = (user, matchday) => {
+    const special = getSpecialByMatchday(user, matchday);
+    const label = getSpecialLabel(matchday);
+    const showToggle = special.global_locked || special.admin_unlocked;
+    const saving = specialUnlockSavingKey === `${user.id}-${matchday}`;
+
+    return (
+      <div className={`bonus-table-cell ${special.complete ? '' : 'incomplete-value'}`}>
+        <span>{special.completed}/{special.total}{special.locked ? ' 🔒' : ''}</span>
+        {showToggle && (
+          <button
+            type="button"
+            className={`bonus-lock-toggle special-lock-toggle ${special.admin_unlocked ? 'is-on' : ''}`}
+            disabled={saving}
+            title={special.admin_unlocked ? `Refermer les spéciaux ${label} pour ce joueur` : `Réouvrir les spéciaux ${label} pour ce joueur`}
+            onClick={() => toggleSpecialUnlock(user, matchday)}
+          >
+            {saving ? '…' : special.admin_unlocked ? '🔓' : '🔒'}
+          </button>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -121,7 +154,7 @@ function AdminMonitoring() {
         <div>
           <span>📡 Monitoring</span>
           <h2>Pronostics à surveiller</h2>
-          <p>Vue rapide pour relancer les joueurs avant les matchs des prochaines 24h, contrôler les bonus incomplets, réouvrir un bonus long terme ou les spéciaux J2/J3.</p>
+          <p>Vue rapide pour relancer les joueurs, contrôler les bonus incomplets, réouvrir un bonus long terme ou les spéciaux J2/J3/16es.</p>
         </div>
         <div className="monitoring-actions">
           <button type="button" className="button secondary" onClick={loadMonitoring}>Rafraîchir</button>
@@ -134,7 +167,7 @@ function AdminMonitoring() {
       <div className="monitoring-summary-grid">
         <div><strong>{summary.users_missing_today || 0}</strong><span>joueurs à relancer 24h</span></div>
         <div><strong>{summary.users_missing_bonus || 0}</strong><span>bonus long terme incomplets</span></div>
-        <div><strong>{summary.users_bonus_unlocked || 0}/{summary.users_special2_unlocked || 0}/{summary.users_special3_unlocked || 0}</strong><span>réouverts bonus/J2/J3</span></div>
+        <div><strong>{summary.users_bonus_unlocked || 0}/{summary.users_special2_unlocked || 0}/{summary.users_special3_unlocked || 0}/{summary.users_special4_unlocked || 0}</strong><span>réouverts bonus/J2/J3/16es</span></div>
         <div><strong>{summary.today_predictions_done || 0}/{summary.today_predictions_required || 0}</strong><span>pronos matchs 24h</span></div>
       </div>
 
@@ -201,9 +234,10 @@ function AdminMonitoring() {
             <span>Joueur</span>
             <span>Matchs 24h</span>
             <span>Bonus</span>
-            <span>Spéciaux J1</span>
-            <span>Spéciaux J2</span>
-            <span>Spéciaux J3</span>
+            <span>J1</span>
+            <span>J2</span>
+            <span>J3</span>
+            <span>16es</span>
             <span>À relancer</span>
           </div>
 
@@ -211,18 +245,16 @@ function AdminMonitoring() {
             const needsReminder = user.should_remind;
             const special2 = getSpecial2(user);
             const special3 = getSpecial3(user);
+            const special4 = getSpecial4(user);
             const missingItems = [
               ...user.today.missing_matches.map(match => `Match ${match.label}`),
               ...(user.bonus.urgent ? user.bonus.missing.map(item => `Bonus : ${item}`) : []),
               ...(user.special.urgent ? user.special.missing.map(item => `Spécial J1 : ${item}`) : []),
               ...(special2.urgent ? special2.missing.map(item => `Spécial J2 : ${item}`) : []),
-              ...(special3.urgent ? special3.missing.map(item => `Spécial J3 : ${item}`) : [])
+              ...(special3.urgent ? special3.missing.map(item => `Spécial J3 : ${item}`) : []),
+              ...(special4.urgent ? special4.missing.map(item => `Spécial 16es : ${item}`) : [])
             ];
             const showBonusToggle = user.bonus.global_locked || user.bonus.admin_unlocked;
-            const showSpecial2Toggle = special2.global_locked || special2.admin_unlocked;
-            const showSpecial3Toggle = special3.global_locked || special3.admin_unlocked;
-            const special2Saving = specialUnlockSavingKey === `${user.id}-2`;
-            const special3Saving = specialUnlockSavingKey === `${user.id}-3`;
 
             return (
               <div key={user.id} className={`monitoring-row ${needsReminder ? 'needs-reminder' : 'is-ok'}`}>
@@ -243,34 +275,9 @@ function AdminMonitoring() {
                   )}
                 </div>
                 <span className={user.special.complete ? '' : 'incomplete-value'}>{user.special.completed}/{user.special.total}{user.special.locked ? ' 🔒' : ''}</span>
-                <div className={`bonus-table-cell ${special2.complete ? '' : 'incomplete-value'}`}>
-                  <span>{special2.completed}/{special2.total}{special2.locked ? ' 🔒' : ''}</span>
-                  {showSpecial2Toggle && (
-                    <button
-                      type="button"
-                      className={`bonus-lock-toggle special2-lock-toggle ${special2.admin_unlocked ? 'is-on' : ''}`}
-                      disabled={special2Saving}
-                      title={special2.admin_unlocked ? 'Refermer les spéciaux J2 pour ce joueur' : 'Réouvrir les spéciaux J2 pour ce joueur'}
-                      onClick={() => toggleSpecialUnlock(user, 2)}
-                    >
-                      {special2Saving ? '…' : special2.admin_unlocked ? '🔓' : '🔒'}
-                    </button>
-                  )}
-                </div>
-                <div className={`bonus-table-cell ${special3.complete ? '' : 'incomplete-value'}`}>
-                  <span>{special3.completed}/{special3.total}{special3.locked ? ' 🔒' : ''}</span>
-                  {showSpecial3Toggle && (
-                    <button
-                      type="button"
-                      className={`bonus-lock-toggle special3-lock-toggle ${special3.admin_unlocked ? 'is-on' : ''}`}
-                      disabled={special3Saving}
-                      title={special3.admin_unlocked ? 'Refermer les spéciaux J3 pour ce joueur' : 'Réouvrir les spéciaux J3 pour ce joueur'}
-                      onClick={() => toggleSpecialUnlock(user, 3)}
-                    >
-                      {special3Saving ? '…' : special3.admin_unlocked ? '🔓' : '🔒'}
-                    </button>
-                  )}
-                </div>
+                {renderSpecialCell(user, 2)}
+                {renderSpecialCell(user, 3)}
+                {renderSpecialCell(user, 4)}
                 <div className="missing-cell">
                   {needsReminder ? (
                     <details>
@@ -288,7 +295,7 @@ function AdminMonitoring() {
       </div>
 
       <p className="monitoring-help">
-        Bonus long terme : {summary.bonus_locked ? 'verrouillés globalement' : `ouverts jusqu’au ${formatDateTime(summary.bonus_deadline)}`} · Réouvertures admin : bonus {summary.users_bonus_unlocked || 0}, J2 {summary.users_special2_unlocked || 0}, J3 {summary.users_special3_unlocked || 0} · Deadline spéciaux J1 : {formatDateTime(summary.first_matchday_deadline)} · {summary.first_matchday_locked ? 'verrouillés' : 'encore ouverts'} · Deadline spéciaux J2 : {formatDateTime(summary.second_matchday_deadline)} · {summary.second_matchday_locked ? 'verrouillés' : summary.special2_reminder_active ? 'relance active' : 'hors relance'} · Deadline spéciaux J3 : {formatDateTime(summary.third_matchday_deadline)} · {summary.third_matchday_locked ? 'verrouillés' : summary.special3_reminder_active ? 'relance active' : 'hors relance'}.
+        Bonus long terme : {summary.bonus_locked ? 'verrouillés globalement' : `ouverts jusqu’au ${formatDateTime(summary.bonus_deadline)}`} · Réouvertures admin : bonus {summary.users_bonus_unlocked || 0}, J2 {summary.users_special2_unlocked || 0}, J3 {summary.users_special3_unlocked || 0}, 16es {summary.users_special4_unlocked || 0} · Deadline spéciaux 16es : {formatDateTime(summary.round32_deadline)} · {summary.round32_locked ? 'verrouillés' : summary.special4_reminder_active ? 'relance active' : 'hors relance'}.
       </p>
 
       <style>{styles}</style>
@@ -334,8 +341,8 @@ const styles = `
   .bonus-missing-row ul { margin: 8px 0 0; padding-left: 18px; color: #7c2d12; font-size: 12px; line-height: 1.35; }
   .reminder-panel textarea { width: 100%; min-height: 108px; box-sizing: border-box; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 11px; color: #0f172a; background: white; resize: vertical; font-size: 13px; line-height: 1.45; font-weight: 750; }
   .monitoring-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 16px; }
-  .monitoring-table { min-width: 1080px; }
-  .monitoring-header, .monitoring-row { display: grid; grid-template-columns: 1.1fr .7fr .75fr .72fr .72fr .72fr 1.55fr; gap: 10px; align-items: center; padding: 10px 12px; }
+  .monitoring-table { min-width: 1190px; }
+  .monitoring-header, .monitoring-row { display: grid; grid-template-columns: 1.05fr .65fr .72fr .55fr .72fr .72fr .72fr 1.45fr; gap: 10px; align-items: center; padding: 10px 12px; }
   .monitoring-header { background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
   .monitoring-row { border-top: 1px solid #e2e8f0; font-size: 13px; color: #334155; }
   .monitoring-row strong { color: #0f172a; }
