@@ -38,6 +38,22 @@ const KNOCKOUT_SLOTS = {
   104: { team1: 'V101', team2: 'V102' }
 };
 
+const THIRD_PLACE_WINNER_COLUMNS = ['A', 'B', 'D', 'E', 'G', 'I', 'K', 'L'];
+const WINNER_GROUP_BY_MATCH = { 74: 'E', 77: 'I', 79: 'A', 80: 'L', 81: 'D', 82: 'G', 85: 'B', 87: 'K' };
+
+const buildAssignment = (values) => Object.fromEntries(THIRD_PLACE_WINNER_COLUMNS.map((winnerGroup, index) => [winnerGroup, values[index]]));
+
+const THIRD_PLACE_COMBINATION_TABLE = {
+  BDEFIJKL: buildAssignment(['E', 'J', 'B', 'D', 'I', 'F', 'L', 'K']),
+  BDEFGIKL: buildAssignment(['E', 'G', 'B', 'D', 'I', 'F', 'L', 'K']),
+  BDEFGIJL: buildAssignment(['E', 'G', 'B', 'D', 'J', 'F', 'L', 'I']),
+  BDEFGIJK: buildAssignment(['E', 'G', 'B', 'D', 'J', 'F', 'I', 'K']),
+  ABDEFGIL: buildAssignment(['E', 'G', 'B', 'D', 'A', 'F', 'L', 'I']),
+  ABDEFGIK: buildAssignment(['E', 'G', 'B', 'D', 'A', 'F', 'I', 'K']),
+  ABDEFGIJ: buildAssignment(['E', 'G', 'B', 'D', 'A', 'F', 'I', 'J']),
+  ABCDEFGI: buildAssignment(['C', 'G', 'B', 'D', 'A', 'F', 'E', 'I'])
+};
+
 const hasResult = (match) => (
   match.team1_goals !== null
   && match.team1_goals !== undefined
@@ -185,6 +201,8 @@ const applyManualThirdPlaceOrder = (thirdTeams, manualOrderRows) => {
     }));
 };
 
+const getCombinationKey = (groupCodes) => [...groupCodes].sort().join('');
+
 const buildThirdPlaceResolution = (thirdTeams, manualOrderRows) => {
   const orderedThirdTeams = applyManualThirdPlaceOrder(thirdTeams, manualOrderRows);
   const manualGroupCodes = manualOrderRows.map(row => row.group_code).filter(Boolean);
@@ -195,10 +213,12 @@ const buildThirdPlaceResolution = (thirdTeams, manualOrderRows) => {
     : allGroupsComplete
       ? new Set(orderedThirdTeams.slice(0, THIRD_PLACE_QUALIFIERS).map(team => team.group_code))
       : new Set();
+  const combinationKey = getCombinationKey(qualifiedGroupCodes);
+  const thirdPlaceAssignment = THIRD_PLACE_COMBINATION_TABLE[combinationKey] || null;
   const qualifiedThirdTeams = orderedThirdTeams
     .filter(team => qualifiedGroupCodes.has(team.group_code))
     .slice(0, THIRD_PLACE_QUALIFIERS);
-  const canResolveThirdPlaceSlots = qualifiedThirdTeams.length >= THIRD_PLACE_QUALIFIERS;
+  const canResolveThirdPlaceSlots = qualifiedThirdTeams.length >= THIRD_PLACE_QUALIFIERS && Boolean(thirdPlaceAssignment);
 
   return {
     orderedThirdTeams,
@@ -207,6 +227,8 @@ const buildThirdPlaceResolution = (thirdTeams, manualOrderRows) => {
     hasManualQualifiers,
     allGroupsComplete,
     canResolveThirdPlaceSlots,
+    combinationKey,
+    thirdPlaceAssignment,
     resolutionMode: canResolveThirdPlaceSlots ? (hasManualQualifiers ? 'manual' : 'auto') : 'pending'
   };
 };
@@ -232,15 +254,19 @@ const getLoserTeamId = (match) => {
   return null;
 };
 
-const resolveThirdPlaceToken = (token, qualifiedThirdTeams) => {
-  if (!qualifiedThirdTeams.length) return null;
+const resolveThirdPlaceToken = (token, qualifiedThirdTeams, winnerGroup, thirdPlaceAssignment) => {
+  if (!qualifiedThirdTeams.length || !winnerGroup || !thirdPlaceAssignment) return null;
+  const targetGroup = thirdPlaceAssignment[winnerGroup];
+  if (!targetGroup) return null;
 
   const allowedGroups = token.replace(/^3/, '').split('/');
-  const resolved = qualifiedThirdTeams.find(team => allowedGroups.includes(team.group_code));
+  if (!allowedGroups.includes(targetGroup)) return null;
+
+  const resolved = qualifiedThirdTeams.find(team => team.group_code === targetGroup);
   return resolved?.team_id || null;
 };
 
-const resolveSlotToken = (token, placements, qualifiedThirdTeams, matchById) => {
+const resolveSlotToken = (token, placements, resolution, matchById, winnerGroup) => {
   if (!token) return null;
 
   if (/^[12][A-L]$/.test(token)) {
@@ -248,7 +274,7 @@ const resolveSlotToken = (token, placements, qualifiedThirdTeams, matchById) => 
   }
 
   if (/^3[A-L](\/[^\s]+)?$/.test(token) && token.includes('/')) {
-    return resolveThirdPlaceToken(token, qualifiedThirdTeams);
+    return resolveThirdPlaceToken(token, resolution.qualifiedThirdTeams, winnerGroup, resolution.thirdPlaceAssignment);
   }
 
   if (/^[VP]\d+$/.test(token)) {
@@ -299,6 +325,8 @@ const getThirdPlaceSnapshot = async (client) => {
     manualOrder: resolution.manualOrder,
     third_place_slots_ready: resolution.canResolveThirdPlaceSlots,
     third_place_resolution_mode: resolution.resolutionMode,
+    third_place_combination_key: resolution.combinationKey,
+    third_place_assignment: resolution.thirdPlaceAssignment,
     required_third_place_qualifiers: THIRD_PLACE_QUALIFIERS,
     total_groups: TOTAL_GROUPS
   };
@@ -336,8 +364,9 @@ const propagateKnockoutTeams = async (client) => {
     const match = matchById.get(Number(matchId));
     if (!match || !slots) return;
 
-    const team1Id = resolveSlotToken(slots.team1, placements, resolution.qualifiedThirdTeams, matchById);
-    const team2Id = resolveSlotToken(slots.team2, placements, resolution.qualifiedThirdTeams, matchById);
+    const winnerGroup = WINNER_GROUP_BY_MATCH[Number(matchId)] || null;
+    const team1Id = resolveSlotToken(slots.team1, placements, resolution, matchById, winnerGroup);
+    const team2Id = resolveSlotToken(slots.team2, placements, resolution, matchById, winnerGroup);
 
     const update1 = applySlot(match, 'team1', team1Id, teamById);
     const update2 = applySlot(match, 'team2', team2Id, teamById);
