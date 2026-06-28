@@ -50,14 +50,19 @@ const COLUMN_TITLES = [
 
 const BRACKET_LAYOUT = [
   { id: 74, col: 1, row: 2 }, { id: 77, col: 1, row: 5 }, { id: 73, col: 1, row: 8 }, { id: 75, col: 1, row: 11 },
-  { id: 76, col: 1, row: 14 }, { id: 78, col: 1, row: 17 }, { id: 79, col: 1, row: 20 }, { id: 80, col: 1, row: 23 },
-  { id: 89, col: 2, row: 4 }, { id: 90, col: 2, row: 10 }, { id: 91, col: 2, row: 16 }, { id: 92, col: 2, row: 22 },
-  { id: 97, col: 3, row: 7 }, { id: 99, col: 3, row: 19 }, { id: 101, col: 5, row: 7 }, { id: 102, col: 5, row: 19 },
-  { id: 104, col: 4, row: 13 }, { id: 103, col: 6, row: 13 },
-  { id: 83, col: 9, row: 2 }, { id: 84, col: 9, row: 5 }, { id: 81, col: 9, row: 8 }, { id: 82, col: 9, row: 11 },
+  { id: 89, col: 2, row: 4 }, { id: 90, col: 2, row: 10 }, { id: 97, col: 3, row: 7 },
+
+  { id: 76, col: 9, row: 2 }, { id: 78, col: 9, row: 5 }, { id: 79, col: 9, row: 8 }, { id: 80, col: 9, row: 11 },
+  { id: 91, col: 8, row: 4 }, { id: 92, col: 8, row: 10 }, { id: 99, col: 7, row: 7 },
+
+  { id: 83, col: 1, row: 14 }, { id: 84, col: 1, row: 17 }, { id: 81, col: 1, row: 20 }, { id: 82, col: 1, row: 23 },
+  { id: 93, col: 2, row: 16 }, { id: 94, col: 2, row: 22 }, { id: 98, col: 3, row: 19 },
+
   { id: 86, col: 9, row: 14 }, { id: 88, col: 9, row: 17 }, { id: 85, col: 9, row: 20 }, { id: 87, col: 9, row: 23 },
-  { id: 93, col: 8, row: 4 }, { id: 94, col: 8, row: 10 }, { id: 95, col: 8, row: 16 }, { id: 96, col: 8, row: 22 },
-  { id: 98, col: 7, row: 7 }, { id: 100, col: 7, row: 19 }
+  { id: 95, col: 8, row: 16 }, { id: 96, col: 8, row: 22 }, { id: 100, col: 7, row: 19 },
+
+  { id: 101, col: 4, row: 13 }, { id: 102, col: 6, row: 13 },
+  { id: 104, col: 5, row: 12 }, { id: 103, col: 5, row: 16 }
 ];
 
 const THIRD_PLACE_TOKEN_REGEX = /^3[A-L](\/[A-L])+$/;
@@ -245,7 +250,7 @@ function TournamentBracket({
       <div className="compact-bracket-scroll"><div className="compact-bracket-board">
         {COLUMN_TITLES.map(title => <div key={`${title.col}-${title.label}`} className="compact-round-title" style={{ gridColumn: title.col, gridRow: 1 }}>{title.label}</div>)}
         {BRACKET_LAYOUT.map(item => <MatchCard key={item.id} match={matches[item.id]} col={item.col} row={item.row} />)}
-        <div className="compact-champion" style={{ gridColumn: 5, gridRow: '13 / span 4' }} title={champion}><span>🏆</span><strong>{champion}</strong></div>
+        <div className="compact-champion" style={{ gridColumn: 5, gridRow: '19 / span 4' }} title={champion}><span>🏆</span><strong>{champion}</strong></div>
       </div></div>
 
       <style>{`
