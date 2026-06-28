@@ -25,6 +25,18 @@ const getAutoPlacement = () => {
 const getMatchdayCopy = (matchday, isBonusPlacement) => {
   const normalizedMatchday = Number(matchday);
 
+  if (normalizedMatchday === 4) {
+    return {
+      eyebrow: '⚡ Spéciaux seizièmes',
+      title: isBonusPlacement ? 'Résultat des spéciaux seizièmes' : 'Paris globaux sur les seizièmes',
+      description: isBonusPlacement
+        ? 'Les spéciaux des seizièmes sont verrouillés. Tu peux suivre ton score dès que les résultats sont calculés.'
+        : 'Deux questions rapides sur les 16 matchs de seizièmes, pour 8 points maximum au total.',
+      lockedText: '🔒 Les pronostics spéciaux des seizièmes sont verrouillés. Tu peux maintenant consulter les pronos du groupe dans un tableau global.',
+      unlockedText: '🔓 Un admin a temporairement réouvert tes pronostics spéciaux des seizièmes. Pense à sauvegarder tes corrections.'
+    };
+  }
+
   if (normalizedMatchday === 3) {
     return {
       eyebrow: '⚡ Spéciaux troisième journée',
