@@ -112,6 +112,7 @@ export const resultsService = {
   delete: (match_id) => api.delete(`/results/${match_id}`),
   getThirdPlaces: () => api.get('/results/third-places'),
   saveThirdPlaceOrder: (group_codes) => api.post('/results/third-places/order', { group_codes }),
+  saveThirdPlaceSlots: (slots) => api.patch('/admin/settings/third-place-slots', { slots }),
   getLeaderboard: () => api.get('/results/leaderboard'),
   getLeaderboardProgression: () => api.get('/results/leaderboard/progression'),
   getUserStats: () => api.get('/results/user/stats')
