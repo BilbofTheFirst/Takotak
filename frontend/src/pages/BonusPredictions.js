@@ -44,8 +44,8 @@ function BonusPredictions() {
 
           <div className="bonus-hero-summary">
             <div className="bonus-summary-card">
-              <div><strong>113</strong><span>pts bonus</span></div>
-              <div><strong>12</strong><span>groupes</span></div>
+              <div><strong>105</strong><span>pts long terme</span></div>
+              <div><strong>8</strong><span>pts 16es</span></div>
               <div><strong>1</strong><span>champion</span></div>
             </div>
           </div>
