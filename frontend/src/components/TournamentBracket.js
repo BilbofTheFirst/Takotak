@@ -61,6 +61,7 @@ const BRACKET_LAYOUT = [
 ];
 
 const THIRD_PLACE_TOKEN_REGEX = /^3[A-L](\/[A-L])+$/;
+const FIRST_KNOCKOUT_IDS = new Set(Array.from({ length: 16 }, (_, index) => 73 + index));
 
 const isBracketToken = (value) => {
   if (!value || typeof value !== 'string') return false;
@@ -69,7 +70,15 @@ const isBracketToken = (value) => {
 
 const getThirdPlaceTokenAllowedGroups = (token) => token.replace('3', '').split('/');
 
-function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreChange, matchSchedule = [], lockedRealMatchIds = new Set() }) {
+function TournamentBracket({
+  groupsData,
+  allThirdPlaces,
+  koSimulations,
+  onScoreChange,
+  matchSchedule = [],
+  lockedRealMatchIds = new Set(),
+  useOfficialKnockoutEntrants = false
+}) {
   const qualifiedThirds = useMemo(() => allThirdPlaces.slice(0, 8), [allThirdPlaces]);
   const scheduleById = useMemo(() => new Map(matchSchedule.map(match => [Number(match.id), match])), [matchSchedule]);
 
@@ -137,10 +146,24 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     return winner === 'team1' ? 'team2' : 'team1';
   }, [getWinner]);
 
+  const getOfficialEntrantNames = useCallback((matchId) => {
+    if (!useOfficialKnockoutEntrants || !FIRST_KNOCKOUT_IDS.has(Number(matchId))) return null;
+    const scheduled = scheduleById.get(Number(matchId));
+    if (!scheduled?.team1 || !scheduled?.team2) return null;
+    return { team1Name: scheduled.team1, team2Name: scheduled.team2 };
+  }, [scheduleById, useOfficialKnockoutEntrants]);
+
   const matches = useMemo(() => {
     const map = {};
     Object.entries(KNOCKOUT).forEach(([id, config]) => {
-      map[id] = { id: Number(id), ...config, team1Name: getPlacement(config.team1), team2Name: getPlacement(config.team2) };
+      const officialEntrants = getOfficialEntrantNames(Number(id));
+      map[id] = {
+        id: Number(id),
+        ...config,
+        team1Name: officialEntrants?.team1Name || getPlacement(config.team1),
+        team2Name: officialEntrants?.team2Name || getPlacement(config.team2),
+        officialEntrants: Boolean(officialEntrants)
+      };
     });
 
     const resolveToken = (token) => {
@@ -156,12 +179,14 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
     };
 
     Object.keys(map).map(Number).sort((a, b) => a - b).forEach(id => {
-      map[id].team1Name = resolveToken(map[id].team1);
-      map[id].team2Name = resolveToken(map[id].team2);
+      if (!map[id].officialEntrants) {
+        map[id].team1Name = resolveToken(map[id].team1);
+        map[id].team2Name = resolveToken(map[id].team2);
+      }
       map[id].start_time = scheduleById.get(id)?.start_time || null;
     });
     return map;
-  }, [getPlacement, getWinner, getLoser, scheduleById]);
+  }, [getOfficialEntrantNames, getPlacement, getWinner, getLoser, scheduleById]);
 
   const renderFlag = (team) => {
     if (!team || isBracketToken(team)) return <span className="bracket-token" title={team || 'À définir'}>{team || '⚽'}</span>;
@@ -199,7 +224,7 @@ function TournamentBracket({ groupsData, allThirdPlaces, koSimulations, onScoreC
 
     return (
       <article className={`compact-bracket-match ${match.id === 103 ? 'third-place-match' : ''} ${canChooseWinner ? 'draw-needs-winner' : ''} ${isRealLocked ? 'real-knockout-result' : ''}`} style={{ gridColumn: col, gridRow: `${row} / span 2` }} title={`${match.round} M${match.id} — ${match.team1Name} vs ${match.team2Name}`}>
-        <header><span>{match.round}</span>{match.start_time && <em>{formatDateTime(match.start_time)}</em>}<strong>{isRealLocked ? 'Réel' : `M${match.id}`}</strong></header>
+        <header><span>{match.round}</span>{match.start_time && <em>{formatDateTime(match.start_time)}</em>}<strong>{isRealLocked ? 'Réel' : match.officialEntrants ? 'Officiel' : `M${match.id}`}</strong></header>
         <div className="compact-scoreline">
           {renderWinnerFlag('team1', match.team1Name)}
           <input type="text" inputMode="numeric" maxLength="2" value={sim.team1_goals} disabled={isRealLocked} aria-label={`Score ${match.team1Name || 'équipe 1'}`} title={match.team1Name || 'Équipe 1'} onFocus={selectScoreText} onChange={(event) => onScoreChange(match.id, 'team1_goals', event.target.value)} />
