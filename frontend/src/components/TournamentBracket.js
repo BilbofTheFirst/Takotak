@@ -81,6 +81,7 @@ function TournamentBracket({
 }) {
   const qualifiedThirds = useMemo(() => allThirdPlaces.slice(0, 8), [allThirdPlaces]);
   const scheduleById = useMemo(() => new Map(matchSchedule.map(match => [Number(match.id), match])), [matchSchedule]);
+  const shouldUseOfficialKnockoutEntrants = useOfficialKnockoutEntrants || lockedRealMatchIds.size > 0;
 
   const thirdPlaceAssignments = useMemo(() => {
     const tokens = Object.values(KNOCKOUT).flatMap(config => [config.team1, config.team2]).filter(token => THIRD_PLACE_TOKEN_REGEX.test(token));
@@ -147,11 +148,11 @@ function TournamentBracket({
   }, [getWinner]);
 
   const getOfficialEntrantNames = useCallback((matchId) => {
-    if (!useOfficialKnockoutEntrants || !FIRST_KNOCKOUT_IDS.has(Number(matchId))) return null;
+    if (!shouldUseOfficialKnockoutEntrants || !FIRST_KNOCKOUT_IDS.has(Number(matchId))) return null;
     const scheduled = scheduleById.get(Number(matchId));
     if (!scheduled?.team1 || !scheduled?.team2) return null;
     return { team1Name: scheduled.team1, team2Name: scheduled.team2 };
-  }, [scheduleById, useOfficialKnockoutEntrants]);
+  }, [scheduleById, shouldUseOfficialKnockoutEntrants]);
 
   const matches = useMemo(() => {
     const map = {};
