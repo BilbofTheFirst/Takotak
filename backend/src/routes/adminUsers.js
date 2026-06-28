@@ -20,6 +20,7 @@ const TEMPORARY_PASSWORD = process.env.ADMIN_RESET_PASSWORD || 'takotak';
 const FIRST_MATCHDAY = 1;
 const SECOND_MATCHDAY = 2;
 const THIRD_MATCHDAY = 3;
+const ROUND32_MATCHDAY = 4;
 const REMINDER_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== '';
@@ -27,8 +28,11 @@ const normalizeSpecialMatchday = (value) => {
   const matchday = Number(value || FIRST_MATCHDAY);
   if (matchday === SECOND_MATCHDAY) return SECOND_MATCHDAY;
   if (matchday === THIRD_MATCHDAY) return THIRD_MATCHDAY;
+  if (matchday === ROUND32_MATCHDAY) return ROUND32_MATCHDAY;
   return FIRST_MATCHDAY;
 };
+
+const getSpecialMatchdayLabel = (matchday) => (Number(matchday) === ROUND32_MATCHDAY ? '16es' : `J${matchday}`);
 
 const parseJsonValue = (value, fallback) => {
   if (value === null || value === undefined) return fallback;
@@ -175,9 +179,24 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
     const firstDefinitions = getSpecialMatchdayDefinitions(FIRST_MATCHDAY);
     const secondDefinitions = getSpecialMatchdayDefinitions(SECOND_MATCHDAY);
     const thirdDefinitions = getSpecialMatchdayDefinitions(THIRD_MATCHDAY);
-    const allSpecialCodes = [...firstDefinitions, ...secondDefinitions, ...thirdDefinitions].map(definition => definition.code);
+    const round32Definitions = getSpecialMatchdayDefinitions(ROUND32_MATCHDAY);
+    const allSpecialCodes = [...firstDefinitions, ...secondDefinitions, ...thirdDefinitions, ...round32Definitions].map(definition => definition.code);
 
-    const [usersResult, nextMatchesResult, bonusResult, specialResult, bonusDeadline, bonusUnlocks, firstMatchdayStatus, secondMatchdayStatus, thirdMatchdayStatus, special2Unlocks, special3Unlocks] = await Promise.all([
+    const [
+      usersResult,
+      nextMatchesResult,
+      bonusResult,
+      specialResult,
+      bonusDeadline,
+      bonusUnlocks,
+      firstMatchdayStatus,
+      secondMatchdayStatus,
+      thirdMatchdayStatus,
+      round32Status,
+      special2Unlocks,
+      special3Unlocks,
+      special4Unlocks
+    ] = await Promise.all([
       pool.query(`
         SELECT id, username, email, is_admin, created_at
         FROM users
@@ -212,8 +231,10 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       getSpecialMatchdayStatus(pool, FIRST_MATCHDAY),
       getSpecialMatchdayStatus(pool, SECOND_MATCHDAY),
       getSpecialMatchdayStatus(pool, THIRD_MATCHDAY),
+      getSpecialMatchdayStatus(pool, ROUND32_MATCHDAY),
       getSpecialUnlocks(pool, SECOND_MATCHDAY),
-      getSpecialUnlocks(pool, THIRD_MATCHDAY)
+      getSpecialUnlocks(pool, THIRD_MATCHDAY),
+      getSpecialUnlocks(pool, ROUND32_MATCHDAY)
     ]);
 
     const users = usersResult.rows.map(buildPublicUser);
@@ -236,19 +257,23 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
     const specialLocked = Boolean(firstMatchdayStatus.locked);
     const special2Locked = Boolean(secondMatchdayStatus.locked);
     const special3Locked = Boolean(thirdMatchdayStatus.locked);
+    const special4Locked = Boolean(round32Status.locked);
     const special2ReminderActive = isDeadlineWithinReminderWindow(secondMatchdayStatus.deadline, special2Locked);
     const special3ReminderActive = isDeadlineWithinReminderWindow(thirdMatchdayStatus.deadline, special3Locked);
+    const special4ReminderActive = isDeadlineWithinReminderWindow(round32Status.deadline, special4Locked);
     const firstCodeSet = new Set(firstDefinitions.map(definition => definition.code));
     const secondCodeSet = new Set(secondDefinitions.map(definition => definition.code));
     const thirdCodeSet = new Set(thirdDefinitions.map(definition => definition.code));
+    const round32CodeSet = new Set(round32Definitions.map(definition => definition.code));
     const bonusByUser = new Map(bonusResult.rows.map(row => [Number(row.user_id), row]));
     const specialRowsByUser = new Map();
     const special2RowsByUser = new Map();
     const special3RowsByUser = new Map();
+    const special4RowsByUser = new Map();
 
     specialResult.rows.forEach(row => {
       const userId = Number(row.user_id);
-      const targetMap = thirdCodeSet.has(row.code) ? special3RowsByUser : secondCodeSet.has(row.code) ? special2RowsByUser : firstCodeSet.has(row.code) ? specialRowsByUser : null;
+      const targetMap = round32CodeSet.has(row.code) ? special4RowsByUser : thirdCodeSet.has(row.code) ? special3RowsByUser : secondCodeSet.has(row.code) ? special2RowsByUser : firstCodeSet.has(row.code) ? specialRowsByUser : null;
       if (!targetMap) return;
       if (!targetMap.has(userId)) targetMap.set(userId, []);
       targetMap.get(userId).push(row);
@@ -276,11 +301,13 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       const special = buildSpecialProgress(firstDefinitions, specialRowsByUser.get(user.id), specialLocked);
       const special2 = buildSpecialProgress(secondDefinitions, special2RowsByUser.get(user.id), special2Locked, special2ReminderActive, special2Unlocks.has(Number(user.id)));
       const special3 = buildSpecialProgress(thirdDefinitions, special3RowsByUser.get(user.id), special3Locked, special3ReminderActive, special3Unlocks.has(Number(user.id)));
+      const special4 = buildSpecialProgress(round32Definitions, special4RowsByUser.get(user.id), special4Locked, special4ReminderActive, special4Unlocks.has(Number(user.id)));
       const urgent_missing_count = missingMatches.length
         + (bonus.urgent ? bonus.missing.length : 0)
         + (special.urgent ? special.missing.length : 0)
         + (special2.urgent ? special2.missing.length : 0)
-        + (special3.urgent ? special3.missing.length : 0);
+        + (special3.urgent ? special3.missing.length : 0)
+        + (special4.urgent ? special4.missing.length : 0);
 
       return {
         ...user,
@@ -294,6 +321,7 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
         special,
         special2,
         special3,
+        special4,
         urgent_missing_count,
         should_remind: urgent_missing_count > 0
       };
@@ -305,6 +333,8 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
     const special2CompleteUsers = userMonitoring.filter(user => user.special2.complete);
     const special3IncompleteUsers = userMonitoring.filter(user => !user.special3.complete);
     const special3CompleteUsers = userMonitoring.filter(user => user.special3.complete);
+    const special4IncompleteUsers = userMonitoring.filter(user => !user.special4.complete);
+    const special4CompleteUsers = userMonitoring.filter(user => user.special4.complete);
 
     const summary = {
       users_count: users.length,
@@ -328,8 +358,13 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       users_missing_special3: special3IncompleteUsers.length,
       users_missing_special3_urgent: special3IncompleteUsers.filter(user => user.special3.urgent).length,
       users_special3_unlocked: userMonitoring.filter(user => user.special3.admin_unlocked).length,
+      users_complete_special4: special4CompleteUsers.length,
+      users_missing_special4: special4IncompleteUsers.length,
+      users_missing_special4_urgent: special4IncompleteUsers.filter(user => user.special4.urgent).length,
+      users_special4_unlocked: userMonitoring.filter(user => user.special4.admin_unlocked).length,
       special2_reminder_active: special2ReminderActive,
       special3_reminder_active: special3ReminderActive,
+      special4_reminder_active: special4ReminderActive,
       bonus_deadline: bonusDeadline.first_match_time,
       bonus_locked: bonusLocked,
       first_matchday_deadline: firstMatchdayStatus.deadline,
@@ -338,6 +373,8 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       second_matchday_locked: special2Locked,
       third_matchday_deadline: thirdMatchdayStatus.deadline,
       third_matchday_locked: special3Locked,
+      round32_deadline: round32Status.deadline,
+      round32_locked: special4Locked,
       window_hours: 24,
       generated_at: new Date().toISOString()
     };
@@ -354,7 +391,10 @@ router.get('/monitoring', authenticateAdmin, async (req, res) => {
       special2_incomplete_users: special2IncompleteUsers,
       special3_unlocked_users: userMonitoring.filter(user => user.special3.admin_unlocked),
       special3_complete_users: special3CompleteUsers,
-      special3_incomplete_users: special3IncompleteUsers
+      special3_incomplete_users: special3IncompleteUsers,
+      special4_unlocked_users: userMonitoring.filter(user => user.special4.admin_unlocked),
+      special4_complete_users: special4CompleteUsers,
+      special4_incomplete_users: special4IncompleteUsers
     });
   } catch (error) {
     console.error('Admin monitoring error:', error);
@@ -410,11 +450,12 @@ router.patch('/users/:userId/special-unlock', authenticateAdmin, async (req, res
 
     const unlocked = Boolean(req.body?.unlocked);
     const specialUnlock = await setSpecialUnlockForUser(pool, userId, matchday, unlocked, req.user?.id || null);
+    const label = getSpecialMatchdayLabel(matchday);
 
     res.json({
       user: buildPublicUser(existingUser.rows[0]),
       special_unlock: specialUnlock,
-      message: unlocked ? `Pronostics spéciaux J${matchday} réouverts pour ce joueur.` : `Pronostics spéciaux J${matchday} refermés pour ce joueur.`
+      message: unlocked ? `Pronostics spéciaux ${label} réouverts pour ce joueur.` : `Pronostics spéciaux ${label} refermés pour ce joueur.`
     });
   } catch (error) {
     console.error('Admin special unlock error:', error);
