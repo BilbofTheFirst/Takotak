@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
 const {
+  SPECIAL_MATCHDAYS,
   ensureSpecialPredictionsTable,
   getSpecialMatchdayDefinitions,
   getSpecialMatchdayStatus,
@@ -13,10 +14,11 @@ const {
 const router = express.Router();
 
 const normalizeMatchday = (value) => {
-  const matchday = Number(value || 1);
-  if (matchday === 2) return 2;
-  if (matchday === 3) return 3;
-  return 1;
+  const matchday = Number(value || SPECIAL_MATCHDAYS.FIRST);
+  if (matchday === SPECIAL_MATCHDAYS.SECOND) return SPECIAL_MATCHDAYS.SECOND;
+  if (matchday === SPECIAL_MATCHDAYS.THIRD) return SPECIAL_MATCHDAYS.THIRD;
+  if (matchday === SPECIAL_MATCHDAYS.ROUND_OF_32) return SPECIAL_MATCHDAYS.ROUND_OF_32;
+  return SPECIAL_MATCHDAYS.FIRST;
 };
 
 const ensureSpecialUnlockTable = async (clientOrPool = pool) => {
