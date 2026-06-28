@@ -55,12 +55,14 @@ const buildSpecialBreakdown = (specialScore) => {
   const specialJ1Points = getSpecialPointsByPrefix(specialScore, 'FIRST_MATCHDAY_');
   const specialJ2Points = getSpecialPointsByPrefix(specialScore, 'SECOND_MATCHDAY_');
   const specialJ3Points = getSpecialPointsByPrefix(specialScore, 'THIRD_MATCHDAY_');
+  const specialRound32Points = getSpecialPointsByPrefix(specialScore, 'ROUND32_');
 
   return {
     special_points: Number(specialScore?.points || 0),
     special_j1_points: specialJ1Points,
     special_j2_points: specialJ2Points,
-    special_j3_points: specialJ3Points
+    special_j3_points: specialJ3Points,
+    special_round32_points: specialRound32Points
   };
 };
 
@@ -388,12 +390,13 @@ router.get('/leaderboard/progression', async (req, res) => {
   try {
     await ensureLeaderboardUserColumns();
 
-    const [{ scores: bonusScores }, { scores: specialScores }, specialJ1Matches, specialJ2Matches, specialJ3Matches] = await Promise.all([
+    const [{ scores: bonusScores }, { scores: specialScores }, specialJ1Matches, specialJ2Matches, specialJ3Matches, specialRound32Matches] = await Promise.all([
       getAllBonusScores(pool),
       getAllSpecialPredictionScores(pool),
       getSpecialMatchdayMatches(pool, 1),
       getSpecialMatchdayMatches(pool, 2),
-      getSpecialMatchdayMatches(pool, 3)
+      getSpecialMatchdayMatches(pool, 3),
+      getSpecialMatchdayMatches(pool, 4)
     ]);
     const usersResult = await pool.query(`SELECT id, username, avatar_data, avatar_updated_at FROM users ORDER BY username ASC`);
     const matchesResult = await pool.query(`
@@ -418,7 +421,8 @@ router.get('/leaderboard/progression', async (req, res) => {
     const specialMilestones = [
       { key: 'special_j1_points', label: 'Spéciaux J1', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialJ1Matches) },
       { key: 'special_j2_points', label: 'Spéciaux J2', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialJ2Matches) },
-      { key: 'special_j3_points', label: 'Spéciaux J3', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialJ3Matches) }
+      { key: 'special_j3_points', label: 'Spéciaux J3', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialJ3Matches) },
+      { key: 'special_round32_points', label: 'Spéciaux 16es', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialRound32Matches) }
     ].filter(milestone => Number.isInteger(milestone.match_number));
     const totalMarker = { match_number: orderedMatches.length + 1, match_id: null, start_time: null, label: 'Total' };
 
