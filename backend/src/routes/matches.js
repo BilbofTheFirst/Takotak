@@ -2,7 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
 const { getKnockoutPredictionAccess } = require('../utils/knockoutPredictions');
-const { KNOCKOUT_SLOTS, getThirdPlaceSnapshot } = require('../utils/knockoutPropagation');
+const { KNOCKOUT_SLOTS, getThirdPlaceSnapshot, propagateKnockoutTeams } = require('../utils/knockoutPropagation');
 
 const router = express.Router();
 
@@ -19,6 +19,14 @@ const MATCH_CAN_PREDICT_SQL = `
 `;
 
 const isThirdPlaceToken = (token) => /^3[A-L]\//.test(String(token || ''));
+
+const refreshKnockoutBracket = async () => {
+  try {
+    await propagateKnockoutTeams(pool);
+  } catch (error) {
+    console.warn('Knockout bracket refresh skipped:', error.message || error);
+  }
+};
 
 const maskUnresolvedThirdPlaceSlots = (rows, thirdPlaceSnapshot) => {
   if (thirdPlaceSnapshot?.third_place_slots_ready) return rows;
@@ -50,6 +58,8 @@ const maskUnresolvedThirdPlaceSlots = (rows, thirdPlaceSnapshot) => {
 // Get all matches with team details
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    await refreshKnockoutBracket();
+
     const [knockoutAccess, thirdPlaceSnapshot] = await Promise.all([
       getKnockoutPredictionAccess(pool),
       getThirdPlaceSnapshot(pool).catch(error => {
@@ -110,6 +120,8 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const matchId = req.params.id;
+    await refreshKnockoutBracket();
+
     const [knockoutAccess, thirdPlaceSnapshot] = await Promise.all([
       getKnockoutPredictionAccess(pool),
       getThirdPlaceSnapshot(pool).catch(error => {
