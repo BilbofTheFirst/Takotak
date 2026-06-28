@@ -38,13 +38,13 @@ function BonusPredictions() {
             <p>
               Tes grands paris avant le coup d’envoi : vainqueurs de groupes,
               demi-finalistes, finaliste perdant et champion du monde.
-              Les spéciaux de première, deuxième et troisième journée rejoignent automatiquement cette page après leur verrouillage.
+              Les spéciaux de journée et des seizièmes rejoignent automatiquement cette page après leur verrouillage.
             </p>
           </div>
 
           <div className="bonus-hero-summary">
             <div className="bonus-summary-card">
-              <div><strong>105</strong><span>pts bonus</span></div>
+              <div><strong>113</strong><span>pts bonus</span></div>
               <div><strong>12</strong><span>groupes</span></div>
               <div><strong>1</strong><span>champion</span></div>
             </div>
@@ -54,6 +54,7 @@ function BonusPredictions() {
         <SpecialPredictionsPanel placement="bonus" matchday={1} currentUserId={currentUser?.id} collapsible defaultCollapsed />
         <SpecialPredictionsPanel placement="bonus" matchday={2} currentUserId={currentUser?.id} collapsible defaultCollapsed />
         <SpecialPredictionsPanel placement="bonus" matchday={3} currentUserId={currentUser?.id} collapsible defaultCollapsed />
+        <SpecialPredictionsPanel placement="bonus" matchday={4} currentUserId={currentUser?.id} collapsible defaultCollapsed />
         <BonusPredictionsPanel matches={matches} currentUserId={currentUser?.id} collapsible />
       </div>
       <style>{styles}</style>
