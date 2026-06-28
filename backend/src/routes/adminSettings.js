@@ -1,9 +1,15 @@
 const express = require('express');
+const pool = require('../db/pool');
 const { authenticateAdmin } = require('../middleware/auth');
 const {
   getKnockoutPredictionAccess,
   setKnockoutPredictionAccess
 } = require('../utils/knockoutPredictions');
+const {
+  getThirdPlaceSnapshot,
+  propagateKnockoutTeams,
+  saveManualThirdPlaceSlotOverrides
+} = require('../utils/knockoutPropagation');
 
 const router = express.Router();
 
@@ -36,6 +42,30 @@ router.patch('/knockout-predictions', authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error('Update knockout prediction setting error:', error);
     res.status(500).json({ error: 'Server error', detail: error.message, code: error.code });
+  }
+});
+
+router.patch('/third-place-slots', authenticateAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const slots = Array.isArray(req.body?.slots) ? req.body.slots : [];
+
+    await client.query('BEGIN');
+    await saveManualThirdPlaceSlotOverrides(client, slots);
+    await propagateKnockoutTeams(client);
+    await client.query('COMMIT');
+
+    const snapshot = await getThirdPlaceSnapshot(client);
+    res.json({
+      ...snapshot,
+      message: 'Affectation manuelle des troisièmes sauvegardée.'
+    });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Update third-place slot settings error:', error);
+    res.status(error.statusCode || 500).json({ error: error.statusCode ? error.message : 'Server error', detail: error.message, code: error.code });
+  } finally {
+    client.release();
   }
 });
 
