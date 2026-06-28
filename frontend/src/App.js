@@ -1,9 +1,10 @@
 import React, { Suspense, lazy, useCallback, useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import api, { bonusPredictionsService, specialPredictionsService } from './services/api';
 import UserAvatar from './components/UserAvatar';
 import TakotakLogo from './components/TakotakLogo';
 import PredictionReminderModal from './components/PredictionReminderModal';
+import SpecialPredictionsPanel from './components/SpecialPredictionsPanel';
 import './nav-status.css';
 import './mobile-responsive.css';
 import './simulation-responsive.css';
@@ -302,6 +303,7 @@ function AppContent() {
   const [reminderStatus, setReminderStatus] = useState(null);
   const [showReminder, setShowReminder] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -410,10 +412,29 @@ function AppContent() {
     navigate('/');
   };
 
+  const showRound32Specials = Boolean(user && (location.pathname === '/' || location.pathname.startsWith('/predictions')));
+
   return (
     <>
       <Navigation user={user} onLogout={handleLogout} hasBonusAttention={hasBonusAttention} hasPredictionAttention={hasPredictionAttention} />
       {showReminder && reminderStatus && <PredictionReminderModal status={reminderStatus} onClose={() => setShowReminder(false)} />}
+      {showRound32Specials && (
+        <div className="round32-special-shell">
+          <SpecialPredictionsPanel matchday={4} />
+          <style>{`
+            .round32-special-shell {
+              padding: 18px 18px 0;
+              background: linear-gradient(135deg, #071b16 0%, #0f172a 45%, #111827 100%);
+            }
+            .round32-special-shell:empty { display: none; }
+            .round32-special-shell > .special-panel {
+              width: min(1220px, 100%);
+              margin: 0 auto;
+            }
+            @media (max-width: 760px) { .round32-special-shell { padding: 12px 10px 0; } }
+          `}</style>
+        </div>
+      )}
       <Routes>
         <Route path="/" element={user ? <Predictions /> : <Home onLogin={handleLogin} />} />
         <Route path="/reset-password" element={<ResetPassword />} />
