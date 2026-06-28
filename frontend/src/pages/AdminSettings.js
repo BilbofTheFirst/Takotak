@@ -8,13 +8,16 @@ function AdminSettings() {
   const [setting, setSetting] = useState(null);
   const [thirdPlaceSnapshot, setThirdPlaceSnapshot] = useState(null);
   const [thirdPlaceOrder, setThirdPlaceOrder] = useState([]);
+  const [thirdPlaceSlots, setThirdPlaceSlots] = useState({});
   const [savingThirdPlaces, setSavingThirdPlaces] = useState(false);
+  const [savingThirdSlots, setSavingThirdSlots] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
   const applyThirdPlaceSnapshot = (snapshot) => {
     setThirdPlaceSnapshot(snapshot);
     setThirdPlaceOrder((snapshot?.thirdTeams || []).map(team => team.group_code));
+    setThirdPlaceSlots(Object.fromEntries((snapshot?.third_place_slots || []).map(slot => [Number(slot.match_id), slot.selected_group_code || ''])));
   };
 
   const loadSettings = async () => {
@@ -30,6 +33,7 @@ function AdminSettings() {
       else {
         setThirdPlaceSnapshot(null);
         setThirdPlaceOrder([]);
+        setThirdPlaceSlots({});
       }
     } finally {
       setLoading(false);
@@ -95,11 +99,46 @@ function AdminSettings() {
     }
   };
 
+  const saveThirdPlaceSlots = async () => {
+    const slots = (thirdPlaceSnapshot?.third_place_slots || [])
+      .filter(slot => thirdPlaceSlots[Number(slot.match_id)])
+      .map(slot => ({ match_id: Number(slot.match_id), group_code: thirdPlaceSlots[Number(slot.match_id)] }));
+
+    try {
+      setSavingThirdSlots(true);
+      setError('');
+      setMessage('');
+      const response = await resultsService.saveThirdPlaceSlots(slots);
+      applyThirdPlaceSnapshot(response.data);
+      setMessage('Rencontres contre les troisièmes sauvegardées. La phase finale a été recalculée.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur lors de la sauvegarde des rencontres de troisièmes');
+    } finally {
+      setSavingThirdSlots(false);
+    }
+  };
+
+  const resetThirdPlaceSlots = async () => {
+    try {
+      setSavingThirdSlots(true);
+      setError('');
+      setMessage('');
+      const response = await resultsService.saveThirdPlaceSlots([]);
+      applyThirdPlaceSnapshot(response.data);
+      setMessage('Choix manuels des rencontres supprimés. Le tableau automatique est réappliqué.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur lors de la réinitialisation des rencontres');
+    } finally {
+      setSavingThirdSlots(false);
+    }
+  };
+
   if (loading) return <PageLoader title="Chargement des réglages..." icon="⚙️" subtitle="Lecture des accès pronostics" />;
 
   const knockoutOpen = Boolean(setting?.knockout_predictions_open);
   const thirdTeams = thirdPlaceSnapshot?.thirdTeams || [];
   const qualifiedThirdTeams = thirdPlaceSnapshot?.qualifiedThirdTeams || [];
+  const thirdSlotRows = thirdPlaceSnapshot?.third_place_slots || [];
   const requiredThirds = Number(thirdPlaceSnapshot?.required_third_place_qualifiers || 8);
   const thirdSlotsReady = Boolean(thirdPlaceSnapshot?.third_place_slots_ready);
   const thirdPlaceMode = thirdPlaceSnapshot?.third_place_resolution_mode || 'pending';
@@ -132,14 +171,46 @@ function AdminSettings() {
       <div className={`third-settings-card ${thirdSlotsReady ? 'is-ready' : 'is-pending'}`}>
         <div className="third-settings-title">
           <div>
-            <span>🥉 Meilleurs troisièmes</span>
-            <h3>{thirdSlotsReady ? 'Tableau final prêt' : 'Tableau final en attente'}</h3>
-            <p>Les troisièmes ne sont injectés en phase finale que quand les {requiredThirds} qualifiés sont connus. Avant ça, les matchs gardent les libellés du type 3A/B/C/D/F.</p>
+            <span>🥉 Rencontres contre les troisièmes</span>
+            <h3>{thirdSlotRows.length ? 'Affectation par match' : 'Aucun slot disponible'}</h3>
+            <p>Choisis l’équipe troisième officiellement déterminée pour chaque match concerné. Ce choix prend le dessus sur le calcul automatique.</p>
           </div>
-          <em>{thirdPlaceMode === 'manual' ? 'Mode manuel' : thirdPlaceMode === 'auto' ? 'Mode auto' : 'En attente'}</em>
+          <em>{thirdPlaceMode === 'slot_manual' ? 'Mode manuel par match' : thirdPlaceMode === 'manual' ? 'Mode ordre manuel' : thirdPlaceMode === 'auto' ? 'Mode auto' : 'En attente'}</em>
         </div>
-        <div className="third-status-grid"><div><strong>{qualifiedThirdTeams.length}/{requiredThirds}</strong><span>qualifiés verrouillés</span></div><div><strong>{thirdTeams.length}</strong><span>troisièmes connus</span></div><div><strong>{thirdSlotsReady ? 'Oui' : 'Non'}</strong><span>propagation active</span></div></div>
-        {thirdTeams.length ? <div className="thirds-list">{thirdPlaceOrder.map((groupCode, index) => { const team = thirdTeams.find(item => item.group_code === groupCode); if (!team) return null; const isQualified = index < requiredThirds; return <div key={groupCode} className={`third-row ${isQualified ? 'is-qualified' : ''}`}><div className="third-rank">#{index + 1}</div><div className="third-main"><strong>{team.team_name}</strong><span>Groupe {team.group_code}{isQualified ? ' · qualifié provisoire' : ''}</span></div><div className="third-stats"><span>{team.points} pts</span><span>Diff {team.goal_difference > 0 ? '+' : ''}{team.goal_difference}</span><span>BP {team.goals_for}</span></div><div className="third-actions"><button type="button" className="button secondary tiny" disabled={index === 0 || savingThirdPlaces} onClick={() => moveThirdPlace(groupCode, -1)}>↑</button><button type="button" className="button secondary tiny" disabled={index === thirdPlaceOrder.length - 1 || savingThirdPlaces} onClick={() => moveThirdPlace(groupCode, 1)}>↓</button></div></div>; })}</div> : <p className="settings-help">Encode les résultats d’un groupe complet pour voir apparaître son troisième.</p>}
+
+        <div className="third-status-grid"><div><strong>{qualifiedThirdTeams.length}/{requiredThirds}</strong><span>qualifiés</span></div><div><strong>{thirdTeams.length}</strong><span>troisièmes connus</span></div><div><strong>{thirdSlotRows.length}</strong><span>matchs à régler</span></div></div>
+
+        {thirdSlotRows.length ? (
+          <div className="slot-list">
+            {thirdSlotRows.map(slot => {
+              const selectedGroup = thirdPlaceSlots[Number(slot.match_id)] || '';
+              const selectedOption = slot.options?.find(option => option.group_code === selectedGroup);
+              return (
+                <div key={slot.match_id} className="slot-row">
+                  <div className="slot-label"><span>M{slot.match_id}</span><strong>1{slot.winner_group} contre {slot.third_token}</strong><em>{slot.manual_group_code ? 'choix manuel' : slot.auto_group_code ? `auto : 3${slot.auto_group_code}` : 'à choisir'}</em></div>
+                  <select value={selectedGroup} onChange={(event) => setThirdPlaceSlots(prev => ({ ...prev, [slot.match_id]: event.target.value }))}>
+                    <option value="">Choisir le troisième officiel…</option>
+                    {(slot.options || []).map(option => <option key={option.group_code} value={option.group_code}>3{option.group_code} · {option.team_name} ({option.points} pts, diff {option.goal_difference > 0 ? '+' : ''}{option.goal_difference})</option>)}
+                  </select>
+                  <div className="slot-current">{selectedOption ? <><strong>{selectedOption.team_name}</strong><span>3{selectedOption.group_code}</span></> : <span>Non défini</span>}</div>
+                </div>
+              );
+            })}
+          </div>
+        ) : <p className="settings-help">Les matchs contre un troisième apparaîtront ici quand les troisièmes seront calculables.</p>}
+
+        <div className="third-actions-footer"><button type="button" className="button secondary" disabled={savingThirdSlots} onClick={resetThirdPlaceSlots}>Effacer ces choix</button><button type="button" className="button primary" disabled={savingThirdSlots || !thirdSlotRows.length} onClick={saveThirdPlaceSlots}>Sauvegarder les rencontres</button></div>
+      </div>
+
+      <div className="third-settings-card compact-card">
+        <div className="third-settings-title">
+          <div>
+            <span>Classement des troisièmes</span>
+            <h3>Ordre global</h3>
+            <p>Tu peux encore ajuster l’ordre global si besoin, mais le plus fiable pour les affiches est la section par match ci-dessus.</p>
+          </div>
+        </div>
+        {thirdTeams.length ? <div className="thirds-list">{thirdPlaceOrder.map((groupCode, index) => { const team = thirdTeams.find(item => item.group_code === groupCode); if (!team) return null; const isQualified = index < requiredThirds; return <div key={groupCode} className={`third-row ${isQualified ? 'is-qualified' : ''}`}><div className="third-rank">#{index + 1}</div><div className="third-main"><strong>{team.team_name}</strong><span>Groupe {team.group_code}{isQualified ? ' · qualifié' : ''}</span></div><div className="third-stats"><span>{team.points} pts</span><span>Diff {team.goal_difference > 0 ? '+' : ''}{team.goal_difference}</span><span>BP {team.goals_for}</span></div><div className="third-actions"><button type="button" className="button secondary tiny" disabled={index === 0 || savingThirdPlaces} onClick={() => moveThirdPlace(groupCode, -1)}>↑</button><button type="button" className="button secondary tiny" disabled={index === thirdPlaceOrder.length - 1 || savingThirdPlaces} onClick={() => moveThirdPlace(groupCode, 1)}>↓</button></div></div>; })}</div> : <p className="settings-help">Encode les résultats d’un groupe complet pour voir apparaître son troisième.</p>}
         <div className="third-actions-footer"><button type="button" className="button secondary" disabled={savingThirdPlaces} onClick={resetThirdPlaceOrder}>Repasser en auto / nettoyer</button><button type="button" className="button primary" disabled={savingThirdPlaces || thirdPlaceOrder.length === 0} onClick={saveThirdPlaceOrder}>Valider l’ordre manuel</button></div>
       </div>
 
@@ -166,12 +237,19 @@ const styles = `
   .third-settings-card { margin-top: 14px; border-radius: 18px; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
   .third-settings-card.is-ready { background: #ecfdf5; border-color: #99f6e4; }
   .third-settings-card.is-pending { background: #fff7ed; border-color: #fed7aa; }
+  .compact-card { background: #f8fafc; }
   .third-settings-title em { padding: 7px 10px; border-radius: 999px; background: white; color: #92400e; font-style: normal; font-size: 11px; font-weight: 950; white-space: nowrap; }
   .third-status-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
   .third-status-grid div { padding: 10px; border-radius: 14px; background: white; border: 1px solid #e2e8f0; }
   .third-status-grid strong { display: block; color: #0f172a; font-size: 20px; line-height: 1; }
   .third-status-grid span { display: block; margin-top: 5px; color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
-  .thirds-list { display: grid; gap: 8px; }
+  .slot-list, .thirds-list { display: grid; gap: 8px; }
+  .slot-row { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(260px, 1.2fr) minmax(130px, .7fr); gap: 10px; align-items: center; padding: 10px; border-radius: 14px; background: white; border: 1px solid #e2e8f0; }
+  .slot-label span { display: inline-flex; padding: 4px 7px; border-radius: 999px; background: #fff7ed; color: #c2410c; font-size: 10px; font-weight: 950; }
+  .slot-label strong, .slot-current strong { display: block; margin-top: 4px; color: #0f172a; font-size: 13px; }
+  .slot-label em, .slot-current span { display: block; margin-top: 3px; color: #64748b; font-size: 11px; font-style: normal; font-weight: 850; }
+  .slot-row select { width: 100%; min-height: 40px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 8px 10px; background: white; color: #0f172a; font-size: 13px; font-weight: 850; }
+  .slot-current { min-height: 42px; padding: 8px 10px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; }
   .third-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 9px; border-radius: 14px; background: white; border: 1px solid #e2e8f0; }
   .third-row.is-qualified { border-color: #99f6e4; background: #f0fdfa; }
   .third-rank { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 999px; background: #e2e8f0; color: #334155; font-size: 12px; font-weight: 950; }
@@ -188,7 +266,7 @@ const styles = `
   .button.secondary { background: #e2e8f0; color: #334155; box-shadow: none; }
   .button.tiny { padding: 6px 9px; font-size: 11px; }
   .toggle-button:disabled, .button:disabled { opacity: .65; cursor: not-allowed; }
-  @media (max-width: 760px) { .settings-title, .third-settings-title, .setting-row, .third-row, .third-status-grid { grid-template-columns: 1fr; } .settings-title, .third-settings-title { flex-direction: column; } .toggle-button { width: 100%; } .third-stats, .third-actions, .third-actions-footer { justify-content: flex-start; } }
+  @media (max-width: 860px) { .settings-title, .third-settings-title, .setting-row, .third-row, .slot-row, .third-status-grid { grid-template-columns: 1fr; } .settings-title, .third-settings-title { flex-direction: column; } .toggle-button { width: 100%; } .third-stats, .third-actions, .third-actions-footer { justify-content: flex-start; } }
 `;
 
 export default AdminSettings;
