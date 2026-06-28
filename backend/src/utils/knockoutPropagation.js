@@ -54,6 +54,10 @@ const THIRD_PLACE_COMBINATION_TABLE = {
   ABCDEFGI: buildAssignment(['C', 'G', 'B', 'D', 'A', 'F', 'E', 'I'])
 };
 
+const THIRD_PLACE_SLOT_MATCH_IDS = Object.entries(KNOCKOUT_SLOTS)
+  .filter(([, slots]) => Object.values(slots).some(token => /^3[A-L]\//.test(String(token || ''))))
+  .map(([matchId]) => Number(matchId));
+
 const hasResult = (match) => (
   match.team1_goals !== null
   && match.team1_goals !== undefined
@@ -175,9 +179,25 @@ const ensureThirdPlaceOrderTable = async (client) => {
   `);
 };
 
+const ensureManualThirdPlaceSlotTable = async (client) => {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS manual_third_place_slots (
+      match_id integer PRIMARY KEY REFERENCES matches(id) ON DELETE CASCADE,
+      group_code varchar(1) NOT NULL,
+      updated_at timestamp DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+};
+
 const getManualThirdPlaceOrder = async (client) => {
   await ensureThirdPlaceOrderTable(client);
   const result = await client.query('SELECT group_code, manual_rank FROM third_place_order ORDER BY manual_rank ASC');
+  return result.rows;
+};
+
+const getManualThirdPlaceSlotRows = async (client) => {
+  await ensureManualThirdPlaceSlotTable(client);
+  const result = await client.query('SELECT match_id, group_code FROM manual_third_place_slots ORDER BY match_id ASC');
   return result.rows;
 };
 
@@ -254,19 +274,25 @@ const getLoserTeamId = (match) => {
   return null;
 };
 
-const resolveThirdPlaceToken = (token, qualifiedThirdTeams, winnerGroup, thirdPlaceAssignment) => {
-  if (!qualifiedThirdTeams.length || !winnerGroup || !thirdPlaceAssignment) return null;
-  const targetGroup = thirdPlaceAssignment[winnerGroup];
+const findThirdTeamByGroup = (resolution, groupCode) => (
+  resolution.qualifiedThirdTeams.find(team => team.group_code === groupCode)
+  || resolution.orderedThirdTeams.find(team => team.group_code === groupCode)
+  || null
+);
+
+const resolveThirdPlaceToken = (token, resolution, winnerGroup, manualSlotGroupCode = null) => {
+  if (!resolution.orderedThirdTeams.length) return null;
+  const targetGroup = manualSlotGroupCode || resolution.thirdPlaceAssignment?.[winnerGroup] || null;
   if (!targetGroup) return null;
 
   const allowedGroups = token.replace(/^3/, '').split('/');
   if (!allowedGroups.includes(targetGroup)) return null;
 
-  const resolved = qualifiedThirdTeams.find(team => team.group_code === targetGroup);
+  const resolved = findThirdTeamByGroup(resolution, targetGroup);
   return resolved?.team_id || null;
 };
 
-const resolveSlotToken = (token, placements, resolution, matchById, winnerGroup) => {
+const resolveSlotToken = (token, placements, resolution, matchById, winnerGroup, manualSlotGroupCode = null) => {
   if (!token) return null;
 
   if (/^[12][A-L]$/.test(token)) {
@@ -274,7 +300,7 @@ const resolveSlotToken = (token, placements, resolution, matchById, winnerGroup)
   }
 
   if (/^3[A-L](\/[^\s]+)?$/.test(token) && token.includes('/')) {
-    return resolveThirdPlaceToken(token, resolution.qualifiedThirdTeams, winnerGroup, resolution.thirdPlaceAssignment);
+    return resolveThirdPlaceToken(token, resolution, winnerGroup, manualSlotGroupCode);
   }
 
   if (/^[VP]\d+$/.test(token)) {
@@ -310,10 +336,61 @@ const fetchBracketMatches = async (client) => {
   return result.rows;
 };
 
+const getManualSlotMap = (rows) => new Map(rows.map(row => [Number(row.match_id), row.group_code]));
+
+const buildThirdPlaceSlotSnapshot = (resolution, manualSlotRows) => {
+  const manualSlotMap = getManualSlotMap(manualSlotRows);
+
+  return THIRD_PLACE_SLOT_MATCH_IDS.map(matchId => {
+    const slots = KNOCKOUT_SLOTS[matchId];
+    const thirdToken = Object.values(slots).find(token => /^3[A-L]\//.test(String(token || '')));
+    const winnerGroup = WINNER_GROUP_BY_MATCH[matchId] || null;
+    const allowedGroups = thirdToken.replace(/^3/, '').split('/');
+    const autoGroupCode = resolution.thirdPlaceAssignment?.[winnerGroup] || null;
+    const manualGroupCode = manualSlotMap.get(matchId) || null;
+    const selectedGroupCode = manualGroupCode || autoGroupCode;
+    const resolvedTeam = selectedGroupCode ? findThirdTeamByGroup(resolution, selectedGroupCode) : null;
+    const options = allowedGroups
+      .map(groupCode => findThirdTeamByGroup(resolution, groupCode))
+      .filter(Boolean)
+      .map(team => ({
+        group_code: team.group_code,
+        team_id: team.team_id,
+        team_name: team.team_name,
+        points: team.points,
+        goal_difference: team.goal_difference,
+        goals_for: team.goals_for,
+        rank: team.rank || team.auto_rank || null
+      }));
+
+    return {
+      match_id: matchId,
+      winner_group: winnerGroup,
+      third_token: thirdToken,
+      allowed_groups: allowedGroups,
+      auto_group_code: autoGroupCode,
+      manual_group_code: manualGroupCode,
+      selected_group_code: selectedGroupCode,
+      selected_team: resolvedTeam ? {
+        group_code: resolvedTeam.group_code,
+        team_id: resolvedTeam.team_id,
+        team_name: resolvedTeam.team_name,
+        points: resolvedTeam.points,
+        goal_difference: resolvedTeam.goal_difference,
+        goals_for: resolvedTeam.goals_for
+      } : null,
+      options
+    };
+  });
+};
+
 const getThirdPlaceSnapshot = async (client) => {
   const matches = await fetchBracketMatches(client);
   const { placements, thirdTeams, groups } = buildGroupPlacements(matches);
-  const manualOrderRows = await getManualThirdPlaceOrder(client);
+  const [manualOrderRows, manualSlotRows] = await Promise.all([
+    getManualThirdPlaceOrder(client),
+    getManualThirdPlaceSlotRows(client)
+  ]);
   const resolution = buildThirdPlaceResolution(thirdTeams, manualOrderRows);
 
   return {
@@ -323,8 +400,9 @@ const getThirdPlaceSnapshot = async (client) => {
     autoThirdTeams: thirdTeams,
     qualifiedThirdTeams: resolution.qualifiedThirdTeams,
     manualOrder: resolution.manualOrder,
-    third_place_slots_ready: resolution.canResolveThirdPlaceSlots,
-    third_place_resolution_mode: resolution.resolutionMode,
+    third_place_slots: buildThirdPlaceSlotSnapshot(resolution, manualSlotRows),
+    third_place_slots_ready: resolution.canResolveThirdPlaceSlots || manualSlotRows.length === THIRD_PLACE_SLOT_MATCH_IDS.length,
+    third_place_resolution_mode: manualSlotRows.length ? 'slot_manual' : resolution.resolutionMode,
     third_place_combination_key: resolution.combinationKey,
     third_place_assignment: resolution.thirdPlaceAssignment,
     required_third_place_qualifiers: THIRD_PLACE_QUALIFIERS,
@@ -353,7 +431,11 @@ const applySlot = (match, side, teamId, teamById) => {
 const propagateKnockoutTeams = async (client) => {
   const matches = await fetchBracketMatches(client);
   const { placements, thirdTeams } = buildGroupPlacements(matches);
-  const manualOrderRows = await getManualThirdPlaceOrder(client);
+  const [manualOrderRows, manualSlotRows] = await Promise.all([
+    getManualThirdPlaceOrder(client),
+    getManualThirdPlaceSlotRows(client)
+  ]);
+  const manualSlotMap = getManualSlotMap(manualSlotRows);
   const resolution = buildThirdPlaceResolution(thirdTeams, manualOrderRows);
   const matchById = new Map(matches.map(match => [Number(match.id), match]));
   const teamByIdResult = await client.query('SELECT id, name, groupe FROM teams');
@@ -361,12 +443,14 @@ const propagateKnockoutTeams = async (client) => {
   const updates = [];
 
   Object.entries(KNOCKOUT_SLOTS).forEach(([matchId, slots]) => {
-    const match = matchById.get(Number(matchId));
+    const numericMatchId = Number(matchId);
+    const match = matchById.get(numericMatchId);
     if (!match || !slots) return;
 
-    const winnerGroup = WINNER_GROUP_BY_MATCH[Number(matchId)] || null;
-    const team1Id = resolveSlotToken(slots.team1, placements, resolution, matchById, winnerGroup);
-    const team2Id = resolveSlotToken(slots.team2, placements, resolution, matchById, winnerGroup);
+    const winnerGroup = WINNER_GROUP_BY_MATCH[numericMatchId] || null;
+    const manualSlotGroupCode = manualSlotMap.get(numericMatchId) || null;
+    const team1Id = resolveSlotToken(slots.team1, placements, resolution, matchById, winnerGroup, manualSlotGroupCode);
+    const team2Id = resolveSlotToken(slots.team2, placements, resolution, matchById, winnerGroup, manualSlotGroupCode);
 
     const update1 = applySlot(match, 'team1', team1Id, teamById);
     const update2 = applySlot(match, 'team2', team2Id, teamById);
@@ -394,10 +478,36 @@ const saveManualThirdPlaceOrder = async (client, groupCodes = []) => {
   }
 };
 
+const saveManualThirdPlaceSlotOverrides = async (client, slots = []) => {
+  await ensureManualThirdPlaceSlotTable(client);
+  await client.query('DELETE FROM manual_third_place_slots');
+
+  for (const slot of slots) {
+    const matchId = Number(slot.match_id);
+    const groupCode = String(slot.group_code || '').trim().toUpperCase();
+    const slotConfig = KNOCKOUT_SLOTS[matchId];
+    const thirdToken = slotConfig ? Object.values(slotConfig).find(token => /^3[A-L]\//.test(String(token || ''))) : null;
+    const allowedGroups = thirdToken ? thirdToken.replace(/^3/, '').split('/') : [];
+
+    if (!THIRD_PLACE_SLOT_MATCH_IDS.includes(matchId) || !allowedGroups.includes(groupCode)) {
+      const error = new Error(`Invalid third-place slot: match ${matchId}, group ${groupCode}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    await client.query(
+      `INSERT INTO manual_third_place_slots (match_id, group_code, updated_at)
+       VALUES ($1, $2, CURRENT_TIMESTAMP)`,
+      [matchId, groupCode]
+    );
+  }
+};
+
 module.exports = {
   KNOCKOUT_SLOTS,
   buildGroupPlacements,
   getThirdPlaceSnapshot,
   propagateKnockoutTeams,
-  saveManualThirdPlaceOrder
+  saveManualThirdPlaceOrder,
+  saveManualThirdPlaceSlotOverrides
 };
