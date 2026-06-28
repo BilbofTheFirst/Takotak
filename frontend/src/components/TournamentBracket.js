@@ -41,7 +41,7 @@ const COLUMN_TITLES = [
   { col: 2, label: '8es' },
   { col: 3, label: 'Quarts' },
   { col: 4, label: 'Demies' },
-  { col: 5, label: 'Finale' },
+  { col: 5, label: 'Finales' },
   { col: 6, label: 'Demies' },
   { col: 7, label: 'Quarts' },
   { col: 8, label: '8es' },
