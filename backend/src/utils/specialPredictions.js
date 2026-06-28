@@ -1,7 +1,8 @@
 const SPECIAL_MATCHDAYS = {
   FIRST: 1,
   SECOND: 2,
-  THIRD: 3
+  THIRD: 3,
+  ROUND_OF_32: 4
 };
 
 const SPECIAL_PREDICTION_CODES = {
@@ -13,7 +14,9 @@ const SPECIAL_PREDICTION_CODES = {
   SECOND_BOTH_TEAMS_SCORE_COUNT: 'SECOND_MATCHDAY_BOTH_TEAMS_SCORE_COUNT',
   THIRD_TOTAL_GOALS: 'THIRD_MATCHDAY_TOTAL_GOALS',
   THIRD_UNBEATEN_TEAMS: 'THIRD_MATCHDAY_UNBEATEN_TEAMS',
-  THIRD_SCORED_ALL_MATCHES_TEAMS: 'THIRD_MATCHDAY_SCORED_ALL_MATCHES_TEAMS'
+  THIRD_SCORED_ALL_MATCHES_TEAMS: 'THIRD_MATCHDAY_SCORED_ALL_MATCHES_TEAMS',
+  ROUND32_PENALTY_SHOOTOUTS: 'ROUND32_PENALTY_SHOOTOUTS',
+  ROUND32_SECOND_OR_THIRD_QUALIFIERS: 'ROUND32_SECOND_OR_THIRD_QUALIFIERS'
 };
 
 const FIRST_MATCHDAY_SPECIAL_DEFINITIONS = [
@@ -106,24 +109,56 @@ const THIRD_MATCHDAY_SPECIAL_DEFINITIONS = [
   }
 ];
 
+const ROUND32_SPECIAL_DEFINITIONS = [
+  {
+    code: SPECIAL_PREDICTION_CODES.ROUND32_PENALTY_SHOOTOUTS,
+    matchday: SPECIAL_MATCHDAYS.ROUND_OF_32,
+    label: 'Matchs aux tirs au but',
+    description: 'Sur les 16 matchs de seizièmes, combien seront décidés aux tirs au but ?',
+    max_points: 4,
+    point_loss_per_gap: 1,
+    unit: 'matchs'
+  },
+  {
+    code: SPECIAL_PREDICTION_CODES.ROUND32_SECOND_OR_THIRD_QUALIFIERS,
+    matchday: SPECIAL_MATCHDAYS.ROUND_OF_32,
+    label: 'Qualifications de 2e ou 3e de groupe',
+    description: 'Combien d’équipes classées 2e ou 3e de leur groupe se qualifieront pour les huitièmes ?',
+    max_points: 4,
+    point_loss_per_gap: 1,
+    unit: 'équipes'
+  }
+];
+
 // Backward-compatible name: first matchday definitions only.
 const SPECIAL_PREDICTION_DEFINITIONS = FIRST_MATCHDAY_SPECIAL_DEFINITIONS;
 const ALL_SPECIAL_PREDICTION_DEFINITIONS = [
   ...FIRST_MATCHDAY_SPECIAL_DEFINITIONS,
   ...SECOND_MATCHDAY_SPECIAL_DEFINITIONS,
-  ...THIRD_MATCHDAY_SPECIAL_DEFINITIONS
+  ...THIRD_MATCHDAY_SPECIAL_DEFINITIONS,
+  ...ROUND32_SPECIAL_DEFINITIONS
 ];
 
 const MATCHDAY_DEFINITIONS = {
   [SPECIAL_MATCHDAYS.FIRST]: FIRST_MATCHDAY_SPECIAL_DEFINITIONS,
   [SPECIAL_MATCHDAYS.SECOND]: SECOND_MATCHDAY_SPECIAL_DEFINITIONS,
-  [SPECIAL_MATCHDAYS.THIRD]: THIRD_MATCHDAY_SPECIAL_DEFINITIONS
+  [SPECIAL_MATCHDAYS.THIRD]: THIRD_MATCHDAY_SPECIAL_DEFINITIONS,
+  [SPECIAL_MATCHDAYS.ROUND_OF_32]: ROUND32_SPECIAL_DEFINITIONS
+};
+
+const ROUND32_MATCH_IDS = Array.from({ length: 16 }, (_, index) => 73 + index);
+const ROUND32_SLOT_RANKS = {
+  73: ['2', '2'], 74: ['1', '3'], 75: ['1', '2'], 76: ['1', '2'],
+  77: ['1', '3'], 78: ['2', '2'], 79: ['1', '3'], 80: ['1', '3'],
+  81: ['1', '3'], 82: ['1', '3'], 83: ['2', '2'], 84: ['1', '2'],
+  85: ['1', '3'], 86: ['1', '2'], 87: ['1', '3'], 88: ['2', '2']
 };
 
 const normalizeSpecialMatchday = (value = SPECIAL_MATCHDAYS.FIRST) => {
   const matchday = Number(value || SPECIAL_MATCHDAYS.FIRST);
   if (matchday === SPECIAL_MATCHDAYS.SECOND) return SPECIAL_MATCHDAYS.SECOND;
   if (matchday === SPECIAL_MATCHDAYS.THIRD) return SPECIAL_MATCHDAYS.THIRD;
+  if (matchday === SPECIAL_MATCHDAYS.ROUND_OF_32) return SPECIAL_MATCHDAYS.ROUND_OF_32;
   return SPECIAL_MATCHDAYS.FIRST;
 };
 
@@ -154,7 +189,10 @@ const MATCHDAY_MATCHES_CTE = `
       m.team1_id,
       m.team2_id,
       r.team1_goals,
-      r.team2_goals
+      r.team2_goals,
+      r.team1_penalty_goals,
+      r.team2_penalty_goals,
+      r.winner_team_id
     FROM matches m
     LEFT JOIN results r ON r.match_id = m.id
     WHERE m.team1_id IS NOT NULL
@@ -181,6 +219,9 @@ const MATCHDAY_MATCHES_CTE = `
       am.team2_id,
       am.team1_goals,
       am.team2_goals,
+      am.team1_penalty_goals,
+      am.team2_penalty_goals,
+      am.winner_team_id,
       GREATEST(t1.appearance_number, t2.appearance_number) AS matchday
     FROM assigned_matches am
     JOIN team_appearances t1 ON t1.match_id = am.id AND t1.team_id = am.team1_id
@@ -188,11 +229,36 @@ const MATCHDAY_MATCHES_CTE = `
   )
 `;
 
+const getRound32Matches = async (clientOrPool) => {
+  const result = await clientOrPool.query(`
+    SELECT
+      m.id,
+      m.start_time,
+      m.team1_id,
+      m.team2_id,
+      r.team1_goals,
+      r.team2_goals,
+      r.team1_penalty_goals,
+      r.team2_penalty_goals,
+      r.winner_team_id
+    FROM matches m
+    LEFT JOIN results r ON r.match_id = m.id
+    WHERE m.team1_id IS NOT NULL
+      AND m.team2_id IS NOT NULL
+      AND m.id BETWEEN 73 AND 88
+    ORDER BY m.start_time ASC NULLS LAST, m.id ASC
+  `);
+
+  return result.rows;
+};
+
 const getSpecialMatchdayMatches = async (clientOrPool, matchday = SPECIAL_MATCHDAYS.FIRST) => {
   const normalizedMatchday = normalizeSpecialMatchday(matchday);
+  if (normalizedMatchday === SPECIAL_MATCHDAYS.ROUND_OF_32) return getRound32Matches(clientOrPool);
+
   const result = await clientOrPool.query(`
     ${MATCHDAY_MATCHES_CTE}
-    SELECT id, start_time, team1_id, team2_id, team1_goals, team2_goals
+    SELECT id, start_time, team1_id, team2_id, team1_goals, team2_goals, team1_penalty_goals, team2_penalty_goals, winner_team_id
     FROM match_appearances
     WHERE matchday = $1
     ORDER BY start_time ASC NULLS LAST, id ASC
@@ -203,9 +269,11 @@ const getSpecialMatchdayMatches = async (clientOrPool, matchday = SPECIAL_MATCHD
 
 const getSpecialMatchesUntilMatchday = async (clientOrPool, matchday = SPECIAL_MATCHDAYS.FIRST) => {
   const normalizedMatchday = normalizeSpecialMatchday(matchday);
+  if (normalizedMatchday === SPECIAL_MATCHDAYS.ROUND_OF_32) return getRound32Matches(clientOrPool);
+
   const result = await clientOrPool.query(`
     ${MATCHDAY_MATCHES_CTE}
-    SELECT id, start_time, team1_id, team2_id, team1_goals, team2_goals, matchday
+    SELECT id, start_time, team1_id, team2_id, team1_goals, team2_goals, team1_penalty_goals, team2_penalty_goals, winner_team_id, matchday
     FROM match_appearances
     WHERE matchday <= $1
     ORDER BY start_time ASC NULLS LAST, id ASC
@@ -216,6 +284,27 @@ const getSpecialMatchesUntilMatchday = async (clientOrPool, matchday = SPECIAL_M
 
 const getSpecialMatchdayDeadline = async (clientOrPool, matchday = SPECIAL_MATCHDAYS.FIRST) => {
   const normalizedMatchday = normalizeSpecialMatchday(matchday);
+
+  if (normalizedMatchday === SPECIAL_MATCHDAYS.ROUND_OF_32) {
+    const result = await clientOrPool.query(`
+      SELECT
+        to_char(MIN(start_time), 'YYYY-MM-DD"T"HH24:MI:SS') AS first_match_time,
+        CASE
+          WHEN MIN(start_time) IS NULL THEN false
+          ELSE (MIN(start_time) AT TIME ZONE 'Europe/Brussels') <= NOW()
+        END AS locked
+      FROM matches
+      WHERE id BETWEEN 73 AND 88
+        AND team1_id IS NOT NULL
+        AND team2_id IS NOT NULL
+    `);
+
+    return {
+      first_match_time: result.rows[0]?.first_match_time || null,
+      locked: Boolean(result.rows[0]?.locked)
+    };
+  }
+
   const result = await clientOrPool.query(`
     ${MATCHDAY_MATCHES_CTE}
     SELECT
@@ -283,8 +372,42 @@ const calculateTeamsScoredInAllGroupMatches = (matchesUntilThirdMatchday) => (
   Array.from(buildGroupStats(matchesUntilThirdMatchday).values()).filter(team => team.played >= 3 && team.scored_matches >= 3).length
 );
 
+const getWinnerSide = (match) => {
+  if (!isMatchResultEncoded(match)) return null;
+  if (match.winner_team_id) {
+    if (Number(match.winner_team_id) === Number(match.team1_id)) return 'team1';
+    if (Number(match.winner_team_id) === Number(match.team2_id)) return 'team2';
+  }
+  const goals1 = Number(match.team1_goals);
+  const goals2 = Number(match.team2_goals);
+  if (goals1 > goals2) return 'team1';
+  if (goals2 > goals1) return 'team2';
+  return null;
+};
+
+const calculateRound32PenaltyShootouts = (matches) => (
+  matches.filter(match => isMatchResultEncoded(match) && match.team1_penalty_goals !== null && match.team1_penalty_goals !== undefined && match.team2_penalty_goals !== null && match.team2_penalty_goals !== undefined).length
+);
+
+const calculateRound32SecondOrThirdQualifiers = (matches) => (
+  matches.filter(match => {
+    const winnerSide = getWinnerSide(match);
+    if (!winnerSide) return false;
+    const rank = ROUND32_SLOT_RANKS[Number(match.id)]?.[winnerSide === 'team1' ? 0 : 1];
+    return rank === '2' || rank === '3';
+  }).length
+);
+
 const calculateValuesFromEncodedMatches = (matchday, matches, matchesUntilMatchday = matches) => {
   const normalizedMatchday = normalizeSpecialMatchday(matchday);
+
+  if (normalizedMatchday === SPECIAL_MATCHDAYS.ROUND_OF_32) {
+    return {
+      [SPECIAL_PREDICTION_CODES.ROUND32_PENALTY_SHOOTOUTS]: calculateRound32PenaltyShootouts(matches),
+      [SPECIAL_PREDICTION_CODES.ROUND32_SECOND_OR_THIRD_QUALIFIERS]: calculateRound32SecondOrThirdQualifiers(matches)
+    };
+  }
+
   let totalGoals = 0;
   let drawCount = 0;
   let cleanSheetCount = 0;
@@ -328,11 +451,14 @@ const calculateValuesFromEncodedMatches = (matchday, matches, matchesUntilMatchd
 const calculateActualValuesFromMatches = (matchday, matches, definitions, matchesUntilMatchday = matches) => {
   const encodedMatches = matches.filter(isMatchResultEncoded);
   const encodedUntilMatchday = matchesUntilMatchday.filter(isMatchResultEncoded);
-  const requiresContextComplete = normalizeSpecialMatchday(matchday) !== SPECIAL_MATCHDAYS.FIRST;
+  const normalizedMatchday = normalizeSpecialMatchday(matchday);
+  const requiresContextComplete = normalizedMatchday !== SPECIAL_MATCHDAYS.FIRST && normalizedMatchday !== SPECIAL_MATCHDAYS.ROUND_OF_32;
+  const expectedTotalMatches = normalizedMatchday === SPECIAL_MATCHDAYS.ROUND_OF_32 ? ROUND32_MATCH_IDS.length : matches.length;
   const complete = matches.length > 0
+    && matches.length === expectedTotalMatches
     && encodedMatches.length === matches.length
     && (!requiresContextComplete || encodedUntilMatchday.length === matchesUntilMatchday.length);
-  const currentValues = calculateValuesFromEncodedMatches(matchday, encodedMatches, encodedUntilMatchday);
+  const currentValues = calculateValuesFromEncodedMatches(normalizedMatchday, encodedMatches, encodedUntilMatchday);
 
   return {
     complete,
@@ -448,7 +574,8 @@ const recalculateAllSpecialPredictionPoints = async (clientOrPool) => {
   const first = await recalculateSpecialPredictionPointsForMatchday(clientOrPool, SPECIAL_MATCHDAYS.FIRST);
   const second = await recalculateSpecialPredictionPointsForMatchday(clientOrPool, SPECIAL_MATCHDAYS.SECOND);
   const third = await recalculateSpecialPredictionPointsForMatchday(clientOrPool, SPECIAL_MATCHDAYS.THIRD);
-  return { first, second, third };
+  const round32 = await recalculateSpecialPredictionPointsForMatchday(clientOrPool, SPECIAL_MATCHDAYS.ROUND_OF_32);
+  return { first, second, third, round32 };
 };
 
 const recalculateFirstMatchdaySpecialPredictionPoints = (clientOrPool) => recalculateSpecialPredictionPointsForMatchday(clientOrPool, SPECIAL_MATCHDAYS.FIRST);
@@ -462,13 +589,14 @@ const normalizeSpecialPredictionValue = (value) => {
 
 const getAllSpecialPredictionScores = async (clientOrPool) => {
   await ensureSpecialPredictionsTable(clientOrPool);
-  const [firstStatus, secondStatus, thirdStatus] = await Promise.all([
+  const [firstStatus, secondStatus, thirdStatus, round32Status] = await Promise.all([
     getSpecialMatchdayStatus(clientOrPool, SPECIAL_MATCHDAYS.FIRST),
     getSpecialMatchdayStatus(clientOrPool, SPECIAL_MATCHDAYS.SECOND),
-    getSpecialMatchdayStatus(clientOrPool, SPECIAL_MATCHDAYS.THIRD)
+    getSpecialMatchdayStatus(clientOrPool, SPECIAL_MATCHDAYS.THIRD),
+    getSpecialMatchdayStatus(clientOrPool, SPECIAL_MATCHDAYS.ROUND_OF_32)
   ]);
-  const actual = { ...firstStatus.actual, ...secondStatus.actual, ...thirdStatus.actual };
-  const currentActual = { ...firstStatus.current_actual, ...secondStatus.current_actual, ...thirdStatus.current_actual };
+  const actual = { ...firstStatus.actual, ...secondStatus.actual, ...thirdStatus.actual, ...round32Status.actual };
+  const currentActual = { ...firstStatus.current_actual, ...secondStatus.current_actual, ...thirdStatus.current_actual, ...round32Status.current_actual };
   const codes = ALL_SPECIAL_PREDICTION_DEFINITIONS.map(definition => definition.code);
   const result = await clientOrPool.query('SELECT * FROM special_predictions WHERE code = ANY($1::varchar[])', [codes]);
 
@@ -487,7 +615,7 @@ const getAllSpecialPredictionScores = async (clientOrPool) => {
   return {
     actual,
     current_actual: currentActual,
-    complete: firstStatus.complete && secondStatus.complete && thirdStatus.complete,
+    complete: firstStatus.complete && secondStatus.complete && thirdStatus.complete && round32Status.complete,
     scores
   };
 };
@@ -499,6 +627,7 @@ module.exports = {
   FIRST_MATCHDAY_SPECIAL_DEFINITIONS,
   SECOND_MATCHDAY_SPECIAL_DEFINITIONS,
   THIRD_MATCHDAY_SPECIAL_DEFINITIONS,
+  ROUND32_SPECIAL_DEFINITIONS,
   ALL_SPECIAL_PREDICTION_DEFINITIONS,
   ensureSpecialPredictionsTable,
   getSpecialMatchdayDefinitions,
