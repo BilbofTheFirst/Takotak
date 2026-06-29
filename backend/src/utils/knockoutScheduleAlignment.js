@@ -19,15 +19,15 @@ const SCHEDULE_KNOCKOUT_SLOTS = {
   86: { team1: '2D', team2: '2G' },
   87: { team1: '1J', team2: '2H' },
   88: { team1: '1K', team2: '3D/E/I/J/L' },
-  89: { team1: 'V73', team2: 'V76' },
-  90: { team1: 'V75', team2: 'V78' },
-  91: { team1: 'V74', team2: 'V77' },
+  89: { team1: 'V74', team2: 'V77' },
+  90: { team1: 'V73', team2: 'V75' },
+  91: { team1: 'V76', team2: 'V78' },
   92: { team1: 'V79', team2: 'V80' },
-  93: { team1: 'V84', team2: 'V83' },
-  94: { team1: 'V82', team2: 'V81' },
-  95: { team1: 'V87', team2: 'V86' },
-  96: { team1: 'V85', team2: 'V88' },
-  97: { team1: 'V90', team2: 'V89' },
+  93: { team1: 'V83', team2: 'V84' },
+  94: { team1: 'V81', team2: 'V82' },
+  95: { team1: 'V86', team2: 'V88' },
+  96: { team1: 'V85', team2: 'V87' },
+  97: { team1: 'V89', team2: 'V90' },
   98: { team1: 'V93', team2: 'V94' },
   99: { team1: 'V91', team2: 'V92' },
   100: { team1: 'V95', team2: 'V96' },
@@ -214,7 +214,12 @@ const resolveSlotToken = (token, placements, resolution, matchById, winnerGroup,
 };
 
 const applySlot = (match, side, teamId, teamById) => {
-  if (!teamId) return null;
+  if (!teamId) {
+    if (!match[`${side}_id`]) return null;
+    match[`${side}_id`] = null;
+    return { id: match.id, side, teamId: null };
+  }
+
   if (match[`${side}_id`] === teamId) return null;
   const team = teamById.get(teamId);
   if (!team) return null;
