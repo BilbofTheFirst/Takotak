@@ -25,10 +25,16 @@ const MATCH_CAN_PREDICT_SQL = `
 const isThirdPlaceToken = (token) => /^3[A-L]\//.test(String(token || ''));
 
 const refreshKnockoutBracket = async () => {
+  const client = await pool.connect();
   try {
-    await propagateAlignedKnockoutTeams(pool);
+    await client.query('BEGIN');
+    await propagateAlignedKnockoutTeams(client);
+    await client.query('COMMIT');
   } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
     console.warn('Knockout bracket refresh skipped:', error.message || error);
+  } finally {
+    client.release();
   }
 };
 
