@@ -10,6 +10,7 @@ const {
   propagateKnockoutTeams,
   saveManualThirdPlaceSlotOverrides
 } = require('../utils/knockoutPropagation');
+const { alignKnockoutScheduleRows } = require('../utils/knockoutScheduleAlignment');
 
 const router = express.Router();
 
@@ -53,6 +54,7 @@ router.patch('/third-place-slots', authenticateAdmin, async (req, res) => {
     await client.query('BEGIN');
     await saveManualThirdPlaceSlotOverrides(client, slots);
     await propagateKnockoutTeams(client);
+    await alignKnockoutScheduleRows(client);
     await client.query('COMMIT');
 
     const snapshot = await getThirdPlaceSnapshot(client);
