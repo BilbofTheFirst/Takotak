@@ -4,9 +4,9 @@ const { authenticateToken, authenticateAdmin } = require('../middleware/auth');
 const { calculatePointsDetailed } = require('../utils/scoring');
 const {
   getThirdPlaceSnapshot,
-  propagateKnockoutTeams,
   saveManualThirdPlaceOrder
 } = require('../utils/knockoutPropagation');
+const { propagateAlignedKnockoutTeams } = require('../utils/knockoutScheduleAlignment');
 const { getAllBonusScores } = require('../utils/bonusScoring');
 const {
   getAllSpecialPredictionScores,
@@ -183,7 +183,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
       );
     }
 
-    await propagateKnockoutTeams(client);
+    await propagateAlignedKnockoutTeams(client);
     await recalculateAllSpecialPredictionPoints(client);
 
     await client.query('COMMIT');
@@ -221,7 +221,7 @@ router.post('/third-places/order', authenticateAdmin, async (req, res) => {
 
     await client.query('BEGIN');
     await saveManualThirdPlaceOrder(client, group_codes.map(code => String(code)));
-    await propagateKnockoutTeams(client);
+    await propagateAlignedKnockoutTeams(client);
     await client.query('COMMIT');
 
     const snapshot = await getThirdPlaceSnapshot(client);
@@ -248,7 +248,7 @@ router.delete('/:matchId', authenticateAdmin, async (req, res) => {
     const deletedResult = await client.query('DELETE FROM results WHERE match_id = $1 RETURNING *', [matchId]);
     await client.query('DELETE FROM user_scores WHERE match_id = $1', [matchId]);
     await client.query('UPDATE matches SET status = $1 WHERE id = $2', ['scheduled', matchId]);
-    await propagateKnockoutTeams(client);
+    await propagateAlignedKnockoutTeams(client);
     await recalculateAllSpecialPredictionPoints(client);
 
     await client.query('COMMIT');
