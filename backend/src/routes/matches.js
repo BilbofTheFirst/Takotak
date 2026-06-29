@@ -12,11 +12,14 @@ const router = express.Router();
 // and return a formatted local schedule string to the frontend.
 const MATCH_TIME_SELECT = `to_char(m.start_time, 'YYYY-MM-DD"T"HH24:MI:SS') as start_time`;
 const MATCH_HAS_STARTED_SQL = `(m.start_time AT TIME ZONE 'Europe/Brussels') <= NOW()`;
+const MATCH_OPEN_TIME_SQL = `
+  (m.start_time AT TIME ZONE 'Europe/Brussels') > NOW()
+  AND COALESCE(m.status, 'scheduled') <> 'finished'
+`;
 const MATCH_CAN_PREDICT_SQL = `
   m.team1_id IS NOT NULL
   AND m.team2_id IS NOT NULL
-  AND (m.start_time AT TIME ZONE 'Europe/Brussels') > NOW()
-  AND COALESCE(m.status, 'scheduled') <> 'finished'
+  AND ${MATCH_OPEN_TIME_SQL}
 `;
 
 const isThirdPlaceToken = (token) => /^3[A-L]\//.test(String(token || ''));
@@ -42,14 +45,14 @@ const maskUnresolvedThirdPlaceSlots = (rows, thirdPlaceSnapshot) => {
       masked.team1_id = null;
       masked.team1 = null;
       masked.groupe1 = null;
-      masked.can_predict = false;
+      masked.can_predict = Boolean(row.knockout_predictions_open);
     }
 
     if (isThirdPlaceToken(slots.team2)) {
       masked.team2_id = null;
       masked.team2 = null;
       masked.groupe2 = null;
-      masked.can_predict = false;
+      masked.can_predict = Boolean(row.knockout_predictions_open);
     }
 
     return masked;
@@ -87,8 +90,12 @@ router.get('/', authenticateToken, async (req, res) => {
         r.team2_penalty_goals,
         r.winner_team_id,
         CASE
+          WHEN m.id > 72
+            AND $1::boolean = true
+            AND ${MATCH_OPEN_TIME_SQL}
+          THEN true
           WHEN ${MATCH_CAN_PREDICT_SQL}
-            AND ($1::boolean = true OR m.id <= 72)
+            AND m.id <= 72
           THEN true
           ELSE false
         END AS can_predict,
@@ -149,8 +156,12 @@ router.get('/:id', authenticateToken, async (req, res) => {
         r.team2_penalty_goals,
         r.winner_team_id,
         CASE
+          WHEN m.id > 72
+            AND $2::boolean = true
+            AND ${MATCH_OPEN_TIME_SQL}
+          THEN true
           WHEN ${MATCH_CAN_PREDICT_SQL}
-            AND ($2::boolean = true OR m.id <= 72)
+            AND m.id <= 72
           THEN true
           ELSE false
         END AS can_predict,
