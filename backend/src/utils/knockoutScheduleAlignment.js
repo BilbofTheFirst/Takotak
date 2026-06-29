@@ -1,6 +1,7 @@
 const { buildGroupPlacements } = require('./knockoutPropagation');
 
 const THIRD_PLACE_QUALIFIERS = 8;
+const PREDICTION_ALIGNMENT_MIGRATION_KEY = 'knockout_prediction_schedule_alignment_20260629';
 
 const SCHEDULE_KNOCKOUT_SLOTS = {
   73: { team1: '2A', team2: '2B' },
@@ -35,6 +36,21 @@ const SCHEDULE_KNOCKOUT_SLOTS = {
   102: { team1: 'V99', team2: 'V100' },
   103: { team1: 'P101', team2: 'P102' },
   104: { team1: 'V101', team2: 'V102' }
+};
+
+const LEGACY_TO_SCHEDULE_MATCH_ID = {
+  74: 75,
+  75: 76,
+  76: 74,
+  77: 78,
+  78: 77,
+  81: 82,
+  82: 81,
+  83: 84,
+  84: 83,
+  86: 87,
+  87: 88,
+  88: 86
 };
 
 const THIRD_PLACE_WINNER_COLUMNS = ['A', 'B', 'D', 'E', 'G', 'I', 'K', 'L'];
@@ -79,6 +95,67 @@ const hasResult = (match) => (
 );
 
 const getCombinationKey = (groupCodes) => [...groupCodes].sort().join('');
+const getLegacyPredictionMatchIds = () => Object.keys(LEGACY_TO_SCHEDULE_MATCH_ID).map(Number);
+const buildPredictionMatchIdCaseSql = () => Object.entries(LEGACY_TO_SCHEDULE_MATCH_ID)
+  .reduce((sql, [legacyId, scheduleId]) => `${sql} WHEN ${Number(legacyId)} THEN ${Number(scheduleId)}`, 'CASE match_id')
+  + ' ELSE match_id END';
+
+const migrateLegacyKnockoutPredictionsOnce = async (clientOrPool) => {
+  await clientOrPool.query(`
+    CREATE TABLE IF NOT EXISTS app_migrations (
+      migration_key varchar(120) PRIMARY KEY,
+      applied_at timestamp DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  const migrationLock = await clientOrPool.query(
+    `INSERT INTO app_migrations (migration_key)
+     VALUES ($1)
+     ON CONFLICT (migration_key) DO NOTHING
+     RETURNING migration_key`,
+    [PREDICTION_ALIGNMENT_MIGRATION_KEY]
+  );
+
+  if (migrationLock.rowCount === 0) {
+    return { skipped: true, moved: 0 };
+  }
+
+  await clientOrPool.query(`
+    ALTER TABLE predictions
+      ADD COLUMN IF NOT EXISTS created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at timestamp DEFAULT CURRENT_TIMESTAMP
+  `);
+
+  const migratedIds = getLegacyPredictionMatchIds();
+  const matchIdCaseSql = buildPredictionMatchIdCaseSql();
+  const result = await clientOrPool.query(`
+    WITH moved AS (
+      DELETE FROM predictions
+      WHERE match_id = ANY($1::int[])
+      RETURNING user_id, match_id, team1_goals, team2_goals, created_at, updated_at
+    ), inserted AS (
+      INSERT INTO predictions (user_id, match_id, team1_goals, team2_goals, created_at, updated_at)
+      SELECT
+        user_id,
+        ${matchIdCaseSql},
+        team1_goals,
+        team2_goals,
+        COALESCE(created_at, CURRENT_TIMESTAMP),
+        COALESCE(updated_at, CURRENT_TIMESTAMP)
+      FROM moved
+      RETURNING 1
+    )
+    SELECT
+      (SELECT COUNT(*) FROM moved)::int AS moved_count,
+      (SELECT COUNT(*) FROM inserted)::int AS inserted_count
+  `, [migratedIds]);
+
+  return {
+    skipped: false,
+    moved: Number(result.rows[0]?.moved_count || 0),
+    inserted: Number(result.rows[0]?.inserted_count || 0)
+  };
+};
 
 const fetchBracketMatches = async (clientOrPool) => {
   const result = await clientOrPool.query(`
@@ -228,6 +305,8 @@ const applySlot = (match, side, teamId, teamById) => {
 };
 
 const propagateAlignedKnockoutTeams = async (clientOrPool) => {
+  await migrateLegacyKnockoutPredictionsOnce(clientOrPool);
+
   const matches = await fetchBracketMatches(clientOrPool);
   const { placements, thirdTeams } = buildGroupPlacements(matches);
   thirdTeams.sort(sortThirdTeams);
