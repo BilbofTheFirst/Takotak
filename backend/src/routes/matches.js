@@ -3,20 +3,19 @@ const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
 const { getKnockoutPredictionAccess } = require('../utils/knockoutPredictions');
 const { KNOCKOUT_SLOTS, getThirdPlaceSnapshot, propagateKnockoutTeams } = require('../utils/knockoutPropagation');
-const { getEffectiveStartTimeSql } = require('../utils/officialSchedule');
+const { alignKnockoutScheduleRows } = require('../utils/knockoutScheduleAlignment');
 
 const router = express.Router();
 
 // Match dates in the database are stored as the Belgian schedule wall time.
 // Convert them explicitly as Europe/Brussels for lock/can_predict checks,
 // and return a formatted local schedule string to the frontend.
-const EFFECTIVE_START_TIME_SQL = getEffectiveStartTimeSql('m');
-const MATCH_TIME_SELECT = `to_char(${EFFECTIVE_START_TIME_SQL}, 'YYYY-MM-DD"T"HH24:MI:SS') as start_time`;
-const MATCH_HAS_STARTED_SQL = `(${EFFECTIVE_START_TIME_SQL} AT TIME ZONE 'Europe/Brussels') <= NOW()`;
+const MATCH_TIME_SELECT = `to_char(m.start_time, 'YYYY-MM-DD"T"HH24:MI:SS') as start_time`;
+const MATCH_HAS_STARTED_SQL = `(m.start_time AT TIME ZONE 'Europe/Brussels') <= NOW()`;
 const MATCH_CAN_PREDICT_SQL = `
   m.team1_id IS NOT NULL
   AND m.team2_id IS NOT NULL
-  AND (${EFFECTIVE_START_TIME_SQL} AT TIME ZONE 'Europe/Brussels') > NOW()
+  AND (m.start_time AT TIME ZONE 'Europe/Brussels') > NOW()
   AND COALESCE(m.status, 'scheduled') <> 'finished'
 `;
 
@@ -25,6 +24,7 @@ const isThirdPlaceToken = (token) => /^3[A-L]\//.test(String(token || ''));
 const refreshKnockoutBracket = async () => {
   try {
     await propagateKnockoutTeams(pool);
+    await alignKnockoutScheduleRows(pool);
   } catch (error) {
     console.warn('Knockout bracket refresh skipped:', error.message || error);
   }
@@ -109,7 +109,7 @@ router.get('/', authenticateToken, async (req, res) => {
       LEFT JOIN teams t1 ON m.team1_id = t1.id
       LEFT JOIN teams t2 ON m.team2_id = t2.id
       LEFT JOIN results r ON m.id = r.match_id
-      ORDER BY ${EFFECTIVE_START_TIME_SQL}, m.id
+      ORDER BY m.start_time
     `, [knockoutAccess.open]);
     res.json(maskUnresolvedThirdPlaceSlots(result.rows, thirdPlaceSnapshot));
   } catch (error) {
