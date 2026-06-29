@@ -1,5 +1,6 @@
 const { getAllBonusScores } = require('./bonusScoring');
 const { getAllSpecialPredictionScores } = require('./specialPredictions');
+const { propagateAlignedKnockoutTeams } = require('./knockoutScheduleAlignment');
 
 let cachedOverview = null;
 let cachedAt = null;
@@ -279,7 +280,7 @@ const buildInsights = (user, context) => {
   if (number(user.best_exact_streak) >= 2) insights.push({ type: 'good', icon: '🎯', title: 'Précision en série', text: `Tu as déjà enchaîné ${user.best_exact_streak} scores exacts.` });
   if (exactRate >= 0.2) insights.push({ type: 'good', icon: '🎯', title: 'Très précis', text: 'Tu transformes pas mal de pronos en scores exacts.' });
   if (number(user.correct_winners) > number(user.exact_scores) + number(user.correct_differences)) insights.push({ type: 'good', icon: '✅', title: 'Bon lecteur de vainqueur', text: 'Tu sécurises souvent au moins le bon résultat.' });
-  if (number(user.best_streak) >= 3) insights.push({ type: 'good', icon: '🔥', title: 'Bonne série', text: `Ta meilleure série est de ${user.best_streak} matchs avec points.` });
+  if (number(user.best_streak) >= 3) insights.push({ type: 'good', icon: '🔥', title: `Bonne série`, text: `Ta meilleure série est de ${user.best_streak} matchs avec points.` });
   if (number(user.near_misses) >= 3) insights.push({ type: 'neutral', icon: '🐈‍⬛', title: 'Pas passé loin', text: `Tu as déjà ${user.near_misses} prono(s) à un seul but du score exact.` });
   if (wrongRate >= 0.5 && number(user.scored_predictions) >= 3) insights.push({ type: 'warning', icon: '💀', title: 'Zone rouge', text: 'Beaucoup de pronos finissent encore à 0 point.' });
   if (context.totalDraws > 0 && number(user.draw_hits) === 0) insights.push({ type: 'warning', icon: '🤝', title: 'Les nuls te résistent', text: 'Aucun nul trouvé pour le moment.' });
@@ -288,6 +289,8 @@ const buildInsights = (user, context) => {
 };
 
 const buildOverview = async (pool) => {
+  await propagateAlignedKnockoutTeams(pool);
+
   const [{ scores: bonusScores }, { scores: specialScores }] = await Promise.all([
     getAllBonusScores(pool),
     getAllSpecialPredictionScores(pool)
