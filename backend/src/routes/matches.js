@@ -2,8 +2,8 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
 const { getKnockoutPredictionAccess } = require('../utils/knockoutPredictions');
-const { KNOCKOUT_SLOTS, getThirdPlaceSnapshot, propagateKnockoutTeams } = require('../utils/knockoutPropagation');
-const { alignKnockoutScheduleRows } = require('../utils/knockoutScheduleAlignment');
+const { KNOCKOUT_SLOTS, getThirdPlaceSnapshot } = require('../utils/knockoutPropagation');
+const { propagateAlignedKnockoutTeams } = require('../utils/knockoutScheduleAlignment');
 
 const router = express.Router();
 
@@ -23,8 +23,7 @@ const isThirdPlaceToken = (token) => /^3[A-L]\//.test(String(token || ''));
 
 const refreshKnockoutBracket = async () => {
   try {
-    await propagateKnockoutTeams(pool);
-    await alignKnockoutScheduleRows(pool);
+    await propagateAlignedKnockoutTeams(pool);
   } catch (error) {
     console.warn('Knockout bracket refresh skipped:', error.message || error);
   }
