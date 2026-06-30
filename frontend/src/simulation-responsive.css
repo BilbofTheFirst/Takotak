@@ -213,13 +213,13 @@
 }
 
 .compact-bracket-board > .compact-round-title:nth-of-type(4)::after {
-  content: 'Finale';
+  content: 'Demi 1';
 }
 
 .compact-bracket-board > .compact-round-title:nth-of-type(5)::after {
-  content: 'Demies';
+  content: 'Finale + 3e';
 }
 
 .compact-bracket-board > .compact-round-title:nth-of-type(6)::after {
-  content: '3ième';
+  content: 'Demi 2';
 }
