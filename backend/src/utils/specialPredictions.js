@@ -1,3 +1,5 @@
+const { SCHEDULE_KNOCKOUT_SLOTS } = require('./knockoutScheduleAlignment');
+
 const SPECIAL_MATCHDAYS = {
   FIRST: 1,
   SECOND: 2,
@@ -147,12 +149,18 @@ const MATCHDAY_DEFINITIONS = {
 };
 
 const ROUND32_MATCH_IDS = Array.from({ length: 16 }, (_, index) => 73 + index);
-const ROUND32_SLOT_RANKS = {
-  73: ['2', '2'], 74: ['1', '3'], 75: ['1', '2'], 76: ['1', '2'],
-  77: ['1', '3'], 78: ['2', '2'], 79: ['1', '3'], 80: ['1', '3'],
-  81: ['1', '3'], 82: ['1', '3'], 83: ['2', '2'], 84: ['1', '2'],
-  85: ['1', '3'], 86: ['1', '2'], 87: ['1', '3'], 88: ['2', '2']
+
+const getRound32SlotRank = (token) => {
+  const rank = String(token || '').trim()[0];
+  return ['1', '2', '3'].includes(rank) ? rank : null;
 };
+
+const ROUND32_SLOT_RANKS = Object.fromEntries(
+  ROUND32_MATCH_IDS.map(matchId => {
+    const slots = SCHEDULE_KNOCKOUT_SLOTS[matchId] || {};
+    return [matchId, [getRound32SlotRank(slots.team1), getRound32SlotRank(slots.team2)]];
+  })
+);
 
 const normalizeSpecialMatchday = (value = SPECIAL_MATCHDAYS.FIRST) => {
   const matchday = Number(value || SPECIAL_MATCHDAYS.FIRST);
