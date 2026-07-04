@@ -466,15 +466,9 @@ router.get('/leaderboard/progression', async (req, res) => {
         if (!milestonesByMatchNumber.has(milestone.match_number)) milestonesByMatchNumber.set(milestone.match_number, []);
         milestonesByMatchNumber.get(milestone.match_number).push({ ...milestone, points, point_type: 'special' });
       });
-      bonusMilestones.forEach(milestone => {
-        const points = Number(bonusBreakdown[milestone.key] || 0);
-        if (!points) return;
-        if (!milestonesByMatchNumber.has(milestone.match_number)) milestonesByMatchNumber.set(milestone.match_number, []);
-        milestonesByMatchNumber.get(milestone.match_number).push({ ...milestone, points, point_type: 'bonus' });
-      });
       const series = [{ match_number: 0, match_id: null, points: 0, label: 'Départ' }];
 
-      orderedMatches.forEach(match => {
+      orderedMatches.forEach((match, index) => {
         const matchPoints = pointsByUserAndMatch.get(`${id}:${match.match_id}`) || 0;
         matchCumulative += matchPoints;
         chartCumulative += matchPoints;
@@ -482,35 +476,33 @@ router.get('/leaderboard/progression', async (req, res) => {
 
         (milestonesByMatchNumber.get(match.match_number) || []).forEach(milestone => {
           chartCumulative += milestone.points;
-          if (milestone.point_type === 'bonus') injectedBonusPoints += milestone.points;
-          else injectedSpecialPoints += milestone.points;
+          injectedSpecialPoints += milestone.points;
           series.push({
             match_number: milestone.match_number,
             match_id: null,
             points: chartCumulative,
             label: milestone.label,
-            special_points: milestone.point_type === 'special' ? milestone.points : 0,
-            bonus_points: milestone.point_type === 'bonus' ? milestone.points : 0
+            special_points: milestone.points
           });
         });
-      });
 
-      bonusMilestones.forEach(milestone => {
-        const alreadyInjected = series.some(point => Number(point.match_number) === Number(milestone.match_number) && point.label === milestone.label);
-        const points = Number(bonusBreakdown[milestone.key] || 0);
-        if (alreadyInjected || !points) return;
-        chartCumulative += points;
-        injectedBonusPoints += points;
-        series.push({
-          match_number: milestone.match_number,
-          match_id: null,
-          points: chartCumulative,
-          label: milestone.label,
-          bonus_points: points
-        });
+        const nextMatchNumber = orderedMatches[index + 1]?.match_number ?? Number.POSITIVE_INFINITY;
+        bonusMilestones
+          .filter(milestone => milestone.match_number > match.match_number && milestone.match_number < nextMatchNumber)
+          .forEach(milestone => {
+            const points = Number(bonusBreakdown[milestone.key] || 0);
+            if (!points) return;
+            chartCumulative += points;
+            injectedBonusPoints += points;
+            series.push({
+              match_number: milestone.match_number,
+              match_id: null,
+              points: chartCumulative,
+              label: milestone.label,
+              bonus_points: points
+            });
+          });
       });
-
-      series.sort((a, b) => Number(a.match_number) - Number(b.match_number));
 
       const remainingSpecialPoints = Math.max(0, specialPoints - injectedSpecialPoints);
       const remainingBonusPoints = Math.max(0, bonusPoints - injectedBonusPoints);
