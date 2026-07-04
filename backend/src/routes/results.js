@@ -66,6 +66,22 @@ const buildSpecialBreakdown = (specialScore) => {
   };
 };
 
+const getBonusGroupWinnerPoints = (bonusScore) => (
+  Object.values(bonusScore?.details?.group_winners || {})
+    .reduce((sum, points) => sum + Number(points || 0), 0)
+);
+
+const buildBonusBreakdown = (bonusScore) => {
+  const bonusPoints = Number(bonusScore?.points || 0);
+  const groupWinnerPoints = getBonusGroupWinnerPoints(bonusScore);
+
+  return {
+    bonus_points: bonusPoints,
+    bonus_group_winner_points: groupWinnerPoints,
+    bonus_knockout_points: Math.max(0, bonusPoints - groupWinnerPoints)
+  };
+};
+
 const buildSpecialMatchdayMilestone = (matchNumberById, specialMatches = []) => {
   const ids = specialMatches.map(match => Number(match.id)).filter(Number.isInteger);
   if (!ids.length || ids.some(id => !matchNumberById.has(id))) return null;
@@ -268,7 +284,8 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const [{ scores: bonusScores }, { scores: specialScores }] = await Promise.all([getAllBonusScores(pool), getAllSpecialPredictionScores(pool)]);
-    const userBonus = bonusScores.get(Number(userId))?.points || 0;
+    const bonusBreakdown = buildBonusBreakdown(bonusScores.get(Number(userId)));
+    const userBonus = bonusBreakdown.bonus_points;
     const specialBreakdown = buildSpecialBreakdown(specialScores.get(Number(userId)));
     const userSpecial = specialBreakdown.special_points;
 
@@ -306,7 +323,7 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
 
     res.json({
       ...baseStats,
-      bonus_points: userBonus,
+      ...bonusBreakdown,
       ...specialBreakdown,
       total_points: matchPoints + userBonus + userSpecial,
       rank: rank || null
@@ -355,7 +372,8 @@ router.get('/leaderboard', async (req, res) => {
     const rows = result.rows.map(row => {
       const id = Number(row.id);
       const matchPoints = Number(row.match_points || 0);
-      const bonusPoints = bonusScores.get(id)?.points || 0;
+      const bonusBreakdown = buildBonusBreakdown(bonusScores.get(id));
+      const bonusPoints = bonusBreakdown.bonus_points;
       const specialBreakdown = buildSpecialBreakdown(specialScores.get(id));
       const specialPoints = specialBreakdown.special_points;
 
@@ -364,7 +382,7 @@ router.get('/leaderboard', async (req, res) => {
         username: row.username,
         avatar_url: buildAvatarUrl(row),
         match_points: matchPoints,
-        bonus_points: bonusPoints,
+        ...bonusBreakdown,
         ...specialBreakdown,
         total_points: matchPoints + bonusPoints + specialPoints,
         previous_total_points: latestMatchId ? matchPoints - (latestScoreByUser.get(id) || 0) + bonusPoints + specialPoints : matchPoints + bonusPoints + specialPoints,
@@ -418,20 +436,27 @@ router.get('/leaderboard/progression', async (req, res) => {
 
     const orderedMatches = matchesResult.rows.map((match, index) => ({ match_number: index + 1, match_id: Number(match.id), start_time: match.start_time }));
     const matchNumberById = new Map(orderedMatches.map(match => [match.match_id, match.match_number]));
+    const specialJ3Milestone = buildSpecialMatchdayMilestone(matchNumberById, specialJ3Matches);
     const specialMilestones = [
       { key: 'special_j1_points', label: 'Spéciaux J1', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialJ1Matches) },
       { key: 'special_j2_points', label: 'Spéciaux J2', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialJ2Matches) },
-      { key: 'special_j3_points', label: 'Spéciaux J3', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialJ3Matches) },
+      { key: 'special_j3_points', label: 'Spéciaux J3', match_number: specialJ3Milestone },
       { key: 'special_round32_points', label: 'Spéciaux 16es', match_number: buildSpecialMatchdayMilestone(matchNumberById, specialRound32Matches) }
     ].filter(milestone => Number.isInteger(milestone.match_number));
+    const bonusMilestones = [
+      Number.isInteger(specialJ3Milestone) ? { key: 'bonus_group_winner_points', label: 'Bonus groupes', match_number: specialJ3Milestone + 0.35 } : null
+    ].filter(Boolean);
+    const progressionMilestones = [...specialMilestones, ...bonusMilestones];
     const totalMarker = { match_number: orderedMatches.length + 1, match_id: null, start_time: null, label: 'Total' };
 
     const users = usersResult.rows.map(user => {
       let matchCumulative = 0;
       let chartCumulative = 0;
       let injectedSpecialPoints = 0;
+      let injectedBonusPoints = 0;
       const id = Number(user.id);
-      const bonusPoints = bonusScores.get(id)?.points || 0;
+      const bonusBreakdown = buildBonusBreakdown(bonusScores.get(id));
+      const bonusPoints = bonusBreakdown.bonus_points;
       const specialBreakdown = buildSpecialBreakdown(specialScores.get(id));
       const specialPoints = specialBreakdown.special_points;
       const milestonesByMatchNumber = new Map();
@@ -439,7 +464,13 @@ router.get('/leaderboard/progression', async (req, res) => {
         const points = Number(specialBreakdown[milestone.key] || 0);
         if (!points) return;
         if (!milestonesByMatchNumber.has(milestone.match_number)) milestonesByMatchNumber.set(milestone.match_number, []);
-        milestonesByMatchNumber.get(milestone.match_number).push({ ...milestone, points });
+        milestonesByMatchNumber.get(milestone.match_number).push({ ...milestone, points, point_type: 'special' });
+      });
+      bonusMilestones.forEach(milestone => {
+        const points = Number(bonusBreakdown[milestone.key] || 0);
+        if (!points) return;
+        if (!milestonesByMatchNumber.has(milestone.match_number)) milestonesByMatchNumber.set(milestone.match_number, []);
+        milestonesByMatchNumber.get(milestone.match_number).push({ ...milestone, points, point_type: 'bonus' });
       });
       const series = [{ match_number: 0, match_id: null, points: 0, label: 'Départ' }];
 
@@ -451,19 +482,39 @@ router.get('/leaderboard/progression', async (req, res) => {
 
         (milestonesByMatchNumber.get(match.match_number) || []).forEach(milestone => {
           chartCumulative += milestone.points;
-          injectedSpecialPoints += milestone.points;
+          if (milestone.point_type === 'bonus') injectedBonusPoints += milestone.points;
+          else injectedSpecialPoints += milestone.points;
           series.push({
             match_number: milestone.match_number,
             match_id: null,
             points: chartCumulative,
             label: milestone.label,
-            special_points: milestone.points
+            special_points: milestone.point_type === 'special' ? milestone.points : 0,
+            bonus_points: milestone.point_type === 'bonus' ? milestone.points : 0
           });
         });
       });
 
+      bonusMilestones.forEach(milestone => {
+        const alreadyInjected = series.some(point => Number(point.match_number) === Number(milestone.match_number) && point.label === milestone.label);
+        const points = Number(bonusBreakdown[milestone.key] || 0);
+        if (alreadyInjected || !points) return;
+        chartCumulative += points;
+        injectedBonusPoints += points;
+        series.push({
+          match_number: milestone.match_number,
+          match_id: null,
+          points: chartCumulative,
+          label: milestone.label,
+          bonus_points: points
+        });
+      });
+
+      series.sort((a, b) => Number(a.match_number) - Number(b.match_number));
+
       const remainingSpecialPoints = Math.max(0, specialPoints - injectedSpecialPoints);
-      const finalPoints = chartCumulative + bonusPoints + remainingSpecialPoints;
+      const remainingBonusPoints = Math.max(0, bonusPoints - injectedBonusPoints);
+      const finalPoints = chartCumulative + remainingBonusPoints + remainingSpecialPoints;
 
       series.push({
         match_number: totalMarker.match_number,
@@ -472,6 +523,7 @@ router.get('/leaderboard/progression', async (req, res) => {
         label: 'Total',
         bonus_points: bonusPoints,
         special_points: specialPoints,
+        ...bonusBreakdown,
         ...specialBreakdown
       });
 
@@ -480,14 +532,21 @@ router.get('/leaderboard/progression', async (req, res) => {
         username: user.username,
         avatar_url: buildAvatarUrl(user),
         total_match_points: matchCumulative,
-        bonus_points: bonusPoints,
+        ...bonusBreakdown,
         ...specialBreakdown,
         total_points: matchCumulative + bonusPoints + specialPoints,
         series
       };
     });
 
-    res.json({ matches: [{ match_number: 0, match_id: null, start_time: null, label: 'Départ' }, ...orderedMatches, totalMarker], users });
+    const progressionMatchMarkers = progressionMilestones.map(milestone => ({
+      match_number: milestone.match_number,
+      match_id: null,
+      start_time: null,
+      label: milestone.label
+    }));
+
+    res.json({ matches: [{ match_number: 0, match_id: null, start_time: null, label: 'Départ' }, ...orderedMatches, ...progressionMatchMarkers, totalMarker], users });
   } catch (error) {
     console.error('Get leaderboard progression error:', error);
     res.status(500).json({ error: 'Server error' });
