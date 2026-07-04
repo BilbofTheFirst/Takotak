@@ -63,6 +63,7 @@ const buildAvatarMarkerItems = (series) => {
 
 const getMilestoneKey = (label = '') => {
   const normalized = String(label).toLowerCase();
+  if (normalized.includes('bonus') && (normalized.includes('groupe') || normalized.includes('group'))) return 'bonus-groups';
   if (normalized.includes('j1')) return 'j1';
   if (normalized.includes('j2')) return 'j2';
   if (normalized.includes('j3')) return 'j3';
@@ -117,7 +118,6 @@ function ScoreProgressionChart({ progression, rankedUsers, currentUser, chartMod
 
   const globalMinX = 0;
   const globalMaxX = Math.max(1, ...xValues);
-
   const series = chartUsers
     .map((user, index) => ({
       ...user,
