@@ -1,3 +1,5 @@
+const { buildGroupPlacements } = require('./knockoutPropagation');
+
 const GROUP_CODES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
 const BONUS_POINTS = {
@@ -151,14 +153,6 @@ const getMatchLoserName = (match) => {
   return null;
 };
 
-const sortStandings = (a, b) => (
-  b.points - a.points
-  || b.goal_difference - a.goal_difference
-  || b.goals_for - a.goals_for
-  || b.wins - a.wins
-  || a.team_name.localeCompare(b.team_name, 'fr')
-);
-
 const buildActualGroupWinners = async (clientOrPool) => {
   const result = await clientOrPool.query(`
     SELECT
@@ -168,6 +162,7 @@ const buildActualGroupWinners = async (clientOrPool) => {
       t1.groupe AS groupe1,
       t2.id AS team2_id,
       t2.name AS team2,
+      t2.groupe AS groupe2,
       r.team1_goals,
       r.team2_goals
     FROM matches m
@@ -178,64 +173,19 @@ const buildActualGroupWinners = async (clientOrPool) => {
     ORDER BY m.id
   `);
 
-  const groupMatches = new Map();
-  result.rows.forEach(match => {
-    const group = match.groupe1;
-    if (!group) return;
-    if (!groupMatches.has(group)) groupMatches.set(group, []);
-    groupMatches.get(group).push(match);
-  });
-
+  const { placements, groups } = buildGroupPlacements(result.rows);
+  const completeGroups = new Map(groups.map(group => [group.group_code, group]));
   const winners = {};
 
-  GROUP_CODES.forEach(group => {
-    const matches = groupMatches.get(group) || [];
-    if (matches.length === 0 || !matches.every(match => match.team1_goals !== null && match.team2_goals !== null)) return;
+  GROUP_CODES.forEach(groupCode => {
+    const group = completeGroups.get(groupCode);
+    const winner = placements[`1${groupCode}`];
+    const groupIsComplete = Boolean(group?.complete)
+      && Array.isArray(group?.standings)
+      && group.standings.length >= 4
+      && group.standings.every(team => Number(team.played || 0) >= 3);
 
-    const standings = new Map();
-    const ensureTeam = (id, name) => {
-      if (!standings.has(id)) {
-        standings.set(id, {
-          team_id: id,
-          team_name: name,
-          points: 0,
-          goals_for: 0,
-          goals_against: 0,
-          goal_difference: 0,
-          wins: 0
-        });
-      }
-      return standings.get(id);
-    };
-
-    matches.forEach(match => {
-      const team1 = ensureTeam(match.team1_id, match.team1);
-      const team2 = ensureTeam(match.team2_id, match.team2);
-      const goals1 = Number(match.team1_goals);
-      const goals2 = Number(match.team2_goals);
-
-      team1.goals_for += goals1;
-      team1.goals_against += goals2;
-      team2.goals_for += goals2;
-      team2.goals_against += goals1;
-
-      if (goals1 > goals2) {
-        team1.points += 3;
-        team1.wins += 1;
-      } else if (goals2 > goals1) {
-        team2.points += 3;
-        team2.wins += 1;
-      } else {
-        team1.points += 1;
-        team2.points += 1;
-      }
-
-      team1.goal_difference = team1.goals_for - team1.goals_against;
-      team2.goal_difference = team2.goals_for - team2.goals_against;
-    });
-
-    const winner = Array.from(standings.values()).sort(sortStandings)[0];
-    if (winner) winners[group] = winner.team_name;
+    if (groupIsComplete && winner?.team_name) winners[groupCode] = winner.team_name;
   });
 
   return winners;
@@ -258,16 +208,16 @@ const buildActualBonusAnswers = async (clientOrPool) => {
       LEFT JOIN teams t1 ON t1.id = m.team1_id
       LEFT JOIN teams t2 ON t2.id = m.team2_id
       LEFT JOIN results r ON r.match_id = m.id
-      WHERE m.id IN (101, 102, 104)
+      WHERE m.id IN (97, 98, 99, 100, 104)
     `)
   ]);
 
   const byId = new Map(knockoutResult.rows.map(match => [Number(match.id), match]));
   const final = byId.get(104);
-  const semis = [byId.get(101), byId.get(102)];
+  const quarterfinals = [97, 98, 99, 100].map(matchId => byId.get(matchId));
 
-  const semifinalists = semis
-    .flatMap(match => match ? [match.team1, match.team2] : [])
+  const semifinalists = quarterfinals
+    .map(getMatchWinnerName)
     .filter(Boolean);
 
   return {
@@ -281,7 +231,11 @@ const buildActualBonusAnswers = async (clientOrPool) => {
 const calculateBonusPoints = (predictionRow, actual) => {
   const prediction = normalizeBonusPrediction(predictionRow);
   const groupWinners = prediction.group_winners || {};
-  const semifinalists = Array.isArray(prediction.semifinalists) ? prediction.semifinalists.map(normalizeTeamName).filter(Boolean) : [];
+  const semifinalists = [...new Set(
+    (Array.isArray(prediction.semifinalists) ? prediction.semifinalists : [])
+      .map(normalizeTeamName)
+      .filter(Boolean)
+  )].slice(0, 4);
 
   let points = 0;
   const details = {
