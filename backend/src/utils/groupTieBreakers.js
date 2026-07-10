@@ -1,6 +1,7 @@
 const buildScopedStats = (teams, matches, scope) => {
   const teamSet = new Set(teams.map(team => Number(team.team_id)));
-  const stats = new Map(teams.map(team => [Number(team.team_id), { points: 0, goals_for: 0, goals_against: 0, goal_difference: 0 }]));
+  const stats = new Map(teams.map(team => [Number(team.team_id), { points: 0, goals_for: 0, goals_against: 0, goal_difference: 0 }]))
+;
 
   matches.forEach(match => {
     const team1Id = Number(match.team1_id);
@@ -34,6 +35,23 @@ const buildScopedStats = (teams, matches, scope) => {
   return stats;
 };
 
+const sortOverall = (a, b) => (
+  b.goal_difference - a.goal_difference
+  || b.goals_for - a.goals_for
+);
+
+const splitByOverallCriteria = (teams) => {
+  const groups = new Map();
+
+  [...teams].sort(sortOverall).forEach(team => {
+    const key = `${team.goal_difference}:${team.goals_for}`;
+    if (!groups.has(key)) groups.set(key, { team, teams: [] });
+    groups.get(key).teams.push(team);
+  });
+
+  return Array.from(groups.values()).sort((a, b) => sortOverall(a.team, b.team));
+};
+
 const splitByHeadToHead = (teams, matches) => {
   const headToHead = buildScopedStats(teams, matches, 'headToHead');
   const groups = new Map();
@@ -62,20 +80,25 @@ const fallbackSort = (teams, matches) => {
     return remainingB.points - remainingA.points
       || remainingB.goal_difference - remainingA.goal_difference
       || remainingB.goals_for - remainingA.goals_for
-      || b.goal_difference - a.goal_difference
-      || b.goals_for - a.goals_for
       || b.wins - a.wins
       || a.team_name.localeCompare(b.team_name, 'fr');
   });
 };
 
-const rankTiedTeams = (teams, matches) => {
+const rankHeadToHeadTiedTeams = (teams, matches) => {
   if (teams.length <= 1) return teams;
 
   const groups = splitByHeadToHead(teams, matches);
   if (groups.length === 1) return fallbackSort(teams, matches);
 
-  return groups.flatMap(group => rankTiedTeams(group.teams, matches));
+  return groups.flatMap(group => rankHeadToHeadTiedTeams(group.teams, matches));
+};
+
+const rankTiedTeams = (teams, matches) => {
+  if (teams.length <= 1) return teams;
+
+  const overallGroups = splitByOverallCriteria(teams);
+  return overallGroups.flatMap(group => rankHeadToHeadTiedTeams(group.teams, matches));
 };
 
 const rankGroupStandings = (teams, matches) => {
