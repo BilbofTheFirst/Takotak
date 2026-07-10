@@ -15,11 +15,26 @@ const TeamFlag = ({ team }) => {
   );
 };
 
+const getGroupWinnerPoints = (scoring) => (
+  Object.values(scoring?.details?.group_winners || {})
+    .reduce((sum, points) => sum + Number(points || 0), 0)
+);
+
+const getFinalTablePoints = (scoring) => {
+  const details = scoring?.details || {};
+  const semifinalistPoints = Object.values(details.semifinalists || {})
+    .reduce((sum, points) => sum + Number(points || 0), 0);
+
+  return Number(details.champion || 0) + Number(details.runner_up || 0) + semifinalistPoints;
+};
+
 function PublicBonusPredictionsTable({ type = 'groups', locked, currentUserId }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [payload, setPayload] = useState(null);
   const [error, setError] = useState('');
+
+  const isFinal = type === 'final';
 
   const rows = useMemo(() => {
     if (!payload?.locked) return [];
@@ -28,9 +43,9 @@ function PublicBonusPredictionsTable({ type = 'groups', locked, currentUserId })
       username: item.username,
       avatar_url: item.avatar_url,
       prediction: item.prediction || {},
-      points: item.scoring?.points ?? null
+      points: isFinal ? getFinalTablePoints(item.scoring) : getGroupWinnerPoints(item.scoring)
     }));
-  }, [payload]);
+  }, [payload, isFinal]);
 
   if (!locked) return null;
 
@@ -54,8 +69,6 @@ function PublicBonusPredictionsTable({ type = 'groups', locked, currentUserId })
     setOpen(nextOpen);
     if (nextOpen) await loadPredictions();
   };
-
-  const isFinal = type === 'final';
 
   return (
     <div className="public-bonus-table-shell">
