@@ -5,7 +5,8 @@ const getMatchGoals = (match) => ({
 
 const buildScopedStats = (teams, matches, scope) => {
   const teamSet = new Set(teams.map(team => team.team));
-  const stats = new Map(teams.map(team => [team.team, { points: 0, goalsFor: 0, goalsAgainst: 0, diff: 0 }]));
+  const stats = new Map(teams.map(team => [team.team, { points: 0, goalsFor: 0, goalsAgainst: 0, diff: 0 }]))
+;
 
   matches.forEach(match => {
     const team1InScope = teamSet.has(match.team1);
@@ -33,6 +34,23 @@ const buildScopedStats = (teams, matches, scope) => {
   });
 
   return stats;
+};
+
+const sortOverall = (a, b) => (
+  b.diff - a.diff
+  || b.goalsFor - a.goalsFor
+);
+
+const splitByOverallCriteria = (teams) => {
+  const groups = new Map();
+
+  [...teams].sort(sortOverall).forEach(team => {
+    const key = `${team.diff}:${team.goalsFor}`;
+    if (!groups.has(key)) groups.set(key, { team, teams: [] });
+    groups.get(key).teams.push(team);
+  });
+
+  return Array.from(groups.values()).sort((a, b) => sortOverall(a.team, b.team));
 };
 
 const splitByHeadToHead = (teams, matches) => {
@@ -63,20 +81,25 @@ const fallbackSort = (teams, matches) => {
     return remainingB.points - remainingA.points
       || remainingB.diff - remainingA.diff
       || remainingB.goalsFor - remainingA.goalsFor
-      || b.diff - a.diff
-      || b.goalsFor - a.goalsFor
       || b.won - a.won
       || a.team.localeCompare(b.team, 'fr');
   });
 };
 
-const rankTiedTeams = (teams, matches) => {
+const rankHeadToHeadTiedTeams = (teams, matches) => {
   if (teams.length <= 1) return teams;
 
   const groups = splitByHeadToHead(teams, matches);
   if (groups.length === 1) return fallbackSort(teams, matches);
 
-  return groups.flatMap(group => rankTiedTeams(group.teams, matches));
+  return groups.flatMap(group => rankHeadToHeadTiedTeams(group.teams, matches));
+};
+
+const rankTiedTeams = (teams, matches) => {
+  if (teams.length <= 1) return teams;
+
+  const overallGroups = splitByOverallCriteria(teams);
+  return overallGroups.flatMap(group => rankHeadToHeadTiedTeams(group.teams, matches));
 };
 
 export const rankGroupTeams = (teams, matches) => {
